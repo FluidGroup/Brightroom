@@ -60,7 +60,7 @@
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
 		8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = 23449504C30943C981A14D75 /* BrightroomParametric */; };
 		8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = BC5DE159959545B49CA01241 /* BrightroomParametric */; };
-		B027724C2FC2B70A006D7796 /* RevealSDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* RevealSDK */; settings = {ATTRIBUTES = (Weak, ); }; };
+		B027724C2FC2B70A006D7796 /* RevealSDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* RevealSDK */; };
 		EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = E41DF318FBB3443697FEC673 /* BrightroomParametric */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
@@ -1501,7 +1501,6 @@
 				4B98CCB625EFF31300E4F61F /* Frameworks */,
 				4B98CCB725EFF31300E4F61F /* Resources */,
 				4B98CCE125EFF4A400E4F61F /* Embed Frameworks */,
-				43AC7FEC125D4D7C9DE34618 /* Integrate Reveal SDK */,
 			);
 			buildRules = (
 			);
@@ -2089,24 +2088,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		43AC7FEC125D4D7C9DE34618 /* Integrate Reveal SDK */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-			);
-			name = "Integrate Reveal SDK";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/bash;
-			shellScript = "SWIFT_PACKAGE_DIR=\"${BUILD_DIR%Build/*}SourcePackages/artifacts\"\nsource \"$SWIFT_PACKAGE_DIR/reveal-sdk/RevealSDKFramework/RevealServer.xcframework/Scripts/integrate_revealserver.sh\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		4B98CCB525EFF31300E4F61F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -2321,17 +2302,11 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-weak_framework",
-					RevealServer,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -2349,17 +2324,11 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-weak_framework",
-					RevealServer,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
