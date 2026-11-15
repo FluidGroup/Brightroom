@@ -182,7 +182,7 @@ struct FeatureTreeNodeTests {
     #expect(toneCurve.fields.map(\.name).contains("Render Plan") == false)
 
     let mixer = nodes[1]
-    #expect(Self.value(of: "Algorithm", in: mixer) == "oklch")
+    #expect(Self.value(of: "Algorithm", in: mixer) == nil)
     #expect(Self.value(of: "Neutral", in: mixer) == "no")
 
     let neutral = FeatureTreeNode.nodes(for: ToneCurveFeature(curves: .neutral))

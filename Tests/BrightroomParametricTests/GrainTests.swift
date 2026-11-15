@@ -32,56 +32,6 @@ struct GrainTests {
     #expect(try FeatureRenderer().makeImage(from: source, feature: GrainFeature.CameraRaw(amount: 0)) === source)
   }
 
-  @Test
-  func cameraRawGrainMatchesMeasuredTextureAtTwoSourceSizes() throws {
-    let film = GrainFeature.CameraRaw(amount: 20, size: 42, roughness: 70)
-    for large in [false, true] {
-      let extent = CGRect(x: 0, y: 0, width: large ? 6000 : 1024, height: large ? 4000 : 256)
-      // Both ends of the measured midtone plateau should have similar noise.
-      for level in [0.15, 0.85] {
-        let linear = pow((level + 0.055) / 1.055, 2.4)
-        let color = CIColor(red: linear, green: linear, blue: linear, alpha: 1, colorSpace: Self.space)!
-        let image = try FeatureRenderer().makeImage(from: CIImage(color: color).cropped(to: extent), feature: film)
-        let values = Self.pixels(image.cropped(to: CGRect(x: 0, y: 0, width: 256, height: 256)))
-        let red = stride(from: 0, to: values.count, by: 4).map {
-          1.055 * pow(Double(values[$0]), 1 / 2.4) - 0.055 - level
-        }
-        #expect(abs(Self.mean(red)) < 0.001)
-        #expect((large ? 0.011...0.013 : 0.026...0.029).contains(sqrt(Self.variance(red))))
-        #expect((large ? 0.81...0.86 : 0.02...0.07).contains(Self.correlation(red)))
-      }
-    }
-  }
-
-  @Test
-  func cameraRawLargeSizeSoftensChromaticEdgesAndPreservesAlpha() throws {
-    let extent = CGRect(x: 0, y: 0, width: 6000, height: 4000)
-    func patch(_ r: Double, _ g: Double, width: CGFloat) -> CIImage {
-      let color = CIColor(red: r, green: g, blue: 0.18, alpha: 0.5, colorSpace: Self.space)!
-      return CIImage(color: color).cropped(to: CGRect(x: 0, y: 0, width: width, height: extent.height))
-    }
-    let input = patch(0.36, 0.15, width: 3000).composited(over:
-      patch(0.15, 0.36, width: 3000).transformed(by: .init(translationX: 3000, y: 0)))
-    let film = GrainFeature.CameraRaw(amount: 20, size: 42, roughness: 70, seed: .max)
-    let image = try FeatureRenderer().makeImage(from: input, feature: film)
-    #expect(image.extent == extent)
-    let row = Self.pixels(image.cropped(to: CGRect(x: 2996, y: 500, width: 8, height: 1)))
-    // A common grain sample cancels in the difference of two encoded ROMM channels.
-    let chroma = (0..<8).map { pixel in
-      let offset = 4 * pixel
-      let alpha = Double(row[offset + 3])
-      #expect(abs(alpha - 0.5) < 0.00001)
-      let r = Double(row[offset]) / alpha
-      let g = Double(row[offset + 1]) / alpha
-      let b = Double(row[offset + 2]) / alpha
-      let red = 0.63169122 * r + 0.21392818 * g + 0.15438059 * b
-      let green = 0.08320432 * r + 0.88585751 * g + 0.03093817 * b
-      return 1.055 * (pow(red, 1 / 2.4) - pow(green, 1 / 2.4))
-    }
-    let edgeFraction = (chroma[3] - chroma[0]) / (chroma[7] - chroma[0])
-    #expect((0.14...0.18).contains(edgeFraction))
-  }
-
   @Test(arguments: [false, true])
   func everySeedBitAndPartialRenderingAreStable(cameraRaw: Bool) throws {
     let source = Self.source(size: 128)

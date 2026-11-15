@@ -6,16 +6,15 @@ import BrightroomColorAdjustmentKernels
 import CoreImage
 import Foundation
 
-/// Evaluates a Color Mixer using the selected algorithm's Metal kernel.
+/// Evaluates the standard OKLCh color mixer.
 nonisolated enum ColorMixerRecipe {
 
   /// Returns the same image instance when all eight bands are neutral.
   static func apply(
     to image: CIImage,
-    bands: ColorMixerFeature.Bands,
-    algorithm: ColorMixerFeature.Algorithm = .oklch
+    bands: ColorMixerFeature.Bands
   ) throws -> CIImage {
-    guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
+    guard let plan = ColorMixerRenderPlan(bands: bands) else {
       return image
     }
     return try apply(to: image, plan: plan)
@@ -26,10 +25,7 @@ nonisolated enum ColorMixerRecipe {
   /// The kernel computes in extended-linear Display-P3 whatever the
   /// rendering context's working space is (`ColorAdjustmentKernelSpace`).
   static func apply(to image: CIImage, plan: ColorMixerRenderPlan) throws -> CIImage {
-    let name = switch plan.algorithm {
-    case .oklch: ColorMixerKernelStore.name
-    case .lightroomApproximation: ColorMixerCalibrationRecipe.name
-    }
+    let name = ColorMixerKernelStore.name
     return try ColorAdjustmentKernelSpace.apply(
       to: image,
       kernelName: name
@@ -42,13 +38,7 @@ nonisolated enum ColorMixerRecipe {
   /// no color-space match. Use `apply(to:plan:)`; tests call this to show
   /// that the match changes nothing in an extended-linear Display-P3 context.
   static func applyKernel(to image: CIImage, plan: ColorMixerRenderPlan) throws -> CIImage {
-    let kernel: CIKernel
-    switch plan.algorithm {
-    case .oklch:
-      kernel = try ColorMixerKernelStore.kernel()
-    case .lightroomApproximation:
-      return try ColorMixerCalibrationRecipe.applyKernel(to: image, plan: plan)
-    }
+    let kernel = try ColorMixerKernelStore.kernel()
     guard
       let output = kernel.apply(
         extent: image.extent,

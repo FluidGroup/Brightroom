@@ -4,9 +4,23 @@ import Foundation
 import Testing
 
 /// Public API only: renders the same graph a host or the editing canvas uses.
-/// Adobe samples are independent observations, not values from our curve model.
 @Suite("Color Grading", .serialized)
 struct ColorGradingTests {
+
+  @Test func standardGlobalUsesAnalyticGainAndTint() throws {
+    let pixels: [SIMD4<Float>] = [SIMD4(0.2, 0.4, 0.6, 1), SIMD4(0.1, 0.2, 0.3, 0.5), SIMD4(-0.1, 1.6, 0.3, 1)]
+    let feature = ColorGradingFeature(global: .init(hue: 0, saturation: 100, luminance: 100), blending: 81, balance: -50)
+    let actual = try Self.render(Self.image(pixels), feature)
+    let tint = SIMD3<Float>(1 - 0.228974564, -0.228974564, -0.228974564) * 0.15
+    for (index, pixel) in pixels.enumerated() {
+      let tone = min(1, max(0, (pixel.x * 0.228974564 + pixel.y * 0.691738522 + pixel.z * 0.079286914) / pixel.w))
+      for channel in 0..<3 {
+        let expected = pixel[channel] * 2 + tint[channel] * (4 * tone * (1 - tone)) * pixel.w
+        #expect(abs(actual[index * 4 + channel] - expected) < 0.00001)
+      }
+      #expect(actual[index * 4 + 3] == pixel.w)
+    }
+  }
   private static let space = CGColorSpace(name: CGColorSpace.extendedLinearDisplayP3)!
   private static let context = CIContext(options: [.workingColorSpace: space,
     .workingFormat: CIFormat.RGBAf, .cacheIntermediates: false])
@@ -73,17 +87,6 @@ struct ColorGradingTests {
     #expect(zip(shifted, shadows).contains { abs($0 - $1) > 0.001 })
   }
 
-  @Test func globalPredictsIndependentAdobeSamples() throws {
-    let input = Self.image(Self.adobeSamples.map(\.0))
-    let actual = try Self.render(input, .init(global: .init(hue: 289, saturation: 41, luminance: 27)))
-    // A focused regression bound, not an assertion that all settings match.
-    for (index, sample) in Self.adobeSamples.enumerated() {
-      for channel in 0..<3 {
-        #expect(abs(actual[index * 4 + channel] - sample.1[channel]) < 0.002)
-      }
-    }
-  }
-
   private static func image(_ values: [SIMD4<Float>]) -> CIImage {
     CIImage(bitmapData: values.withUnsafeBytes { Data($0) }, bytesPerRow: values.count * 16,
       size: CGSize(width: values.count, height: 1), format: .RGBAf, colorSpace: space)
@@ -103,18 +106,4 @@ struct ColorGradingTests {
     return values
   }
 
-  // Lightroom Classic 15.6 / Camera Raw 18.7, PV 15.4; identical 16-bit P3
-  // chart, ProPhoto 16-bit TIFF export. Global H289 S41 L27; no other edit.
-  // Source/reference hashes and all 19 validation cases are recorded in the
-  // comparison report. Values here are decoded to linear Display-P3.
-  private static let adobeSamples: [(SIMD4<Float>, SIMD3<Float>)] = [
-    (SIMD4(0.009976710, 0.009976710, 0.009976710, 1.000000000), SIMD3(0.014260249, 0.008281684, 0.014474925)),
-    (SIMD4(0.050975401, 0.050975401, 0.050975401, 1.000000000), SIMD3(0.072194733, 0.042945161, 0.073046066)),
-    (SIMD4(0.214500442, 0.214500442, 0.214500442, 1.000000000), SIMD3(0.285563171, 0.186669692, 0.286453128)),
-    (SIMD4(0.523657322, 0.523657322, 0.523657322, 1.000000000), SIMD3(0.621763587, 0.482690841, 0.618812561)),
-    (SIMD4(0.731183469, 0.009529255, 0.002496716, 1.000000000), SIMD3(0.845541775, -0.008313874, 0.004517607)),
-    (SIMD4(0.054162942, 0.229281858, 0.054162942, 1.000000000), SIMD3(0.095915198, 0.206093296, 0.081718162)),
-    (SIMD4(0.561012566, 0.296428531, 0.296428531, 1.000000000), SIMD3(0.661166072, 0.259785175, 0.382856876)),
-    (SIMD4(0.084918790, 0.614825428, 0.793813586, 1.000000000), SIMD3(0.181198135, 0.575701594, 0.853372514)),
-  ]
 }

@@ -2,16 +2,10 @@
 
 import CoreImage
 
-/// Adjusts the dark end of a developed image with a measured tonal response.
+/// Adjusts the dark end of a developed image.
 ///
-/// Positive amounts lift blacks; negative amounts deepen them. This is a
-/// pointwise SDR approximation measured from Lightroom Process Version 15.4.
-/// It does not reproduce image-adaptive behavior. Negative Blacks still shows
-/// a mismatch on a uniform midgray validation image.
-///
-/// The effect preserves alpha and extent. Outside the measured Display-P3 SDR
-/// cube it extends the boundary response without clipping the input; this is
-/// not a model of Adobe HDR processing. It does not change RAW development.
+/// Positive amounts lift blacks; negative amounts lower them.
+/// The standard response preserves alpha, extent, and extended-range components.
 public nonisolated struct BlacksFeature: ImageEffect, Equatable, Sendable {
 
   /// Signed strength from -100 through 100. Zero bypasses the effect exactly.
@@ -31,6 +25,9 @@ public nonisolated struct BlacksFeature: ImageEffect, Equatable, Sendable {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard amount != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return try TonalPointRecipe.apply(to: image, control: .blacks, amount: amount)
   }
 

@@ -1,5 +1,16 @@
 # Texture on developed RGB
 
+The calibrated calculation described below moved to optional GradingKit.
+Brightroom retains the authored Feature and now uses a lightweight standard
+calculation. Use [Feature implementation setup](adjustment-rendering.md) to
+install the measured response. The old numerical results, API examples and
+research procedures below are retained as historical documentation of the
+[pre-split implementation](https://github.com/FluidGroup/Brightroom/tree/b92ea6b110b9e920e90109974d54f20b4b06f50d),
+not a description of today's standard processing.
+
+## Historical calibrated implementation
+
+
 Pass the signed Camera Raw `Texture` setting directly to `TextureFeature`. It accepts −100 through +100. Zero returns the source image. The validating initializer rejects nonfinite and out-of-range values.
 
 ```swift

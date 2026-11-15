@@ -22,40 +22,6 @@ struct ClarityTests {
   }
 
   @Test
-  func signedChangesFollowTheMeasuredColorPatch() throws {
-    let source = lightroomColorLattice()
-    // Linear-P3 red at (317, 210) on the 16-bit chart. Subtract each engine's
-    // neutral, as in the comparison of the corresponding Lightroom exports.
-    let index = (210 * 1024 + 317) * 4
-    let neutral = RenderingFixtures.pixels(of: source)[index]
-    for (amount, measured, tolerance): (Double, Float, Float) in [
-      (-100, -0.14162, 0.015), (-50, -0.08085, 0.010), (4, 0.00704, 0.0018),
-      (50, 0.08518, 0.012), (100, 0.16354, 0.022),
-    ] {
-      let output = try FeatureRenderer().makeImage(from: source, feature: ClarityFeature(amount: amount))
-      #expect(abs(RenderingFixtures.pixels(of: output)[index] - neutral - measured) < tolerance)
-    }
-  }
-
-  @Test
-  func negativeClarityLiftsTheDarkSideOfTheRampBoundary() throws {
-    let source = lightroomColorLattice()
-    // The first eight rows of the lattice border a neutral gray ramp.
-    // Lightroom's mean blue lift here is 0.01518 at −50 and 0.02996 at −100.
-    let band = CGRect(x: 768, y: 120, width: 128, height: 8)
-    let neutral = RenderingFixtures.pixels(of: source.cropped(to: band))
-    for (amount, measured, tolerance): (Double, Float, Float) in [
-      (-50, 0.01518, 0.008), (-100, 0.02996, 0.014),
-    ] {
-      let adjusted = try FeatureRenderer().makeImage(from: source, feature: ClarityFeature(amount: amount))
-      let pixels = RenderingFixtures.pixels(of: adjusted.cropped(to: band))
-      let blue = stride(from: 2, to: pixels.count, by: 4)
-      let lift = blue.reduce(Float.zero) { $0 + (pixels[$1] - neutral[$1]) } / Float(pixels.count / 4)
-      #expect(abs(lift - measured) < tolerance)
-    }
-  }
-
-  @Test
   func neighborhoodsMatchAcrossTilesAndUniformOpacity() throws {
     let source = lightroomColorChart(width: 240, height: 120) { x, y, _, _ in
       SIMD3(x < 120 ? 0.2 : 0.8, Double(y) / 119, 0.3)

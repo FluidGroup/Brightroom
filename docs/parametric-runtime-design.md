@@ -278,7 +278,7 @@ func makeGrade() -> ColorGrade {
 
   return ColorGrade(
     curves: ToneCurveFeature(curves: curves),
-    mixer: ColorMixerFeature(bands: mixer, algorithm: .oklch)
+    mixer: ColorMixerFeature(bands: mixer)
   )
 }
 ```
@@ -307,25 +307,21 @@ curve, and `ColorMixerFeature.Bands.isIdentity` for a mixer.
 interior points on the diagonal is not the default, but it still renders as
 identity.
 
-`ColorMixerFeature.Algorithm` names the rendering semantics of the feature.
-Its only current case is `.oklch`; the `algorithm` parameter of
-`ColorMixerFeature(bands:algorithm:)` defaults to `.oklch`, so existing
-`ColorMixerFeature(bands:)` calls keep the same result. The algorithm is
-part of the feature, its compiled plan, feature equality, and render identity.
-`ColorMixerFeature.RenderKey(activeBands:algorithm:)` has the same default;
-hosts choosing an algorithm must use that choice for both rendering and cache
-identity. This API does not add a second algorithm, change editor controls, or
-claim compatibility with Adobe Lightroom's Color Mixer.
+`ColorMixerFeature` stores bands only. The host chooses its calculation through
+the typed [implementation setup](adjustment-rendering.md); the standard is
+OKLCh. `ColorMixerFeature.RenderKey(activeBands:)` describes normalized bands,
+not the selected implementation. A complete output-cache key also includes
+the `AdjustmentRendering` identity and the other render inputs.
 
 Tone Curve points are plain `(input, output)` coordinates with no identity of
 their own: the first and last points are the endpoints, and editing addresses
 a point by its index, which a move never changes. Curve render identities
 drop channels that render as identity, such as a channel whose only interior
-points lie on the diagonal. Mixer render identities include the selected
-algorithm and the same normalized Float32 parameters as the kernel.
+points lie on the diagonal. Mixer render identities include the same normalized
+Float32 band parameters as the standard kernel.
 
 Equality of both features compares their stored, authored members like
-every other feature: `curves` for a curve, `bands` and `algorithm` for a
+every other feature: `curves` for a curve and `bands` for a
 mixer. The compiled plan is derived state and does not take part. Two curves
 that differ only in diagonal interior points are therefore not equal, and
 neither are mixers whose values differ as Doubles but round to the same

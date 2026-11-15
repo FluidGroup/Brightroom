@@ -1,5 +1,8 @@
 // Host-side XMP mapping for the measured A10 experiment; not a library codec.
 import BrightroomParametric
+#if canImport(BrightroomGradingKit)
+import BrightroomGradingKit
+#endif
 import CoreImage
 import CryptoKit
 import Foundation
@@ -19,6 +22,31 @@ let includeGrain = mode == "adaptive"
 let adaptive = includeGrain || mode == "adaptive-no-grain"
 let tonal = mode == "tonal" || adaptive
 let measuredMixer = mode == "calibrated" || measuredLight || tonal
+var setup = AdjustmentRendering.Setup()
+if measuredMixer || tonal || adaptive {
+  #if canImport(BrightroomGradingKit)
+  let grading = GradingImplementation()
+  if measuredMixer {
+    setup.replace(ColorMixerFeature.self, with: grading.colorMixer)
+  }
+  if tonal {
+    setup.replace(WhitesFeature.self, with: grading.whites)
+    setup.replace(BlacksFeature.self, with: grading.blacks)
+  }
+  if adaptive {
+    setup.replace(HighlightsShadowsFeature.self, with: grading.highlightsShadows)
+    setup.replace(SaturationFeature.self, with: grading.saturation)
+    setup.replace(TextureFeature.self, with: grading.texture)
+    setup.replace(ClarityFeature.self, with: grading.clarity)
+    setup.replace(DehazeFeature.self, with: grading.dehaze)
+    setup.replace(ColorGradingFeature.self, with: grading.colorGrading)
+    setup.replace(GrainFeature.CameraRaw.self, with: grading.cameraRawGrain)
+  }
+  #else
+  fatalError("Calibrated modes require BrightroomGradingKit; pass --grading-products to run.py")
+  #endif
+}
+let rendering = setup.makeRendering()
 precondition(!FileManager.default.fileExists(atPath: output.path), "Do not overwrite evidence")
 let packet = try JSONSerialization.jsonObject(with: Data(contentsOf: settingsURL)) as! [String: Any]
 func sha256(_ data: Data) -> String {
@@ -83,8 +111,7 @@ if partial {
       effects += [AnyImageEffect(WhitesFeature(amount: number("Whites2012"))),
         AnyImageEffect(BlacksFeature(amount: number("Blacks2012")))]
     }
-    effects.append(AnyImageEffect(adaptive ? SaturationFeature(lightroomAmount: number("Saturation"))
-      : SaturationFeature(value: number("Saturation") / 100)))
+    effects.append(AnyImageEffect(SaturationFeature(value: number("Saturation") / 100)))
   }
 }
 if mode != "neutral" {
@@ -110,8 +137,7 @@ if partial {
     bands[band] = .init(hue: number("HueAdjustment" + key),
       saturation: number("SaturationAdjustment" + key), luminance: number("LuminanceAdjustment" + key))
   }
-  effects.append(AnyImageEffect(ColorMixerFeature(bands: bands,
-    algorithm: measuredMixer ? .lightroomApproximation : .oklch)))
+  effects.append(AnyImageEffect(ColorMixerFeature(bands: bands)))
   // The grading study includes combined wheels. Preserve their authored blend
   // and balance in the same pass instead of measuring each wheel separately.
   if adaptive {
@@ -142,7 +168,7 @@ let image = CIImage(contentsOf: input, options: [.applyOrientationProperty: true
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 let renderedURL = output.appendingPathComponent("brightroom.png")
 let renderStart = ProcessInfo.processInfo.systemUptime
-_ = try ExportRenderer().render(from: image, feature: effects,
+_ = try ExportRenderer(adjustmentRendering: rendering).render(from: image, feature: effects,
   options: .init(resolution: .full, outputFormat: .RGBA16,
     outputColorSpace: outputSpace,
     output: .file(url: renderedURL, fileType: .png)))

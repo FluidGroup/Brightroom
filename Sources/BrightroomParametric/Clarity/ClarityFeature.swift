@@ -2,12 +2,10 @@
 
 import CoreImage
 
-/// Adjusts local contrast in a developed RGB image using Camera Raw's signed Clarity scale.
+/// Adjusts local contrast in a developed RGB image.
 ///
-/// Positive amounts accentuate tonal differences around edges. Negative amounts
-/// soften them. The effect also adjusts color width according to the surrounding
-/// contrast. It approximates Lightroom Process Version 15.4 on SDR images.
-/// A nonzero adjustment requires a finite extent to size its neighborhoods.
+/// Positive amounts accentuate tonal differences around edges; negative amounts
+/// soften them. The standard neighborhood scales with the chain-entry extent.
 public nonisolated struct ClarityFeature: ImageEffect, Equatable, Sendable {
 
   /// The signed `Clarity2012` amount, from −100 through 100. Zero is neutral.
@@ -26,7 +24,15 @@ public nonisolated struct ClarityFeature: ImageEffect, Equatable, Sendable {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard amount != 0, !image.extent.isEmpty else { return image }
-    return try ClarityRecipe.apply(to: image, amount: amount)
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
+    let extent = context.chainEntryExtent(for: image)
+    guard !extent.isInfinite, extent.width.isFinite, extent.height.isFinite else {
+      throw FeatureEvaluationError.imageCreationFailed("Clarity requires a finite chain-entry extent")
+    }
+    let radius = EffectRadius.proportional(20).pixels(in: context, for: image)
+    return try DetailRecipe.apply(to: image, amount: amount, radius: radius)
   }
 
   private static func clamp(_ amount: Double) -> Double {

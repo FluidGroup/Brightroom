@@ -1,90 +1,25 @@
-//
-// Copyright (c) 2026 Hiroshi Kimura(Muukii) <muukii.app@gmail.com>
-//
-
 import CoreImage
-import Foundation
 
-/// An eight-band color correction evaluated by the selected algorithm.
-///
-/// Both algorithms evaluate extended-linear Display-P3 components
-/// whatever the rendering context's working color space is: the feature
-/// matches its input into that space and its result back, so it renders the
-/// same colors through any `CIContext`. Render through a floating-point working
-/// format, such as `CIFormat.RGBAh` or `CIFormat.RGBAf`; an 8-bit format
-/// clamps the linear components to 0...1 and quantizes them, losing
-/// wide-gamut and extended-range colors. When Core Image cannot express that match,
-/// rendering throws `FeatureEvaluationError.imageCreationFailed`. The feature
-/// does not clip the gamut or choose its position relative to other features;
-/// the containing pipeline owns that order.
-///
-/// Constructing the feature compiles its authored values once. Neutral values
-/// bypass rendering exactly. The authored bands and algorithm are all a
-/// host needs to store; constructing the feature again rebuilds the plan.
-///
-/// Equality compares the authored `bands` and `algorithm` exactly. The
-/// derived render plan, which rounds values to Float32, does not take part. To
-/// ask whether two mixers render the same, compare their
-/// `ColorMixerFeature.RenderKey(activeBands:algorithm:)`.
+/// An eight-band color correction. Authored bands are independent of the renderer's implementation.
 public nonisolated struct ColorMixerFeature: ImageEffect, Equatable {
 
-  /// The color model and correction semantics used to interpret all eight bands.
-  ///
-  /// Each case identifies a supported rendering implementation, rather than a
-  /// UI presentation. Raw values are stable identifiers a host can store.
-  public enum Algorithm: String, CaseIterable, Hashable, Sendable {
-
-    /// Adjusts hue, chroma, and lightness in OKLCh without gamut clipping.
-    ///
-    /// Adjacent perceptual hue anchors blend with smoothstep weights, and a
-    /// low-chroma gate protects neutral pixels.
-    /// It does not claim compatibility with Lightroom's Color Mixer.
-    case oklch
-
-    /// Approximates Lightroom's post-development Color Mixer in an SDR RGB image.
-    ///
-    /// This experimental, measured model combines eight selection weights before
-    /// evaluating a sampled response for luminance, saturation, then hue. It was
-    /// calibrated against Process Version 15.4 with an embedded RGB profile;
-    /// it does not reproduce Adobe RAW development or guarantee XMP compatibility.
-    /// See `Tools/LightroomComparison/Mixer` for evidence and reproduction.
-    ///
-    /// A 24-cubed lattice uses tetrahedral interpolation in encoded Display-P3.
-    /// Corrections are linear RGB deltas. Outside SDR, the nearest boundary
-    /// correction is added without clipping the original color; that extension
-    /// is a Brightroom policy, not a measured Adobe HDR response.
-    /// The default algorithm remains ``oklch``.
-    case lightroomApproximation
-  }
-
-  /// The complete authored eight-band correction.
   public let bands: Bands
-
-  /// The implementation that interprets the authored band corrections.
-  public let algorithm: Algorithm
-
   private let renderPlan: ColorMixerRenderPlan?
 
-  /// Creates one Color Mixer node and compiles its authored parameters.
-  public init(
-    bands: Bands,
-    algorithm: Algorithm = .oklch
-  ) {
+  public init(bands: Bands) {
     self.bands = bands
-    self.algorithm = algorithm
-    renderPlan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm)
+    self.renderPlan = ColorMixerRenderPlan(bands: bands)
   }
 
-  /// Evaluates one pass, preserving the exact neutral bypass and input extent.
-  ///
-  /// Identity bands (`bands.isIdentity`) return `image` itself.
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard let renderPlan else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return try ColorMixerRecipe.apply(to: image, plan: renderPlan)
   }
 
-  /// Compares the authored members; the derived render plan does not take part.
   public static func == (lhs: Self, rhs: Self) -> Bool {
-    lhs.bands == rhs.bands && lhs.algorithm == rhs.algorithm
+    lhs.bands == rhs.bands
   }
 }

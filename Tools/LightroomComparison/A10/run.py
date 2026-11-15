@@ -20,6 +20,8 @@ parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('references', type=Path, help='registered directory or portable Lightroom reference ZIP')
 parser.add_argument('output', type=Path)
 parser.add_argument('--developer-dir', help='override the active Xcode (DEVELOPER_DIR or xcode-select)')
+parser.add_argument('--grading-products', type=Path,
+  help='BrightroomGradingKit SwiftPM .build/debug directory; required for calibrated modes')
 parser.add_argument('--additional-references', type=Path, action='append', default=[],
   help='also read a registered set, for example another strength acquired for the same photographs')
 parser.add_argument('--scope', choices=['point', 'partial', 'groups', 'ablation', 'adjustments', 'mixer', 'light', 'grain', 'presence', 'all'], default='point',
@@ -228,12 +230,33 @@ for path in ['Sources/BrightroomParametric', 'Sources/BrightroomColorAdjustmentK
     subprocess.run(['/bin/cp', '-cRLp', repo/path, destination], check=True)
   else:
     shutil.copytree(repo/path, destination)
+grading_flags = []
+if args.grading_products:
+  grading_products = args.grading_products.resolve()
+  objects = sorted((grading_products/'BrightroomGradingKit.build').glob('*.o'))
+  require(bool(objects), 'Build BrightroomGradingKit before passing --grading-products')
+  grading_root = next((p for p in grading_products.parents
+    if (p/'Sources/BrightroomGradingKit').is_dir() and (p/'Package.swift').is_file()), None)
+  require(grading_root is not None, '--grading-products must be inside a GradingKit checkout')
+  for path in ['Sources/BrightroomGradingKit', 'Plugins/BuildGradingKernels']:
+    shutil.copytree(grading_root/path, out/'GradingKit'/path)
+  shutil.copy2(grading_root/'Package.swift', out/'GradingKit/Package.swift')
+  (out/'grading-runtime.json').write_text(json.dumps({
+    'objects': {p.name: digest(p) for p in objects},
+    'resources': {str(p.relative_to(grading_products)): digest(p)
+      for p in sorted((grading_products/'BrightroomGradingKit_BrightroomGradingKit.bundle').rglob('*')) if p.is_file()},
+  }, indent=2)+'\n')
+  grading_flags = ['-I', grading_products/'Modules', *objects]
+else:
+  calibrated_modes = {'calibrated', 'calibrated-light', 'tonal', 'adaptive', 'adaptive-no-grain'}
+  require(not any(set(neutral_modes.get(c['id'], modes_for(c))) & calibrated_modes for c in selected),
+    'Calibrated modes require --grading-products; build the optional GradingKit package first')
 run(['xcodebuild', '-project', 'Dev/Brightroom.xcodeproj', '-scheme', 'ParametricMacDemo',
   '-destination', 'platform=macOS', '-derivedDataPath', '.tmp/xmp-derived-data',
   '-skipMacroValidation', '-skipPackagePluginValidation', 'CODE_SIGNING_ALLOWED=NO', 'build'], out/'build.log')
 run(['xcrun', 'swiftc', '-O', '-module-cache-path', '.tmp/swift-module-cache', '-I', products,
   out/'main.swift', out/'Light/MeasuredLightFeature.swift', products/'BrightroomParametric.o',
-  products/'BrightroomColorAdjustmentKernels.o', '-o', products/'render-a10'], out/'compile.log')
+  products/'BrightroomColorAdjustmentKernels.o', *grading_flags, '-o', products/'render-a10'], out/'compile.log')
 run(['xcrun', 'swiftc', '-O', '-module-cache-path', '.tmp/swift-module-cache',
   Path(__file__).parent.parent/'compare.swift', '-o', products/'compare-a10'], out/'compile-compare.log')
 results = []

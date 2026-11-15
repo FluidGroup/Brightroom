@@ -1,5 +1,16 @@
 # Dehaze on developed RGB images
 
+The calibrated calculation described below moved to optional GradingKit.
+Brightroom retains the authored Feature and now uses a lightweight standard
+calculation. Use [Feature implementation setup](adjustment-rendering.md) to
+install the measured response. The old numerical results, API examples and
+research procedures below are retained as historical documentation of the
+[pre-split implementation](https://github.com/FluidGroup/Brightroom/tree/b92ea6b110b9e920e90109974d54f20b4b06f50d),
+not a description of today's standard processing.
+
+## Historical calibrated implementation
+
+
 `DehazeFeature(amount:)` takes the signed Camera Raw `Dehaze` value in −100…100. The default is zero. Its validating initializer accepts only finite values in that range. For example, `DehazeFeature(amount: 9)` applies A10's setting to an existing image. A host chooses the position in its feature stack. In the A10 comparison and DNG development adapters, the point curve is followed by Texture, Clarity, Dehaze and the Color Mixer.
 
 ## Image response

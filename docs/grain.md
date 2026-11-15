@@ -1,5 +1,12 @@
 # Grain
 
+The calibrated `GrainFeature.CameraRaw` calculation described below moved to
+optional GradingKit. Its public parameters remain in Brightroom, whose default
+is now lightweight grain. Use a configured renderer from
+[Feature implementation setup](adjustment-rendering.md) for the measured
+response. Ordinary `GrainFeature` remains Brightroom's lightweight implementation.
+
+
 `GrainFeature` adds a seeded texture independently of color adjustments.
 Hosts choose its place in their feature stack, including inside a local
 adjustment. The built-in editor has no grain controls.

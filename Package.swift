@@ -25,13 +25,8 @@ let package = Package(
         "BrushStampFalloff.metalh"
       ],
       resources: [
-        .copy("ColorGrading/Resources/ColorGradingCalibration.bin"),
-        .copy("ColorMixer/Resources/ColorMixerCalibration.lzfse"),
-        .copy("Saturation/Resources/SaturationCalibration.lzfse"),
-        .copy("TonalPoints/Resources/TonalPointCalibration.lzfse"),
-        .copy("TonalPoints/Resources/StrongWhitesCalibration.lzfse"),
-        .copy("HighlightsShadows/Resources/HighlightShadowCalibration.json"),
-        .copy("HighlightsShadows/Resources/HighlightStrength.bin"),
+        .process("BrushMaskRenderShader.metal"),
+        .process("ParametricKernels.metal"),
       ]
     ),
     // General Core Image kernels require different Metal flags from the

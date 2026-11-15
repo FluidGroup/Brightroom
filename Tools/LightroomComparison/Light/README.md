@@ -1,3 +1,14 @@
+# Runtime ownership after the implementation split
+
+The models and numerical procedures below describe the historical calibrated
+implementation, now owned by optional GradingKit rather than Brightroom's
+lightweight standard. Current sequential fitting requires its built SwiftPM
+products via `--grading-products /path/to/BrightroomGradingKit/.build/debug`.
+Build that checkout with `swift build --target BrightroomGradingKit` first.
+The driver installs standalone Shadows and Highlights explicitly, without
+applying the compound interaction it is trying to measure. Historical reports
+retain their original meaning; see `docs/adjustment-rendering.md` for setup.
+
 # Light parameter investigation
 
 BrightroomParametric exposes measured `WhitesFeature` and `BlacksFeature`, plus
