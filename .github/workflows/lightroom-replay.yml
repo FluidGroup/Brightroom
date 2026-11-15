@@ -5,7 +5,6 @@ on:
   pull_request:
     paths:
       - '.github/workflows/lightroom-replay.yml'
-      - 'Tools/LightroomComparison/**'
       - 'Sources/BrightroomParametric/**'
       - 'Sources/BrightroomColorAdjustmentKernels/**'
       - 'Plugins/BuildColorAdjustmentKernels/**'

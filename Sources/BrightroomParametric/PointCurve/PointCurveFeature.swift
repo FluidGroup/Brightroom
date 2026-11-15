@@ -14,7 +14,7 @@ import Foundation
 /// This is an experimental post-development approximation of Camera Raw point
 /// curves. Its master and RGB responses were measured against PV 15.4.
 /// ``refineSaturation`` controls how the master curve affects color.
-/// See `docs/point-curve.md` for measured coverage and remaining differences.
+/// See `docs/point-curve.md` for authoring and standard processing.
 /// ``ToneCurveFeature`` retains its scene-linear YRGB interpretation.
 ///
 /// Curves cover SDR values. Outside 0...1, the corresponding boundary result
