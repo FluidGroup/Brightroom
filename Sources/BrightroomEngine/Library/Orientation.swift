@@ -1,5 +1,9 @@
 import CoreGraphics
+import ImageIO
+
+#if canImport(UIKit)
 import UIKit
+#endif
 
 extension CGSize {
   
@@ -14,6 +18,7 @@ extension CGSize {
   
 }
 
+#if canImport(UIKit)
 extension CGImagePropertyOrientation {
   init(_ uiOrientation: UIImage.Orientation) {
     switch uiOrientation {
@@ -68,3 +73,4 @@ private func imageOrientationToTiffOrientation(_ value: UIImage.Orientation) -> 
     fatalError()
   }
 }
+#endif

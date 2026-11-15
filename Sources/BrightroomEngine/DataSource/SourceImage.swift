@@ -21,7 +21,10 @@
 
 import CoreImage
 import ImageIO
+
+#if canImport(UIKit)
 import UIKit
+#endif
 
 #if canImport(Photos)
 import Photos
@@ -120,6 +123,7 @@ extension SourceImage {
     self.init(storage: Storage(bitmap: cgImage, orientation: orientation))
   }
 
+  #if canImport(UIKit)
   /// Creates an image from a bitmap-backed `UIImage`, oriented by its
   /// `imageOrientation`.
   ///
@@ -132,6 +136,7 @@ extension SourceImage {
     let decoded = ImageDecoding.makeDecodedCGImage(from: image.cgImage!) ?? image.cgImage!
     self.init(cgImage: decoded, orientation: CGImagePropertyOrientation(image.imageOrientation))
   }
+  #endif
 
   /// Creates an image by developing RAW data with Core Image's default RAW
   /// settings.
