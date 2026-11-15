@@ -50,7 +50,6 @@ struct AppOwnedPersistenceExampleTests {
     #expect(restored.toneCurve?.curves == curves)
     #expect(restored.toneCurve?.curves.red.points[1] == ToneCurve.Point(input: 0.45, output: 0.65))
     #expect(restored.colorMixer?.bands == mixer)
-    #expect(restored.colorMixer?.algorithm == .oklch)
     #expect(restored.lut?.intensity == 0.6)
     #expect(restored.lut?.cubeData == lut.cubeData)
 
@@ -106,12 +105,6 @@ struct AppOwnedPersistenceExampleTests {
     reorderedCurve.toneCurve?.channels = reorderedChannels
     #expect(throws: StoredLook.Error.invalidToneCurve) {
       try reorderedCurve.makeLook(loadLUT: Self.loadLUT(assetID:))
-    }
-
-    var unknownAlgorithm = stored
-    unknownAlgorithm.colorMixer?.algorithm = "future"
-    #expect(throws: StoredLook.Error.unknownColorMixerAlgorithm("future")) {
-      try unknownAlgorithm.makeLook(loadLUT: Self.loadLUT(assetID:))
     }
 
     var bands = storedMixer.bands
@@ -194,7 +187,6 @@ private struct StoredLook: Codable, Equatable {
     case unsupportedFeature(String)
     case unsupportedToneCurveSemantics(Int)
     case invalidToneCurve
-    case unknownColorMixerAlgorithm(String)
     case invalidColorMixerBand(String)
     case missingColorMixerBands
   }
@@ -205,7 +197,6 @@ private struct StoredLook: Codable, Equatable {
   }
 
   struct StoredMixer: Codable, Equatable {
-    var algorithm: String
     var bands: [StoredBand]
   }
 
@@ -230,7 +221,6 @@ private struct StoredLook: Codable, Equatable {
     }
     colorMixer = look.colorMixer.map { mixer in
       StoredMixer(
-        algorithm: mixer.algorithm.rawValue,
         bands: ColorMixerFeature.Band.allCases.map { StoredBand(band: $0, value: mixer.bands[$0]) }
       )
     }
@@ -265,9 +255,6 @@ private struct StoredLook: Codable, Equatable {
 extension StoredLook.StoredMixer {
 
   func makeFeature() throws -> ColorMixerFeature {
-    guard let algorithm = ColorMixerFeature.Algorithm(rawValue: algorithm) else {
-      throw StoredLook.Error.unknownColorMixerAlgorithm(algorithm)
-    }
     var adjustment = ColorMixerFeature.Bands.neutral
     var restoredBands = Set<ColorMixerFeature.Band>()
     for stored in bands {
@@ -279,7 +266,7 @@ extension StoredLook.StoredMixer {
     else {
       throw StoredLook.Error.missingColorMixerBands
     }
-    return ColorMixerFeature(bands: adjustment, algorithm: algorithm)
+    return ColorMixerFeature(bands: adjustment)
   }
 }
 

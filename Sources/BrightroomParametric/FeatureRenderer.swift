@@ -38,8 +38,12 @@ import Foundation
 /// `ColorMixerFeature` compute in extended-linear Display-P3 in any context.
 public struct FeatureRenderer: Sendable {
 
+  private let adjustmentRendering: AdjustmentRendering
+
   /// Creates a feature renderer.
-  public init() {}
+  public init(adjustmentRendering: AdjustmentRendering = .standard) {
+    self.adjustmentRendering = adjustmentRendering
+  }
 
   /// Evaluates a feature over a source image.
   ///
@@ -107,7 +111,8 @@ public struct FeatureRenderer: Sendable {
   ) throws -> CIImage {
     let context = FeatureEvaluationContext(
       chainEntryExtent: chainEntryExtent,
-      presentationTime: presentationTime
+      presentationTime: presentationTime,
+      adjustmentRendering: adjustmentRendering
     )
     return try feature.apply(to: image, context: context)
   }

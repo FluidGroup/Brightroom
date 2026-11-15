@@ -109,6 +109,7 @@ struct EditingCanvasRenderImages {
   /// Whether `adjusted` applies a local effect over `base`.
   let hasLocalEffect: Bool
   let usesPreparedBaseImage: Bool
+  var adjustmentRendering: AdjustmentRendering = .standard
 }
 
 /// Owns the image recipes and GPU resources used to render one editing canvas.
@@ -118,6 +119,8 @@ struct EditingCanvasRenderImages {
 /// command queue. The host owns input gestures, frame timing, and presentation.
 @MainActor
 final class EditingCanvasRenderer {
+
+  private(set) var renderingError: (any Error)?
 
   /// Maps y-down image-content coordinates into the fixed canvas's point space.
   ///
@@ -288,6 +291,7 @@ final class EditingCanvasRenderer {
   // MARK: - Rendering inputs
 
   func setRenderImages(_ images: EditingCanvasRenderImages) {
+    renderingError = nil
     viewportState.renderImages = images
     viewportState.renderImagesGeneration &+= 1
     viewportState.preFinishCache = nil
@@ -377,6 +381,7 @@ final class EditingCanvasRenderer {
       return false
     }
     viewportState.postCrop = postCrop
+    renderingError = nil
     if postCrop == nil {
       // The cached image is only read under a pass.
       releasePreFinishCache()
@@ -878,20 +883,24 @@ final class EditingCanvasRenderer {
     // pixel outside the frame is the one drawn above, exactly as without a
     // pass. (Compositing the pass over the image in one graph would resample
     // the image's fractional edges differently.)
-    if let finished = postCropRegion(preFinishImage, frame: frame, renderBounds: renderBounds) {
-      let region = finished.rect.applying(flip).standardized
-      let destination = CIRenderDestination(mtlTexture: frame.texture, commandBuffer: commandBuffer)
-      destination.colorSpace = EditingCanvasImageProcessing.drawableColorSpace
-      do {
+    do {
+      if let finished = try postCropRegion(preFinishImage, frame: frame, renderBounds: renderBounds) {
+        let region = finished.rect.applying(flip).standardized
+        let destination = CIRenderDestination(mtlTexture: frame.texture, commandBuffer: commandBuffer)
+        destination.colorSpace = EditingCanvasImageProcessing.drawableColorSpace
         _ = try ciContext.startTask(
           toRender: finished.image.transformed(by: flip).cropped(to: region),
           from: region,
           to: destination,
           at: region.origin
         )
-      } catch {
-        EditorLog.error(.editingCanvas, "Post-crop pass failed: \(error)")
       }
+      renderingError = nil
+    } catch {
+      renderingError = error
+      viewportState.preFinishCache = nil
+      encodeClearTexture(frame.texture, commandBuffer: commandBuffer)
+      return Self.submit(commandBuffer)
     }
 
     let submitted = Self.submit(commandBuffer)
@@ -920,7 +929,7 @@ final class EditingCanvasRenderer {
     _ image: CIImage,
     frame: Frame,
     renderBounds: CGRect
-  ) -> (image: CIImage, rect: CGRect)? {
+  ) throws -> (image: CIImage, rect: CGRect)? {
     guard
       let postCrop = viewportState.postCrop,
       image.extent.isEmpty == false,
@@ -969,11 +978,12 @@ final class EditingCanvasRenderer {
       fullResolution: postCrop.chainEntry.size
     )
 
-    let finished = postCrop.effect
-      .applyIgnoringFailure(
+    let finished = try postCrop.effect
+      .applyForPreview(
         to: image.clampedToExtent().cropped(to: frameInTexture),
         chainEntryExtent: chainEntry,
-        renderScale: renderScale
+        renderScale: renderScale,
+        adjustmentRendering: viewportState.renderImages?.adjustmentRendering ?? .standard
       )
       .cropped(to: rect)
     return (finished, rect)

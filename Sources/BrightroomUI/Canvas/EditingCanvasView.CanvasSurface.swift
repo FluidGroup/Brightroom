@@ -149,6 +149,7 @@ extension EditingCanvasView {
   /// These are reference types because UIKit may re-enter scroll-view delegate
   /// callbacks while a surface is updating its views and layers.
   class CanvasSurface: NSObject, UIScrollViewDelegate {
+    var adjustmentRendering: AdjustmentRendering = .standard
     let scrollView = CropScrollView()
     var canvasView: EditingCanvasMTKView?
     var canvasSize: CGSize?
@@ -359,30 +360,40 @@ extension EditingCanvasView {
         return
       }
 
-      let key = CanvasInputKey(source: source, feature: feature, crop: crop)
+      let key = CanvasInputKey(
+        source: source,
+        feature: feature,
+        crop: crop,
+        adjustmentRendering: adjustmentRendering
+      )
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
       let renderPlan = CanvasRenderPlan(localBlur: feature.localBlur)
-      guard
-        let images = EditingCanvasRenderImageFactory.makeRenderImages(
-          editingSourceImage: source.editingSourceImage,
-          effects: feature.effects.canvasEffect,
-          canvasSize: crop.imageSize,
-          mode: renderPlan.canvasMode
-        )
-      else {
-        return
-      }
+      do {
+        guard
+          let images = try EditingCanvasRenderImageFactory.makeRenderImages(
+            editingSourceImage: source.editingSourceImage,
+            effects: feature.effects.canvasEffect,
+            canvasSize: crop.imageSize,
+            mode: renderPlan.canvasMode,
+            adjustmentRendering: adjustmentRendering
+          )
+        else {
+          return
+        }
 
-      canvasView.setRenderImages(images)
-      // This canvas is sized to crop.imageSize, so the records are in the
-      // source domain.
-      canvasView.setCommittedStrokes(committedStrokes())
-      canvasView.isHidden = false
-      currentCanvasInputKey = key
+        canvasView.setRenderImages(images)
+        // This canvas is sized to crop.imageSize, so the records are in the source domain.
+        canvasView.setCommittedStrokes(committedStrokes())
+        canvasView.isHidden = false
+        currentCanvasInputKey = key
+      } catch {
+        currentCanvasInputKey = nil
+        canvasView.setRenderingFailure(error)
+      }
     }
 
     func applyMode(isActive: Bool) {
@@ -505,6 +516,7 @@ extension EditingCanvasView {
     /// instance. Strokes are not part of the key: committing one keeps the
     /// render images and their bakes.
     struct CanvasRenderInputKey: Equatable {
+      var adjustmentIdentity: AdjustmentRendering.Identity = AdjustmentRendering.standard.identity
       var sourceImage: ObjectIdentifier
       var effects: ImageEditorFeature.Effects
       var geometry: EditingCanvasCropOutputGeometry
@@ -589,6 +601,7 @@ extension EditingCanvasView {
       publishOutputGeometry(geometry)
 
       let inputKey = CanvasRenderInputKey(
+        adjustmentIdentity: adjustmentRendering.identity,
         sourceImage: ObjectIdentifier(source.editingSourceImage),
         effects: effects,
         geometry: geometry,
@@ -599,19 +612,26 @@ extension EditingCanvasView {
       // unrelated SwiftUI re-renders). Rebuilding identical render-image graphs
       // would discard the canvas's viewport texture caches each time.
       if currentCanvasRenderInputKey != inputKey || canvasView.hasRenderImages == false {
-        guard
-          let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-            editingSourceImage: source.editingSourceImage,
-            effects: effects.canvasEffect,
-            geometry: geometry,
-            mode: mode
-          )
-        else {
+        do {
+          guard
+            let images = try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+              editingSourceImage: source.editingSourceImage,
+              effects: effects.canvasEffect,
+              geometry: geometry,
+              mode: mode,
+              adjustmentRendering: adjustmentRendering
+            )
+          else {
+            return
+          }
+
+          canvasView.setRenderImages(images)
+          currentCanvasRenderInputKey = inputKey
+        } catch {
+          currentCanvasRenderInputKey = nil
+          canvasView.setRenderingFailure(error)
           return
         }
-
-        canvasView.setRenderImages(images)
-        currentCanvasRenderInputKey = inputKey
       }
 
       canvasView.setCommittedStrokes(committedStrokes)

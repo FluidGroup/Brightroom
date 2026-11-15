@@ -229,9 +229,15 @@ struct EditingPreviewExportParityTests {
   /// a throwing global effect instead of silently exporting an image missing
   /// the adjustment.
   ///
-  /// (The canvas path's release-mode degrade-to-identity is not asserted here:
-  /// `applyIgnoringFailure` calls `assertionFailure`, which traps in the
-  /// debug test build — the same intentional contract global effects use.)
+  @Test func `Throwing preview content is not replaced with the input image`() throws {
+    let source = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+      .cropped(to: CGRect(x: 0, y: 0, width: 32, height: 32))
+    #expect(throws: ThrowingEffectFeature.EvaluationError.self) {
+      try AnyImageEffect(ThrowingEffectFeature()).applyForPreview(
+        to: source, chainEntryExtent: source.extent, renderScale: 1)
+    }
+  }
+
   @Test func `Throwing local adjustment fails export`() async throws {
     let source = Self.makeSolidImage(width: 32, height: 32, white: 0.5)
     let imageSize = CGSize(width: 32, height: 32)

@@ -2,19 +2,10 @@
 
 import CoreImage
 
-/// Adjusts the bright end of a developed image with a measured tonal response.
+/// Adjusts the bright end of a developed image.
 ///
-/// Positive amounts brighten whites and negative amounts lower them. The SDR
-/// response was measured from Lightroom Process Version 15.4. Positive amounts
-/// adapt to the luminance distribution and fine-scale contrast of the finite input.
-/// From +25, the measured changes of the two outer color channels in linear
-/// ProPhoto RGB preserve each input color's hue as whites brighten.
-/// Above +75, the peak channel can move toward the white point measured on gray fields.
-/// The response of dark photographs with sparse highlights is still under investigation.
-///
-/// The effect preserves alpha and extent. Outside the measured Display-P3 SDR
-/// cube it extends the boundary response without clipping the input; this is
-/// not a model of Adobe HDR processing. It does not change RAW development.
+/// Positive amounts brighten whites; negative amounts lower them.
+/// The standard response preserves alpha, extent, and extended-range components.
 public nonisolated struct WhitesFeature: ImageEffect, Equatable, Sendable {
 
   /// Signed strength from -100 through 100. Zero bypasses the effect exactly.
@@ -34,6 +25,9 @@ public nonisolated struct WhitesFeature: ImageEffect, Equatable, Sendable {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard amount != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return try TonalPointRecipe.apply(to: image, control: .whites, amount: amount)
   }
 

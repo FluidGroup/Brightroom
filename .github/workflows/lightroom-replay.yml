@@ -1,4 +1,4 @@
-name: Lightroom reference replay
+name: Lightweight runtime resource audit
 
 on:
   workflow_dispatch:
@@ -36,28 +36,23 @@ jobs:
           xcodebuild -version
           xcrun -f metal
           xcrun swift -e 'import Metal; guard let gpu = MTLCreateSystemDefaultDevice() else { fatalError("No Metal device") }; print(gpu.name)'
-      - name: Render public charts and compare to recorded Lightroom TIFFs
+      - name: Build Brightroom without optional grading models
         run: |
-          python3 Tools/LightroomComparison/A10/run.py \
-            Tools/LightroomComparison/Fixtures/light-context-v1.zip .tmp/replay \
-            --scope light --modes adaptive --paired-neutral --metrics-only
-          python3 Tools/LightroomComparison/Fixtures/check_light_context.py .tmp/replay/report.json
-          python3 Tools/LightroomComparison/A10/score.py .tmp/replay/report.json >> "$GITHUB_STEP_SUMMARY"
-          python3 Tools/LightroomComparison/A10/run.py \
-            Tools/LightroomComparison/Fixtures/grading-wheels-v1.zip .tmp/grading \
-            --scope all --paired-neutral --metrics-only
-          printf '\n' >> "$GITHUB_STEP_SUMMARY"
-          python3 Tools/LightroomComparison/A10/score.py .tmp/grading/report.json >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: light-context-report
-          if-no-files-found: warn
-          path: |
-            .tmp/replay/report.json
-            .tmp/replay/failure.json
-            .tmp/replay/**/*.log
-            .tmp/grading/report.json
-            .tmp/grading/failure.json
-            .tmp/grading/**/*.log
-          include-hidden-files: true
+          xcodebuild -project Dev/Brightroom.xcodeproj -scheme SwiftUIDemo \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath .tmp/resource-audit \
+            -skipMacroValidation -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO build
+          python3 - <<'PY'
+          from pathlib import Path
+          app = Path('.tmp/resource-audit/Build/Products/Debug-iphonesimulator/SwiftUIDemo.app')
+          assert app.is_dir(), 'Missing built application'
+          models = {'ColorMixerCalibration.lzfse', 'StrongWhitesCalibration.lzfse',
+            'TonalPointCalibration.lzfse', 'SaturationCalibration.lzfse',
+            'ColorGradingCalibration.bin', 'HighlightStrength.bin', 'HighlightShadowCalibration.json'}
+          forbidden = [str(p) for p in app.rglob('*')
+            if p.name in models or 'BrightroomGradingKit' in str(p)]
+          assert not forbidden, forbidden
+          for bundle in app.rglob('Brightroom*.bundle'):
+            size = sum(p.stat().st_size for p in bundle.rglob('*') if p.is_file())
+            print(bundle.name, size, 'bytes')
+          print('No calibrated model or GradingKit resource in the standard application')
+          PY

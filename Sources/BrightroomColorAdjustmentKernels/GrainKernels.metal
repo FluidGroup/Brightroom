@@ -54,27 +54,5 @@ extern "C" { namespace coreimage {
     return premultiply(float4(grainDecode(encoded + delta), source.a));
   }
 
-  float4 brightroomGrainEncodeROMM(sample_t source) {
-    const float3 p3 = unpremultiply(source).rgb;
-    const float3 romm = brightroom::linearP3ToROMM(p3);
-    return premultiply(float4(grainEncode(romm), source.a));
-  }
-
-  float4 brightroomGrainShape(sample_t noise, float normalization, float exponent, float gain) {
-    const float n = noise.r * normalization;
-    return float4(gain * copysign(pow(abs(n), exponent), n), 0.0f, 0.0f, 1.0f);
-  }
-
-  float4 brightroomGrainBlendROMM(sample_t original, sample_t softened, sample_t texture) {
-    if (original.a <= 0.0f) return original;
-    const float3 encoded = unpremultiply(softened).rgb;
-    const float3 bounded = clamp(encoded, 0.0f, 1.0f);
-    // Plateau across the midrange, with a per-channel taper at black and white.
-    const float3 weight = min(1.0f, 20.0f * min(bounded, 1.0f - bounded));
-    const float3 diff = clamp(bounded + texture.r * weight, 0.0f, 1.0f) - bounded;
-    const float3 romm = grainDecode(encoded + diff);
-    const float3 p3 = brightroom::linearROMMToP3(romm);
-    return premultiply(float4(p3, original.a));
-  }
 }}
 #endif

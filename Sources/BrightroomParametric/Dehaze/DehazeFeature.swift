@@ -4,14 +4,7 @@ import CoreImage
 
 /// Adjusts atmospheric haze in a developed RGB image.
 ///
-/// Pass the signed Camera Raw `Dehaze` amount directly. Positive values remove
-/// haze and negative values add it. The effect estimates the brightness of the
-/// haze from the image and varies the adjustment with the surrounding colors.
-///
-/// The response approximates SDR Lightroom Process Version 15.4. It was measured
-/// at −100, −50, +9, +50 and +100. Intermediate amounts interpolate between
-/// those responses. A nonzero adjustment needs a finite input extent to measure
-/// the scene. The output preserves that extent, alpha, and extended-range headroom.
+/// Positive amounts increase contrast and color intensity; negative amounts reduce them.
 public nonisolated struct DehazeFeature: ImageEffect, Equatable, Sendable {
 
   /// Signed strength from −100 through 100. Zero returns the input image itself.
@@ -30,6 +23,9 @@ public nonisolated struct DehazeFeature: ImageEffect, Equatable, Sendable {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard amount != 0, !image.extent.isEmpty else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return try DehazeRecipe.apply(to: image, amount: amount)
   }
 

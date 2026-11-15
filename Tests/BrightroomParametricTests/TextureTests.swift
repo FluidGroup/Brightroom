@@ -6,6 +6,7 @@ import Testing
 @Suite("Texture")
 struct TextureTests {
 
+
   @Test
   func restoresTheCameraRawSliderAndBypassesNeutral() throws {
     let source = lightroomColorChart(width: 16, height: 12) { _, _, _, _ in .init(repeating: 0.5) }
@@ -19,41 +20,6 @@ struct TextureTests {
     #expect(TextureFeature(validatingAmount: 4) == TextureFeature(amount: 4))
     #expect(TextureFeature(validatingAmount: -.infinity) == nil)
     #expect(TextureFeature(validatingAmount: 100.01) == nil)
-  }
-
-  /// Measures the fundamental of the 16-pixel-period patch in the registered frequency chart.
-  private func relativeContrast(amount: Double, level: Double, amplitude: Double) throws -> Float {
-    let source = lightroomColorChart(width: 192, height: 96) { x, _, _, _ in
-      .init(repeating: level + amplitude * cos(Double(x) * .pi / 8))
-    }
-    func contrast(_ image: CIImage) -> Float {
-      let strip = image.cropped(to: CGRect(x: 72, y: 47, width: 48, height: 1))
-      let pixels = RenderingFixtures.pixels(of: strip)
-      return (0..<48).reduce(Float.zero) { result, index in
-        let linear = pixels[4 * index + 1]
-        let code = 1.055 * pow(linear, 1 / 2.4) - 0.055
-        return result + code * cos(Float(index + 72) * .pi / 8)
-      } / 24
-    }
-    let result = try FeatureRenderer().makeImage(from: source, feature: TextureFeature(amount: amount))
-    return contrast(result) / contrast(source) - 1
-  }
-
-  @Test
-  func darkPatchTracksTheSignedContrastOfTheFrequencyChart() throws {
-    for (amount, measured): (Double, Float) in [(-50, -0.287), (50, 0.348)] {
-      let change = try relativeContrast(amount: amount, level: 0.25, amplitude: 0.06)
-      #expect(abs(change - measured) < 0.10)
-    }
-  }
-
-  @Test
-  func weakMidtoneDetailRetainsItsPolarityAtStrongSettings() throws {
-    // Self-normalized Lightroom contrast on the 0.5 ± 0.035 patch.
-    for (amount, measured): (Double, Float) in [(-100, -0.633), (50, 0.459)] {
-      let change = try relativeContrast(amount: amount, level: 0.5, amplitude: 0.035)
-      #expect(abs(change - measured) < 0.09)
-    }
   }
 
   @Test

@@ -199,10 +199,12 @@ public struct ExportRenderer {
     case resize(maxPixelSize: CGFloat)
   }
 
-  private let featureRenderer = FeatureRenderer()
+  private let featureRenderer: FeatureRenderer
 
   /// Creates an export renderer.
-  public init() {}
+  public init(adjustmentRendering: AdjustmentRendering = .standard) {
+    self.featureRenderer = FeatureRenderer(adjustmentRendering: adjustmentRendering)
+  }
 
   /**
    Renders a feature over an already-oriented source image.

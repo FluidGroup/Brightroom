@@ -11,16 +11,11 @@ struct BuildColorAdjustmentKernels: BuildToolPlugin {
 
   func createBuildCommands(context: PluginContext, target: any Target) async throws -> [Command] {
     let sources = [
+      target.directoryURL.appending(path: "StandardAdjustmentKernels.metal"),
       target.directoryURL.appending(path: "ToneCurveKernels.metal"),
       target.directoryURL.appending(path: "ColorMixerKernels.metal"),
-      target.directoryURL.appending(path: "ColorMixerCalibrationKernels.metal"),
-      target.directoryURL.appending(path: "ColorGradingKernels.metal"),
       target.directoryURL.appending(path: "PointCurveKernels.metal"),
-      target.directoryURL.appending(path: "ClarityKernels.metal"),
-      target.directoryURL.appending(path: "TextureKernels.metal"),
-      target.directoryURL.appending(path: "DehazeKernels.metal"),
       target.directoryURL.appending(path: "GrainKernels.metal"),
-      target.directoryURL.appending(path: "HighlightShadowKernels.metal"),
     ]
     let colorSpaceHeader = target.directoryURL.appending(path: "ColorAdjustmentWorkingSpace.metalh")
 

@@ -1,3 +1,22 @@
+# Calibrated rendering after the implementation split
+
+The old numerical reports below describe the calibrated Brightroom baseline,
+not today's lightweight standard. For current calibrated modes, build the
+optional GradingKit checkout and pass its SwiftPM products explicitly:
+
+```sh
+swift build --package-path ../BrightroomGradingKit --target BrightroomGradingKit
+python3 Tools/LightroomComparison/A10/run.py REFERENCES NEW_OUTPUT \
+  --modes adaptive --grading-products ../BrightroomGradingKit/.build/debug
+```
+
+The runner installs only the calculations each mode previously selected; it
+does not silently opt the historical Exposure control into the experimental
+shoulder. It snapshots the GradingKit sources and records model/object hashes.
+Calibrated modes without GradingKit fail rather than reporting lightweight
+output as calibrated. Use compatible Brightroom/GradingKit revisions; for an
+exact historical replay, use the original pinned Brightroom tree and its tools.
+
 # A10 parameter comparison
 
 For developed 16-bit inputs, add `--middle-channel-error` to a comparison run

@@ -10,15 +10,8 @@ import Foundation
 /// does not tint pixels. Blending and balance affect the three tonal ranges;
 /// they do not affect the global correction.
 ///
-/// The experimental SDR response is calibrated against Camera Raw adjustments
-/// over a common developed RGB input. Global closely matches the measured cases;
-/// some shadow/highlight hues still differ substantially. This is not an Adobe
-/// compatible preset renderer and does not reproduce Adobe's RAW development or
-/// camera profiles. See `docs/color-grading.md` for measured compatibility limits.
-/// Rendering uses linear ProPhoto RGB channel curves, matched through
-/// extended-linear Display-P3 independently of the context's working space.
-/// Alpha and the input extent are preserved. Values outside the calibrated
-/// 0...1 range continue with unit slope instead of being clipped.
+/// The standard calculation uses extended-linear Display-P3, preserves alpha and
+/// extent, and does not clip extended-range components.
 public nonisolated struct ColorGradingFeature: ImageEffect, Equatable, Sendable {
 
   /// One independently editable tonal range.
@@ -128,6 +121,9 @@ public nonisolated struct ColorGradingFeature: ImageEffect, Equatable, Sendable 
   /// Evaluates the grading curves, or bypasses a neutral adjustment exactly.
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard !isIdentity else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return try ColorGradingRecipe.apply(to: image, grading: self)
   }
 }

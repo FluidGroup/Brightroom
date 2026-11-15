@@ -20,8 +20,6 @@ struct ColorAdjustmentContextTests {
   enum Effect: String, CaseIterable, CustomTestStringConvertible {
     case toneCurve
     case colorMixer
-    case calibratedColorMixer
-    case calibratedSaturation
     case colorGrading
 
     var testDescription: String { rawValue }
@@ -30,9 +28,6 @@ struct ColorAdjustmentContextTests {
       switch self {
       case .toneCurve: AnyImageEffect(RenderingFixtures.makeToneCurve())
       case .colorMixer: AnyImageEffect(ColorAdjustmentContextTests.mixer)
-      case .calibratedColorMixer: AnyImageEffect(ColorMixerFeature(
-        bands: ColorAdjustmentContextTests.mixer.bands, algorithm: .lightroomApproximation))
-      case .calibratedSaturation: AnyImageEffect(SaturationFeature(lightroomAmount: 35))
       case .colorGrading: AnyImageEffect(ColorGradingFeature(
         shadows: .init(hue: 220, saturation: 25),
         midtones: .init(hue: 35, saturation: 30),

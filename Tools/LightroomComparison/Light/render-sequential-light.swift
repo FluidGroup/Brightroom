@@ -3,6 +3,7 @@
 // Render separate public Shadows and Highlights at their effective strengths.
 // The fitter measures how the first output changes the second adjustment's input.
 import BrightroomParametric
+import BrightroomGradingKit
 import CoreImage
 import Foundation
 
@@ -19,9 +20,13 @@ guard let image = CIImage(contentsOf: input, options: [.applyOrientationProperty
 }
 precondition(!FileManager.default.fileExists(atPath: destination.path))
 let effects = [
-  AnyImageEffect(ShadowsFeature(lightroomAmount: shadows)),
-  AnyImageEffect(HighlightsFeature(lightroomAmount: highlights)),
+  AnyImageEffect(ShadowsFeature(value: shadows / 100)),
+  AnyImageEffect(HighlightsFeature(value: -highlights / 100)),
 ]
-_ = try ExportRenderer().render(from: image, feature: effects,
+var setup = AdjustmentRendering.Setup()
+let grading = GradingImplementation()
+setup.replace(ShadowsFeature.self, with: grading.shadows)
+setup.replace(HighlightsFeature.self, with: grading.highlights)
+_ = try ExportRenderer(adjustmentRendering: setup.makeRendering()).render(from: image, feature: effects,
   options: .init(resolution: .full, outputFormat: .RGBA16, outputColorSpace: colorSpace,
     output: .file(url: destination, fileType: .png)))

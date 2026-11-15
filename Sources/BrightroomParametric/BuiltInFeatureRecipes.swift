@@ -154,17 +154,15 @@ extension ContrastFeature {
 extension SaturationFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    switch algorithm {
-    case .coreImage:
-      return image.applyingFilter(
-        "CIColorControls",
-        parameters: [kCIInputSaturationKey: 1 + value]
-      )
-      .cropped(to: image.extent)
-    case .lightroomApproximation:
-      guard value.isFinite, value != 0 else { return image }
-      return try SaturationRecipe.apply(to: image, strength: min(max(value, -1), 1))
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
     }
+    return image.applyingFilter(
+      "CIColorControls",
+      parameters: [kCIInputSaturationKey: 1 + value]
+    )
+    .cropped(to: image.extent)
   }
 }
 
@@ -173,6 +171,9 @@ extension ExposureFeature {
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard abs(ev) > 0.0001 else {
       return image
+    }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
     }
     return image.applyingFilter(
       "CIExposureAdjust",
@@ -185,8 +186,9 @@ extension ExposureFeature {
 extension HighlightsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    if algorithm == .lightroomApproximation {
-      return try HighlightShadowRecipe.apply(to: image, highlights: true, value: value)
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
     }
     return image.applyingFilter(
       "CIHighlightShadowAdjust",
@@ -199,8 +201,9 @@ extension HighlightsFeature {
 extension ShadowsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    if algorithm == .lightroomApproximation {
-      return try HighlightShadowRecipe.apply(to: image, highlights: false, value: value)
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
     }
     return image.applyingFilter(
       "CIHighlightShadowAdjust",

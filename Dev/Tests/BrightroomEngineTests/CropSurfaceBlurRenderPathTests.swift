@@ -34,7 +34,7 @@ struct CropSurfaceBlurRenderPathTests {
     let source = makeSource(width: 64, height: 48)
     let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     let images = try #require(
-      EditingCanvasRenderImageFactory.makeRenderImages(
+      try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: source,
         effects: nil,
         canvasSize: CGSize(width: 64, height: 48),
@@ -51,7 +51,7 @@ struct CropSurfaceBlurRenderPathTests {
     let source = makeSource(width: 64, height: 48)
     let exposure = AnyImageEffect(ExposureFeature(ev: 0.5))
     let images = try #require(
-      EditingCanvasRenderImageFactory.makeRenderImages(
+      try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: source,
         effects: nil,
         canvasSize: CGSize(width: 64, height: 48),
@@ -76,7 +76,7 @@ struct CropSurfaceBlurRenderPathTests {
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
     let blur = AnyImageEffect(GaussianBlurFeature(radius: .proportional(40)))
     let images = try #require(
-      EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+      try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
         editingSourceImage: source,
         effects: nil,
         geometry: geometry,

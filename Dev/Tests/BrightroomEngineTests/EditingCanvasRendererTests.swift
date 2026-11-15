@@ -24,13 +24,13 @@ struct EditingCanvasRendererTests {
     let empty = try render(renderer, into: target)
     #expect(empty.allSatisfy { $0 == 0 })
 
-    renderer.setRenderImages(images(source: solid(.init(red: 1, green: 0, blue: 0))))
+    renderer.setRenderImages(try images(source: solid(.init(red: 1, green: 0, blue: 0))))
     let red = try render(renderer, into: target)
     let cachedRed = try render(renderer, into: target)
     #expect(red == cachedRed)
     #expect(pixel(red, in: target, x: 20, y: 10)[2] > 180)
 
-    renderer.setRenderImages(images(source: solid(.init(red: 0, green: 0, blue: 1))))
+    renderer.setRenderImages(try images(source: solid(.init(red: 0, green: 0, blue: 1))))
     let blue = try render(renderer, into: target)
     let sample = pixel(blue, in: target, x: 20, y: 10)
     #expect(sample[0] > 180)
@@ -57,7 +57,7 @@ struct EditingCanvasRendererTests {
       .composited(over: solid(.clear))
       .cropped(to: contentBounds)
     let effects = AnyImageEffect(ExposureFeature(ev: 3))
-    renderer.setRenderImages(images(source: source, effects: effects))
+    renderer.setRenderImages(try images(source: source, effects: effects))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
     let unrotated = try render(renderer, into: target)
     let originalSample = pixel(unrotated, in: target, x: 10, y: 16)
@@ -75,7 +75,7 @@ struct EditingCanvasRendererTests {
     #expect(pixel(rotated, in: target, x: 10, y: 60)[3] == 0)
 
     // Returning to the source-cache route must replace the effected output.
-    renderer.setRenderImages(images(source: source))
+    renderer.setRenderImages(try images(source: source))
     let unadjusted = try render(renderer, into: target)
     #expect(Int(pixel(unadjusted, in: target, x: 60, y: 10)[0]) + 60 < Int(originalSample[0]))
   }
@@ -86,7 +86,7 @@ struct EditingCanvasRendererTests {
     let target = try makeTarget(device: device)
     let source = solid(.init(red: 0.2, green: 0.2, blue: 0.2))
     let effect = AnyImageEffect(ExposureFeature(ev: 3))
-    renderer.setRenderImages(images(source: source, localEffect: effect))
+    renderer.setRenderImages(try images(source: source, localEffect: effect))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
 
     let brush = EditingCanvasBrush(size: 16, hardness: 0.7, opacity: 0.8)
@@ -117,10 +117,80 @@ struct EditingCanvasRendererTests {
 
     // Replacing images at the same extent invalidates the retained local-effect
     // bake as well as the viewport layers; the new source is fully black.
-    renderer.setRenderImages(images(source: solid(.black), localEffect: effect))
+    renderer.setRenderImages(try images(source: solid(.black), localEffect: effect))
     let replaced = try render(renderer, into: largerTarget)
     #expect(pixel(replaced, in: largerTarget, x: 132, y: 40)[0] == 0)
     #expect(pixel(replaced, in: largerTarget, x: 132, y: 40)[3] == 255)
+  }
+
+  private struct AdjustmentProbe: Sendable {
+
+    var rendering: AdjustmentRendering {
+      var setup = AdjustmentRendering.Setup()
+      setup.replace(ExposureFeature.self, with: .init(identity: renderingIdentity) { feature, image, context in
+        try apply(feature, to: image, context: context)
+      })
+      return setup.makeRendering()
+    }
+
+    enum Failure: Error { case resource }
+
+    let amount: Double
+    var fails = false
+
+    var renderingIdentity: AdjustmentRendering.Identity {
+      .init(implementation: "renderer.probe", version: "1", configuration: "\(amount);fails=\(fails)")
+    }
+
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      if fails { throw Failure.resource }
+      return image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: amount])
+    }
+  }
+
+  @Test func `Selection changes discard prepared local and pre-finish bakes without reloading the source`() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let renderer = EditingCanvasRenderer(canvasSize: contentBounds.size, device: device)
+    let target = try makeTarget(device: device)
+    let source = solid(.init(red: 0.2, green: 0.2, blue: 0.2))
+    let feature = AnyImageEffect(ExposureFeature(ev: 0.25))
+    renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
+    renderer.setCommittedStrokes([.init(stamps: [CGPoint(x: 20, y: 14)], brush: .init(size: 20, hardness: 1, opacity: 1))])
+    renderer.setPostCrop(effect: feature, frame: contentBounds, chainEntry: contentBounds)
+    var samples: [Int] = []
+    for amount in [0.25, 0.5, 0.75] {
+      let selection = AdjustmentProbe(amount: amount).rendering
+      renderer.setRenderImages(try images(source: source, effects: feature, localEffect: feature, adjustmentRendering: selection))
+      let actual = try render(renderer, into: target)
+      let cached = try render(renderer, into: target)
+      #expect(actual == cached)
+      #expect(renderer.renderingError == nil)
+      #expect(renderer.hasPreFinishCache)
+      samples.append(Int(pixel(actual, in: target, x: 20, y: 14)[0]))
+    }
+    #expect(samples[1] > samples[0] + 15)
+    #expect(samples[2] > samples[1] + 15)
+    #expect(renderer.cacheMissCounts.preparedContentLayers == 3)
+    #expect(renderer.cacheMissCounts.preFinish == 3)
+    #expect(renderer.cacheMissCounts.sourceTexture <= 1)
+  }
+
+  @Test func `Post-crop failure clears pixels and removing the failing pass recovers`() throws {
+    let device = try #require(MTLCreateSystemDefaultDevice())
+    let renderer = EditingCanvasRenderer(canvasSize: contentBounds.size, device: device)
+    let target = try makeTarget(device: device)
+    let selection = AdjustmentProbe(amount: 1, fails: true).rendering
+    renderer.setRenderImages(try images(source: solid(.white), adjustmentRendering: selection))
+    renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
+    renderer.setPostCrop(effect: AnyImageEffect(ExposureFeature(ev: 1)), frame: contentBounds, chainEntry: contentBounds)
+    let failed = try render(renderer, into: target)
+    #expect(failed.allSatisfy { $0 == 0 })
+    #expect(renderer.renderingError is AdjustmentProbe.Failure)
+    #expect(renderer.hasPreFinishCache == false)
+    renderer.setPostCrop(effect: nil, frame: contentBounds, chainEntry: contentBounds)
+    let recovered = try render(renderer, into: target)
+    #expect(renderer.renderingError == nil)
+    #expect(pixel(recovered, in: target, x: 20, y: 14)[0] == 255)
   }
 
   private func solid(_ color: CIColor) -> CIImage {
@@ -130,17 +200,21 @@ struct EditingCanvasRendererTests {
   private func images(
     source: CIImage,
     effects: AnyImageEffect? = nil,
-    localEffect: AnyImageEffect? = nil
-  ) -> EditingCanvasRenderImages {
-    let base = effects?.applyIgnoringFailure(to: source, chainEntryExtent: contentBounds, renderScale: 1) ?? source
-    let adjusted = localEffect?.applyIgnoringFailure(to: base, chainEntryExtent: contentBounds, renderScale: 1) ?? base
+    localEffect: AnyImageEffect? = nil,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) throws -> EditingCanvasRenderImages {
+    let base = try effects?.applyForPreview(to: source, chainEntryExtent: contentBounds, renderScale: 1,
+      adjustmentRendering: adjustmentRendering) ?? source
+    let adjusted = try localEffect?.applyForPreview(to: base, chainEntryExtent: contentBounds, renderScale: 1,
+      adjustmentRendering: adjustmentRendering) ?? base
     return .init(
       source: source,
       base: base,
       adjusted: adjusted,
       hasGlobalEffects: effects != nil,
       hasLocalEffect: localEffect != nil,
-      usesPreparedBaseImage: localEffect != nil
+      usesPreparedBaseImage: localEffect != nil,
+      adjustmentRendering: adjustmentRendering
     )
   }
 

@@ -60,6 +60,9 @@ public nonisolated struct GrainFeature: ImageEffect, Equatable, Sendable {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
     guard amount > 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     let kernels = try Self.kernels.get()
     let scale = context.renderScale
     let fullRadius = radius.pixels(in: context, for: image) / scale
