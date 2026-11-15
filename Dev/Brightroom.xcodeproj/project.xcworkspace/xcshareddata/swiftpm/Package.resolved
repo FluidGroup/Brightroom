@@ -1,12 +1,13 @@
 {
+  "originHash" : "9541c6deba4559d117f409051b0def4eef083b69a982baa0869241a956a5167e",
   "pins" : [
     {
       "identity" : "reveal-sdk",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/muukii/Reveal-SDK",
+      "location" : "https://github.com/ittybittyapps/reveal-sdk.git",
       "state" : {
-        "revision" : "039bf6b6f75ef67b5a8678b8caaa1b01e6708745",
-        "version" : "57.0.0"
+        "revision" : "a851d5e2ca5baf173bd34001c359aa14b8baf7c9",
+        "version" : "59.0.0"
       }
     },
     {
@@ -37,5 +38,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

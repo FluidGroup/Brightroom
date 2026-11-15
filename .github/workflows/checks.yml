@@ -20,8 +20,6 @@ jobs:
         with:
           xcode-version: "27.2"
       - uses: actions/checkout@v7
-        with:
-          submodules: true
       - name: Test
         run: |
           set -o pipefail && xcodebuild \
