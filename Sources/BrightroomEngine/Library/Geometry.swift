@@ -20,7 +20,6 @@
 // THE SOFTWARE.
 
 import CoreImage
-import UIKit
 
 enum Geometry: Sendable {
 

@@ -295,7 +295,8 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 4. Do not store edits in `PreviewSourceLoader`; it only prepares the preview
 
 ## Platform Requirements
-- iOS 17.0+ (BrightroomUI, BrightroomEngine)
-- iOS 17.0+ and macOS 14.0+ (BrightroomParametric)
+- iOS 17.0+ (BrightroomUI)
+- iOS 17.0+ and macOS 14.0+ (BrightroomParametric, BrightroomEngine;
+  `SourceImage(image:)` takes a `UIImage` and exists only where UIKit does)
 - Swift 6.3+ (Swift 6 language mode)
 - Supports iPhone and iPad
