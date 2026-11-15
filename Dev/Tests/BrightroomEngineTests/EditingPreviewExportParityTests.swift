@@ -230,7 +230,8 @@ struct EditingPreviewExportParityTests {
   /// the adjustment.
   ///
   @Test func `Throwing preview content is not replaced with the input image`() throws {
-    let source = CIImage(color: .gray).cropped(to: CGRect(x: 0, y: 0, width: 32, height: 32))
+    let source = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5))
+      .cropped(to: CGRect(x: 0, y: 0, width: 32, height: 32))
     #expect(throws: ThrowingEffectFeature.EvaluationError.self) {
       try AnyImageEffect(ThrowingEffectFeature()).applyForPreview(
         to: source, chainEntryExtent: source.extent, renderScale: 1)
