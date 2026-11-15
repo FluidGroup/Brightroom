@@ -70,3 +70,14 @@ jobs:
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
+      # BrightroomParametric and BrightroomEngine also support macOS.
+      # BrightroomUI does not yet, so the package test scheme cannot build
+      # there; this keeps the two macOS modules compiling.
+      - name: Build for macOS
+        run: |
+          set -o pipefail && xcodebuild \
+            -scheme BrightroomEngine \
+            -destination 'platform=macOS' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify
