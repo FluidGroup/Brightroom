@@ -6,27 +6,6 @@ import Testing
 @Suite("Texture")
 struct TextureTests {
 
-  @Test func standardRecipeUsesTheScaledGaussianNeighborhood() throws {
-    let input = try RenderingFixtures.makeSource()
-    let original = RenderingFixtures.pixels(of: input)
-    for scale in [0.25, 1.0] {
-      let guide = input.clampedToExtent()
-        .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 12 * scale])
-        .cropped(to: input.extent)
-      let blurred = RenderingFixtures.pixels(of: guide)
-      for amount in [-50.0, 50.0] {
-        let output = try FeatureRenderer().makeImage(
-          from: input, feature: ScaledTextureFeature(amount: amount, scale: scale))
-        let actual = RenderingFixtures.pixels(of: output)
-        var maximum: Float = 0
-        for index in actual.indices where index % 4 != 3 {
-          let expected = original[index] + Float(amount / 100) * (original[index] - blurred[index])
-          maximum = max(maximum, abs(actual[index] - expected))
-        }
-        #expect(maximum < 0.00001)
-      }
-    }
-  }
 
   @Test
   func restoresTheCameraRawSliderAndBypassesNeutral() throws {
@@ -43,8 +22,6 @@ struct TextureTests {
     #expect(TextureFeature(validatingAmount: 100.01) == nil)
   }
 
-  /// Measures the fundamental of the 16-pixel-period patch in the registered frequency chart.
-
   @Test
   func transparentEdgesRetainTheirStraightColorAndAlpha() throws {
     let extent = CGRect(x: 24, y: -16, width: 96, height: 64)
@@ -56,15 +33,4 @@ struct TextureTests {
     #expect(result.extent == neutral.extent)
     #expect(RenderingFixtures.maximumDifference(result, neutral) < 0.001)
   }
-}
-
-private struct ScaledTextureFeature: ImageEffect {
-
-  let amount: Double
-  let scale: CGFloat
-
-  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    try TextureFeature(amount: amount).apply(to: image, context: context.withRenderScale(scale))
-  }
-
 }

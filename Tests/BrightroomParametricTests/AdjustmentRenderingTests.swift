@@ -7,6 +7,29 @@ import Testing
 
 struct AdjustmentRenderingTests {
 
+  @Test func standardTextureUsesTheScaledGaussianNeighborhood() throws {
+    let input = try RenderingFixtures.makeSource()
+    let original = RenderingFixtures.pixels(of: input)
+    for scale in [0.25, 1.0] {
+      let guide = input.clampedToExtent()
+        .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 12 * scale])
+        .cropped(to: input.extent)
+      let blurred = RenderingFixtures.pixels(of: guide)
+      for amount in [-50.0, 50.0] {
+        let output = try TextureFeature(amount: amount).apply(
+          to: input, context: .init(chainEntryExtent: input.extent, renderScale: scale))
+        let actual = RenderingFixtures.pixels(of: output)
+        var maximum: Float = 0
+        for index in actual.indices where index % 4 != 3 {
+          let expected = original[index] + Float(amount / 100) * (original[index] - blurred[index])
+          maximum = max(maximum, abs(actual[index] - expected))
+        }
+        #expect(maximum < 0.00001)
+      }
+    }
+  }
+
+
   @Test func standardCameraRawDoesNotInvokeTheGenericGrainReplacement() throws {
     enum Failure: Error { case unexpected }
     var setup = AdjustmentRendering.Setup()
