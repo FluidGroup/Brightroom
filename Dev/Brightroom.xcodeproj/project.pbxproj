@@ -60,8 +60,7 @@
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
 		8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = 23449504C30943C981A14D75 /* BrightroomParametric */; };
 		8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = BC5DE159959545B49CA01241 /* BrightroomParametric */; };
-		B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* Reveal-SDK */; };
-		B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */ = {isa = PBXBuildFile; productRef = B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */; };
+		B027724C2FC2B70A006D7796 /* RevealSDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* RevealSDK */; settings = {ATTRIBUTES = (Weak, ); }; };
 		EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = E41DF318FBB3443697FEC673 /* BrightroomParametric */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
 		FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C8802A53AF4500215B89 /* BrightroomUI */; };
@@ -923,8 +922,7 @@
 			files = (
 				EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */,
 				FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */,
-				B08FEAC52F2C76B2002E67C4 /* Reveal-SDK in Frameworks */,
-				B027724C2FC2B70A006D7796 /* Reveal-SDK in Frameworks */,
+				B027724C2FC2B70A006D7796 /* RevealSDK in Frameworks */,
 				FC06C8812A53AF4500215B89 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1503,6 +1501,7 @@
 				4B98CCB625EFF31300E4F61F /* Frameworks */,
 				4B98CCB725EFF31300E4F61F /* Resources */,
 				4B98CCE125EFF4A400E4F61F /* Embed Frameworks */,
+				43AC7FEC125D4D7C9DE34618 /* Integrate Reveal SDK */,
 			);
 			buildRules = (
 			);
@@ -1516,8 +1515,7 @@
 				E41DF318FBB3443697FEC673 /* BrightroomParametric */,
 				FC06C87E2A53AF4500215B89 /* BrightroomEngine */,
 				FC06C8802A53AF4500215B89 /* BrightroomUI */,
-				B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */,
-				B027724B2FC2B70A006D7796 /* Reveal-SDK */,
+				B027724B2FC2B70A006D7796 /* RevealSDK */,
 			);
 			productName = SwiftUIDemo;
 			productReference = 4B98CCB925EFF31300E4F61F /* SwiftUIDemo.app */;
@@ -1619,7 +1617,7 @@
 			);
 			mainGroup = 4B600AF3216B7A94001E1456;
 			packageReferences = (
-				B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */,
+				B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "reveal-sdk" */,
 			);
 			productRefGroup = 4B600AFE216B7A94001E1456 /* Products */;
 			projectDirPath = "";
@@ -2091,6 +2089,24 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		43AC7FEC125D4D7C9DE34618 /* Integrate Reveal SDK */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Integrate Reveal SDK";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "SWIFT_PACKAGE_DIR=\"${BUILD_DIR%Build/*}SourcePackages/artifacts\"\nsource \"$SWIFT_PACKAGE_DIR/reveal-sdk/RevealSDKFramework/RevealServer.xcframework/Scripts/integrate_revealserver.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		4B98CCB525EFF31300E4F61F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -2305,6 +2321,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -2327,6 +2344,7 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sources/SwiftUIDemo/Preview Content\"";
 				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = Sources/SwiftUIDemo/Info.plist;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -2543,12 +2561,12 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */ = {
+		B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "reveal-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/muukii/Reveal-SDK";
+			repositoryURL = "https://github.com/ittybittyapps/reveal-sdk.git";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 57.0.0;
+				minimumVersion = 59.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -2566,14 +2584,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomUI;
 		};
-		B027724B2FC2B70A006D7796 /* Reveal-SDK */ = {
+		B027724B2FC2B70A006D7796 /* RevealSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "Reveal-SDK" */;
-			productName = "Reveal-SDK";
-		};
-		B08FEAC42F2C76B2002E67C4 /* Reveal-SDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = "Reveal-SDK";
+			package = B027724A2FC2B70A006D7796 /* XCRemoteSwiftPackageReference "reveal-sdk" */;
+			productName = RevealSDK;
 		};
 		BC5DE159959545B49CA01241 /* BrightroomParametric */ = {
 			isa = XCSwiftPackageProductDependency;
