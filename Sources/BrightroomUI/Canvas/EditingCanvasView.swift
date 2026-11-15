@@ -628,6 +628,13 @@ final class EditingCanvasView: UIView {
     updateDisplay()
   }
 
+  func setAdjustmentRendering(_ rendering: AdjustmentRendering) {
+    guard cropSurface.adjustmentRendering != rendering else { return }
+    cropSurface.adjustmentRendering = rendering
+    toolSurface.adjustmentRendering = rendering
+    updateDisplay()
+  }
+
   /// Displays `feature`.
   ///
   /// When its crop differs from the crop EditingCanvasView holds (for example after an
@@ -638,13 +645,6 @@ final class EditingCanvasView: UIView {
   /// does not is fitted inside its own rectangle, not at the image center. A
   /// feature EditingCanvasView changed itself comes back equal and only refreshes the
   /// display.
-  func setAdjustmentRendering(_ rendering: AdjustmentRendering) {
-    guard cropSurface.adjustmentRendering != rendering else { return }
-    cropSurface.adjustmentRendering = rendering
-    toolSurface.adjustmentRendering = rendering
-    updateDisplay()
-  }
-
   func setFeature(_ feature: ImageEditorFeature) {
     guard feature != self.feature else {
       updateDisplay()

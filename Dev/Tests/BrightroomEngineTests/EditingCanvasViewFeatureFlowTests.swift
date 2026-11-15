@@ -78,6 +78,67 @@ struct EditingCanvasViewFeatureFlowTests {
     return feature
   }
 
+  private enum RenderingFailure: Error { case resource }
+
+  private struct RenderingProbe: AdjustmentImplementation {
+
+    let amount: Double
+    var fails = false
+
+    var renderingIdentity: AdjustmentRendering.Identity {
+      .init(implementation: "canvas.probe", version: "1", configuration: "\(amount);fails=\(fails)")
+    }
+
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage? {
+      if fails { throw RenderingFailure.resource }
+      return image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: amount])
+    }
+  }
+
+  @Test(arguments: [true, false])
+  func `Selection updates the real crop and tool surface keys without writing edits`(isCrop: Bool) throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.exposure = ExposureFeature(ev: 0.5)
+    let harness = makeLoadedCanvasView(feature: feature, target: isCrop ? .crop : nil)
+    harness.canvasView.frame = CGRect(x: 0, y: 0, width: 400, height: 400)
+    harness.canvasView.layoutIfNeeded()
+    let surface = isCrop ? harness.canvasView.cropSurface as EditingCanvasView.CanvasSurface
+      : harness.canvasView.toolSurface
+    let canvas = try #require(surface.canvasView)
+    #expect(canvas.hasRenderImages)
+    for amount in [1.0, 2.0] {
+      let rendering = AdjustmentRendering.overridingSupportedFeatures(with: RenderingProbe(amount: amount))
+      harness.canvasView.setAdjustmentRendering(rendering)
+      if isCrop {
+        #expect(harness.canvasView.cropSurface.currentCanvasInputKey?.adjustmentIdentity == rendering.identity)
+      } else {
+        #expect(harness.canvasView.toolSurface.currentCanvasRenderInputKey?.adjustmentIdentity == rendering.identity)
+      }
+      #expect(surface.canvasView === canvas)
+      #expect(canvas.renderingError == nil)
+      #expect(harness.emitted.isEmpty)
+      #expect(harness.box.owned == feature)
+    }
+  }
+
+  @Test(arguments: [true, false])
+  func `An external failure is visible and returning to a previous selection recovers`(isCrop: Bool) throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.exposure = ExposureFeature(ev: 1)
+    let harness = makeLoadedCanvasView(feature: feature, target: isCrop ? .crop : nil)
+    let surface = isCrop ? harness.canvasView.cropSurface as EditingCanvasView.CanvasSurface
+      : harness.canvasView.toolSurface
+    let canvas = try #require(surface.canvasView)
+    harness.canvasView.setAdjustmentRendering(.overridingSupportedFeatures(with: RenderingProbe(amount: 1, fails: true)))
+    #expect(canvas.renderingError is RenderingFailure)
+    let label = canvas.subviews.first { $0.accessibilityIdentifier == "editing-canvas-rendering-failure" }
+    #expect(label?.isHidden == false)
+    harness.canvasView.setAdjustmentRendering(.standard)
+    #expect(canvas.renderingError == nil)
+    #expect(label?.isHidden == true)
+    #expect(harness.emitted.isEmpty)
+  }
+
   @Test func `Loading reports the first crop guide to the bound handler`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
 

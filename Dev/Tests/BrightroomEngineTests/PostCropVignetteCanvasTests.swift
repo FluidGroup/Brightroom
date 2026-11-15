@@ -105,7 +105,7 @@ struct PostCropVignetteCanvasTests {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let size = CGSize(width: 160, height: 120)
     let grey = CIImage(color: CIColor(red: 0.5, green: 0.5, blue: 0.5)).cropped(to: CGRect(origin: .zero, size: size))
-    let images = try #require(EditingCanvasRenderImageFactory.makeRenderImages(
+    let images = try #require(try EditingCanvasRenderImageFactory.makeRenderImages(
       editingSourceImage: grey,
       effects: nil,
       canvasSize: size,
@@ -292,7 +292,7 @@ struct PostCropVignetteCanvasTests {
     switch route {
     case .cropViewportBase, .cropLocalAdjustment:
       renderer = EditingCanvasRenderer(canvasSize: imageSize, device: device)
-      renderer.setRenderImages(try #require(EditingCanvasRenderImageFactory.makeRenderImages(
+      renderer.setRenderImages(try #require(try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: editingSource,
         effects: document.effects.canvasEffect,
         canvasSize: imageSize,
@@ -317,7 +317,7 @@ struct PostCropVignetteCanvasTests {
       let mode: EditingCanvasMode = route == .blur
         ? .localAdjustment(effect: AnyImageEffect(document.localBlur?.content ?? ImageEditorFeature.defaultLocalBlurContent))
         : plan.canvasMode
-      renderer.setRenderImages(try #require(EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+      renderer.setRenderImages(try #require(try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
         editingSourceImage: editingSource,
         effects: document.effects.canvasEffect,
         geometry: geometry,

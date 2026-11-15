@@ -381,6 +381,7 @@ final class EditingCanvasRenderer {
       return false
     }
     viewportState.postCrop = postCrop
+    renderingError = nil
     if postCrop == nil {
       // The cached image is only read under a pass.
       releasePreFinishCache()

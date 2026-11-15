@@ -32,6 +32,45 @@ struct MaskedPreviewExportScaleConsistencyTests {
 
   private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
+  private struct ContextProbe: AdjustmentImplementation {
+
+    let renderingIdentity = AdjustmentRendering.Identity(implementation: "preview.context", version: "1", configuration: "quarter-scale")
+
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage? {
+      #expect(context.renderScale == 0.25)
+      #expect(context.chainEntryExtent == CGRect(x: 0, y: 0, width: 64, height: 64))
+      #expect(context.presentationTime == .zero)
+      return CIImage(color: CIColor(red: 0.25, green: 0, blue: 0)).cropped(to: image.extent)
+    }
+  }
+
+  @Test func `Both preview factories forward selection and downsample scale to global and local content`() throws {
+    let size = CGSize(width: 256, height: 256)
+    let input = CIImage(color: .black).cropped(to: CGRect(x: 0, y: 0, width: 64, height: 64))
+    let effect = AnyImageEffect(ExposureFeature(ev: 1))
+    let selection = AdjustmentRendering.overridingSupportedFeatures(with: ContextProbe())
+    let crop = CropGuideState(cropFeature: CropFeature(rect: CGRect(x: 32, y: 32, width: 128, height: 128)), imageSize: size)
+    let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
+    let sourceImages = try #require(try EditingCanvasRenderImageFactory.makeRenderImages(
+      editingSourceImage: input, effects: effect, canvasSize: size,
+      mode: .localAdjustment(effect: effect), adjustmentRendering: selection))
+    let cropImages = try #require(try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+      editingSourceImage: input, effects: effect, geometry: geometry,
+      mode: .localAdjustment(effect: effect), adjustmentRendering: selection))
+    for images in [sourceImages, cropImages] {
+      #expect(images.adjustmentRendering == selection)
+      for image in [images.base, images.adjusted] {
+        var pixel = [UInt8](repeating: 0, count: 4)
+        ciContext.render(image, toBitmap: &pixel, rowBytes: 4,
+          bounds: CGRect(x: 10, y: 10, width: 1, height: 1), format: .RGBA8,
+          colorSpace: CGColorSpace(name: CGColorSpace.sRGB)!)
+        #expect(abs(Int(pixel[0]) - 64) <= 1)
+        #expect(pixel[1] == 0)
+        #expect(pixel[3] == 255)
+      }
+    }
+  }
+
   @Test func `Source resolution blur preview matches full resolution export`() throws {
     let fullSize = CGSize(width: Self.fullSide, height: Self.fullSide)
 
@@ -54,7 +93,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // it is directly comparable to a global blur. With the OOM fix this is
     // computed at the 256 source and upscaled to 1024.
     let previewImages = try #require(
-      EditingCanvasRenderImageFactory.makeRenderImages(
+      try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: sourceEdgeCI,
         effects: nil,
         canvasSize: fullSize,
@@ -136,7 +175,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     // The factory renders the FULL 12000² canvas (the not-zoomed case that
     // crashed): the adjusted image carries a 12000² extent.
     let images = try #require(
-      EditingCanvasRenderImageFactory.makeRenderImages(
+      try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: sourceEdgeCI,
         effects: nil,
         canvasSize: canvasSize,
