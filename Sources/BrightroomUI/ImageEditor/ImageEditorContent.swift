@@ -1481,7 +1481,7 @@ extension SteppedSliderStyle {
       majorTickInterval: 5
     )
 
-  fileprivate static let imageEditorAdjustmentSlider =
+  static let imageEditorAdjustmentSlider =
     SteppedSliderStyle(
       tickWidth: 2,
       tickSpacing: 4,

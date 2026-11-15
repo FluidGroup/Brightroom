@@ -2,15 +2,13 @@
 
 import BrightroomParametric
 import SwiftUI
+import UIKit
 
 struct GrainControl: View {
 
   private let grain: GrainFeature.CameraRaw
   private let onChange: (GrainFeature.CameraRaw) -> Void
   private let onEnd: (GrainFeature.CameraRaw) -> Void
-
-  // A Slider may retain its starting closure through the drag.
-  @State private var pendingSliderValue: GrainFeature.CameraRaw?
 
   init(
     grain: GrainFeature.CameraRaw,
@@ -52,29 +50,56 @@ struct GrainControl: View {
     axis: WritableKeyPath<GrainFeature.CameraRaw, Double>
   ) -> some View {
     let value = grain[keyPath: axis]
+    let resetValue = GrainFeature.CameraRaw(amount: 0)[keyPath: axis]
 
     return HStack(spacing: 8) {
       Text(title)
         .frame(width: 72, alignment: .leading)
 
-      Slider(
+      SteppedSlider(
         value: Binding(
           get: { value },
-          set: { value in
+          set: { newValue in
+            let rounded = newValue.rounded()
+            guard rounded != value else {
+              return
+            }
+
             var next = grain
-            next[keyPath: axis] = value
-            pendingSliderValue = next
+            next[keyPath: axis] = rounded
             onChange(next)
           }
         ),
-        in: 0...100,
-        step: 1
-      ) { editing in
-        if !editing, let pendingSliderValue {
-          onEnd(pendingSliderValue)
-          self.pendingSliderValue = nil
+        range: 0...100,
+        stepCount: 100,
+        style: .imageEditorAdjustmentSlider,
+        resetValue: resetValue,
+        snapsToTicksOnEditingEnd: false,
+        transform: { $0.rounded() },
+        hapticIdentity: { value in
+          let step = Int(value.rounded())
+          return step.isMultiple(of: 25) ? AnyHashable(step) : nil
+        },
+        onHaptic: {
+          UIImpactFeedbackGenerator(style: .light).impactOccurred(intensity: 0.35)
+        },
+        onEditingEnded: { value in
+          var next = grain
+          next[keyPath: axis] = value.rounded()
+          onEnd(next)
+        },
+        topMarker: { context in
+          Circle()
+            .frame(width: 6, height: 6)
+            .opacity(context.value == resetValue && value != resetValue ? 1 : 0)
+            .animation(.spring, value: value == resetValue)
+        },
+        tick: { context in
+          Capsule()
+            .foregroundStyle(context.isMajor ? Color.primary : Color.secondary)
         }
-      }
+      )
+      .frame(height: 44)
       .accessibilityLabel(title)
       .accessibilityValue("\(Int(value.rounded()))")
       .accessibilityIdentifier("image-editor.grain.\(title.lowercased())")
