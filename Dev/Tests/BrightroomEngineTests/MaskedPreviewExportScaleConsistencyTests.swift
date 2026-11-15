@@ -32,11 +32,19 @@ struct MaskedPreviewExportScaleConsistencyTests {
 
   private let ciContext = CIContext(options: [.useSoftwareRenderer: false])
 
-  private struct ContextProbe: AdjustmentImplementation {
+  private struct ContextProbe: Sendable {
+
+    var rendering: AdjustmentRendering {
+      var setup = AdjustmentRendering.Setup()
+      setup.replace(ExposureFeature.self, with: .init(identity: renderingIdentity) { feature, image, context in
+        try apply(feature, to: image, context: context)
+      })
+      return setup.makeRendering()
+    }
 
     let renderingIdentity = AdjustmentRendering.Identity(implementation: "preview.context", version: "1", configuration: "quarter-scale")
 
-    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage? {
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       #expect(context.renderScale == 0.25)
       #expect(context.chainEntryExtent == CGRect(x: 0, y: 0, width: 64, height: 64))
       #expect(context.presentationTime == .zero)
@@ -48,7 +56,7 @@ struct MaskedPreviewExportScaleConsistencyTests {
     let size = CGSize(width: 256, height: 256)
     let input = CIImage(color: .black).cropped(to: CGRect(x: 0, y: 0, width: 64, height: 64))
     let effect = AnyImageEffect(ExposureFeature(ev: 1))
-    let selection = AdjustmentRendering.overridingSupportedFeatures(with: ContextProbe())
+    let selection = ContextProbe().rendering
     let crop = CropGuideState(cropFeature: CropFeature(rect: CGRect(x: 32, y: 32, width: 128, height: 128)), imageSize: size)
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
     let sourceImages = try #require(try EditingCanvasRenderImageFactory.makeRenderImages(

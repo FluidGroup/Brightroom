@@ -123,7 +123,15 @@ struct EditingCanvasRendererTests {
     #expect(pixel(replaced, in: largerTarget, x: 132, y: 40)[3] == 255)
   }
 
-  private struct AdjustmentProbe: AdjustmentImplementation {
+  private struct AdjustmentProbe: Sendable {
+
+    var rendering: AdjustmentRendering {
+      var setup = AdjustmentRendering.Setup()
+      setup.replace(ExposureFeature.self, with: .init(identity: renderingIdentity) { feature, image, context in
+        try apply(feature, to: image, context: context)
+      })
+      return setup.makeRendering()
+    }
 
     enum Failure: Error { case resource }
 
@@ -134,7 +142,7 @@ struct EditingCanvasRendererTests {
       .init(implementation: "renderer.probe", version: "1", configuration: "\(amount);fails=\(fails)")
     }
 
-    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage? {
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       if fails { throw Failure.resource }
       return image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: amount])
     }
@@ -151,7 +159,7 @@ struct EditingCanvasRendererTests {
     renderer.setPostCrop(effect: feature, frame: contentBounds, chainEntry: contentBounds)
     var samples: [Int] = []
     for amount in [0.25, 0.5, 0.75] {
-      let selection = AdjustmentRendering.overridingSupportedFeatures(with: AdjustmentProbe(amount: amount))
+      let selection = AdjustmentProbe(amount: amount).rendering
       renderer.setRenderImages(try images(source: source, effects: feature, localEffect: feature, adjustmentRendering: selection))
       let actual = try render(renderer, into: target)
       let cached = try render(renderer, into: target)
@@ -171,7 +179,7 @@ struct EditingCanvasRendererTests {
     let device = try #require(MTLCreateSystemDefaultDevice())
     let renderer = EditingCanvasRenderer(canvasSize: contentBounds.size, device: device)
     let target = try makeTarget(device: device)
-    let selection = AdjustmentRendering.overridingSupportedFeatures(with: AdjustmentProbe(amount: 1, fails: true))
+    let selection = AdjustmentProbe(amount: 1, fails: true).rendering
     renderer.setRenderImages(try images(source: solid(.white), adjustmentRendering: selection))
     renderer.setViewport(.init(visibleContentRect: contentBounds, contentToCanvasTransform: .identity))
     renderer.setPostCrop(effect: AnyImageEffect(ExposureFeature(ev: 1)), frame: contentBounds, chainEntry: contentBounds)

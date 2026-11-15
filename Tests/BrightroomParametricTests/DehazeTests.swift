@@ -3,7 +3,7 @@ import CoreImage
 import Foundation
 import Testing
 
-/// Public rendering checks for the signed Camera Raw Dehaze slider.
+/// Public rendering checks for the signed Dehaze amount.
 @Suite("Dehaze")
 struct DehazeTests {
 

@@ -15,8 +15,8 @@ struct TextureTests {
         .cropped(to: input.extent)
       let blurred = RenderingFixtures.pixels(of: guide)
       for amount in [-50.0, 50.0] {
-        let output = try TextureFeature(amount: amount).apply(
-          to: input, context: .init(chainEntryExtent: input.extent, renderScale: scale))
+        let output = try FeatureRenderer().makeImage(
+          from: input, feature: ScaledTextureFeature(amount: amount, scale: scale))
         let actual = RenderingFixtures.pixels(of: output)
         var maximum: Float = 0
         for index in actual.indices where index % 4 != 3 {
@@ -56,4 +56,15 @@ struct TextureTests {
     #expect(result.extent == neutral.extent)
     #expect(RenderingFixtures.maximumDifference(result, neutral) < 0.001)
   }
+}
+
+private struct ScaledTextureFeature: ImageEffect {
+
+  let amount: Double
+  let scale: CGFloat
+
+  func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+    try TextureFeature(amount: amount).apply(to: image, context: context.withRenderScale(scale))
+  }
+
 }

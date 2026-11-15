@@ -80,7 +80,15 @@ struct EditingCanvasViewFeatureFlowTests {
 
   private enum RenderingFailure: Error { case resource }
 
-  private struct RenderingProbe: AdjustmentImplementation {
+  private struct RenderingProbe: Sendable {
+
+    var rendering: AdjustmentRendering {
+      var setup = AdjustmentRendering.Setup()
+      setup.replace(ExposureFeature.self, with: .init(identity: renderingIdentity) { feature, image, context in
+        try apply(feature, to: image, context: context)
+      })
+      return setup.makeRendering()
+    }
 
     let amount: Double
     var fails = false
@@ -89,7 +97,7 @@ struct EditingCanvasViewFeatureFlowTests {
       .init(implementation: "canvas.probe", version: "1", configuration: "\(amount);fails=\(fails)")
     }
 
-    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage? {
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
       if fails { throw RenderingFailure.resource }
       return image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: amount])
     }
@@ -107,7 +115,7 @@ struct EditingCanvasViewFeatureFlowTests {
     let canvas = try #require(surface.canvasView)
     #expect(canvas.hasRenderImages)
     for amount in [1.0, 2.0] {
-      let rendering = AdjustmentRendering.overridingSupportedFeatures(with: RenderingProbe(amount: amount))
+      let rendering = RenderingProbe(amount: amount).rendering
       harness.canvasView.setAdjustmentRendering(rendering)
       if isCrop {
         #expect(harness.canvasView.cropSurface.currentCanvasInputKey?.adjustmentIdentity == rendering.identity)
@@ -129,7 +137,7 @@ struct EditingCanvasViewFeatureFlowTests {
     let surface = isCrop ? harness.canvasView.cropSurface as EditingCanvasView.CanvasSurface
       : harness.canvasView.toolSurface
     let canvas = try #require(surface.canvasView)
-    harness.canvasView.setAdjustmentRendering(.overridingSupportedFeatures(with: RenderingProbe(amount: 1, fails: true)))
+    harness.canvasView.setAdjustmentRendering(RenderingProbe(amount: 1, fails: true).rendering)
     #expect(canvas.renderingError is RenderingFailure)
     let label = canvas.subviews.first { $0.accessibilityIdentifier == "editing-canvas-rendering-failure" }
     #expect(label?.isHidden == false)
