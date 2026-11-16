@@ -4,7 +4,7 @@ import Foundation
 import Testing
 
 /// Public API only. Measure the texture's behavior rather than duplicating its
-/// random generator; no test equates a procedural seed with Lightroom pixels.
+/// random generator.
 @Suite("Grain", .serialized)
 struct GrainTests {
 

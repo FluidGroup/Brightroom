@@ -6,10 +6,9 @@ import Testing
 @Suite("Texture")
 struct TextureTests {
 
-
   @Test
-  func restoresTheCameraRawSliderAndBypassesNeutral() throws {
-    let source = lightroomColorChart(width: 16, height: 12) { _, _, _, _ in .init(repeating: 0.5) }
+  func restoresAuthoredAmountsAndBypassesNeutral() throws {
+    let source = try RenderingFixtures.normalizedSource()
     for amount in [0.0, .nan, .infinity, -.infinity] {
       #expect(try FeatureRenderer().makeImage(from: source, feature: TextureFeature(amount: amount)) === source)
     }

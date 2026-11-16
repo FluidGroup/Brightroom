@@ -21,7 +21,7 @@ struct DehazeTests {
 
   @Test
   func neutralAndRestoredAmounts() throws {
-    let source = lightroomColorLattice()
+    let source = try RenderingFixtures.normalizedSource()
     var effect = DehazeFeature(amount: 101)
     #expect(effect.amount == 100)
     effect.amount = -101
@@ -37,9 +37,8 @@ struct DehazeTests {
 
   @Test
   func neighborhoodsAreIndependentOfTheOutputTileAndUniformOpacity() throws {
-    let source = lightroomColorChart(width: 192, height: 96) { x, y, _, _ in
-      SIMD3(Double(x) / 191, Double(y) / 95, 0.3)
-    }
+    let source = try RenderingFixtures.normalizedSource()
+      .cropped(to: CGRect(x: 0, y: 0, width: 192, height: 96))
     let half = source.applyingFilter("CIColorMatrix", parameters: [
       "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.5),
     ])

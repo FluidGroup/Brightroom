@@ -2,13 +2,13 @@ import BrightroomParametric
 import CoreImage
 import Testing
 
-/// Public rendering checks against isolated Lightroom Clarity settings on developed RGB.
+/// Public rendering checks for Clarity's authored amount, tiling, and alpha.
 @Suite("Clarity")
 struct ClarityTests {
 
   @Test
   func neutralAndRestoredAmounts() throws {
-    let source = lightroomColorLattice()
+    let source = try RenderingFixtures.normalizedSource()
     for value in [0.0, .nan, .infinity, -.infinity] {
       #expect(try FeatureRenderer().makeImage(from: source, feature: ClarityFeature(amount: value)) === source)
     }
@@ -23,9 +23,8 @@ struct ClarityTests {
 
   @Test
   func neighborhoodsMatchAcrossTilesAndUniformOpacity() throws {
-    let source = lightroomColorChart(width: 240, height: 120) { x, y, _, _ in
-      SIMD3(x < 120 ? 0.2 : 0.8, Double(y) / 119, 0.3)
-    }
+    let source = try RenderingFixtures.normalizedSource()
+      .cropped(to: CGRect(x: 0, y: 0, width: 240, height: 120))
     let half = source.applyingFilter("CIColorMatrix", parameters: [
       "inputAVector": CIVector(x: 0, y: 0, z: 0, w: 0.5),
     ])
