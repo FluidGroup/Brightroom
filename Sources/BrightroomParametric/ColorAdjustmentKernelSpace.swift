@@ -5,10 +5,10 @@
 import CoreImage
 import Foundation
 
-/// The color space the Tone Curve and Color Mixer kernels compute in.
+/// The color space the color-adjustment kernels compute in.
 ///
 /// Core Image hands a custom kernel its pixels in the working color space of
-/// the `CIContext` that renders the recipe. Both kernels are written for
+/// the `CIContext` that renders the recipe. These kernels are written for
 /// extended-linear Display-P3 numbers (the tone curve's stop shaper and P3
 /// luminance, the mixer's P3 → XYZ → OKLab matrices), so a recipe matches its
 /// input from the working space into that space before the kernel and matches

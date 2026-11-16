@@ -130,7 +130,7 @@ struct ViewportBasePreviewExportParityTests {
 
     let cropSurfaceRecorder = ExtentRecorder()
     _ = try #require(
-      EditingCanvasRenderImageFactory.makeRenderImages(
+      try EditingCanvasRenderImageFactory.makeRenderImages(
         editingSourceImage: editingSource,
         effects: AnyImageEffect(ExtentRecordingEffect(recorder: cropSurfaceRecorder)),
         canvasSize: sourceSize,
@@ -152,7 +152,7 @@ struct ViewportBasePreviewExportParityTests {
       )
     )
     _ = try #require(
-      EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+      try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
         editingSourceImage: editingSource,
         effects: AnyImageEffect(ExtentRecordingEffect(recorder: toolSurfaceRecorder)),
         geometry: geometry,

@@ -45,10 +45,12 @@ public struct VideoRenderer: Sendable {
     case custom(CGSize)
   }
 
-  private let featureRenderer = FeatureRenderer()
+  private let featureRenderer: FeatureRenderer
 
   /// Creates a video renderer.
-  public init() {}
+  public init(adjustmentRendering: AdjustmentRendering = .standard) {
+    self.featureRenderer = FeatureRenderer(adjustmentRendering: adjustmentRendering)
+  }
 
   /// Applies a feature to a single video frame.
   ///

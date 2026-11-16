@@ -24,6 +24,132 @@ struct ImageEditorFeatureEditingTests {
     effects: [AnyImageEffect(BrightnessFeature(value: 0.1))]
   )
 
+  @Test func `Grading previews preserve other edits and commit once`() throws {
+    var document = EditingDocument(source: makeImage())
+    document.feature.effects.exposure = .init(ev: 0.7)
+    document.commit()
+    let initial = document
+    var session = ImageEditorSession(documentAtStart: document)
+    var grading = ColorGradingFeature(global: .init(hue: 52))
+    session.previewColorGrading(grading, over: document)
+    #expect(document == initial)
+    #expect(session.displayedFeature(of: document).effects.colorGrading?.global.hue == 52)
+    grading.global.saturation = 30
+    session.previewColorGrading(grading, over: document)
+    grading.midtones.luminance = 10
+    session.previewColorGrading(grading, over: document)
+    #expect(document == initial)
+    let gradingWrite = session.document(after: document)
+    document = try #require(gradingWrite)
+    #expect(document.feature.effects.colorGrading == grading)
+    #expect(document.feature.effects.exposure?.ev == 0.7)
+    let repeatedWrite = session.document(after: document)
+    #expect(repeatedWrite == nil)
+    document.undo()
+    #expect(document.feature == initial.feature)
+    document.redo()
+    #expect(document.feature.effects.colorGrading == grading)
+    session.noteDocument(document)
+    _ = session.endToolVisit(of: document)
+    session.previewColorGrading(.init(), over: document)
+    let resetWrite = session.document(after: document)
+    document = try #require(resetWrite)
+    #expect(document.feature.effects.colorGrading == nil)
+    #expect(document.feature.effects.exposure?.ev == 0.7)
+    document.undo()
+    #expect(document.feature.effects.colorGrading == grading)
+  }
+
+  @Test func `Grain previews preserve other edits and form one undo step per visit`() throws {
+    var document = EditingDocument(source: makeImage())
+    document.feature.effects.exposure = .init(ev: 0.7)
+    document.commit()
+    let initial = document
+    var session = ImageEditorSession(documentAtStart: document)
+    var grain = GrainFeature.CameraRaw(amount: 20, size: 42, roughness: 70, seed: 123)
+
+    session.previewGrain(grain, over: document)
+    #expect(document == initial)
+    #expect(session.displayedFeature(of: document).effects.grain == grain)
+
+    grain.amount = 40
+    session.previewGrain(grain, over: document)
+    let amountWrite = session.document(after: document)
+    document = try #require(amountWrite)
+
+    grain.size = 60
+    grain.roughness = 80
+    session.previewGrain(grain, over: document)
+    let shapeWrite = session.document(after: document)
+    document = try #require(shapeWrite)
+    #expect(document.feature.effects.grain == grain)
+    #expect(document.feature.effects.exposure == initial.feature.effects.exposure)
+    #expect(document.feature.crop == initial.feature.crop)
+    let repeatedWrite = session.document(after: document)
+    #expect(repeatedWrite == nil)
+
+    document.undo()
+    #expect(document.feature == initial.feature)
+    document.redo()
+    #expect(document.feature.effects.grain == grain)
+
+    _ = session.endToolVisit(of: document)
+    session.previewGrain(.init(amount: 0), over: document)
+    let resetWrite = session.document(after: document)
+    document = try #require(resetWrite)
+    #expect(document.feature.effects.grain == nil)
+    #expect(document.feature.effects.exposure?.ev == 0.7)
+    document.undo()
+    #expect(document.feature.effects.grain == grain)
+  }
+
+  @Test func `Zero grain amount keeps authored size roughness and seed until reset`() throws {
+    var document = EditingDocument(source: makeImage())
+    var session = ImageEditorSession(documentAtStart: document)
+    let grain = GrainFeature.CameraRaw(amount: 0, size: 42, roughness: 70, seed: 99)
+
+    session.previewGrain(grain, over: document)
+    let shapeWrite = session.document(after: document)
+    document = try #require(shapeWrite)
+    #expect(document.feature.effects.grain == grain)
+    #expect(document.feature.hasAnyEffect)
+
+    var enabled = try #require(document.feature.effects.grain)
+    enabled.amount = 20
+    session.previewGrain(enabled, over: document)
+    #expect(session.displayedFeature(of: document).effects.grain == enabled)
+    session.discardLiveFeature()
+    #expect(session.displayedFeature(of: document).effects.grain == grain)
+
+    session.previewGrain(.init(amount: 0), over: document)
+    let resetWrite = session.document(after: document)
+    document = try #require(resetWrite)
+    #expect(document.feature.effects.grain == nil)
+    #expect(!document.feature.hasAnyEffect)
+    session.previewGrain(.init(amount: 0), over: document)
+    let repeatedReset = session.document(after: document)
+    #expect(repeatedReset == nil)
+  }
+
+  @Test func `Editor reset removes grain keeps custom effects and can be undone`() throws {
+    let custom = [AnyImageEffect(BrightnessFeature(value: 0.1))]
+    var document = EditingDocument(source: makeImage())
+    document.feature.effects = .init(grain: .init(amount: 20), custom: custom)
+    let initial = document.feature
+    var session = ImageEditorSession(documentAtStart: document)
+    var reset = ImageEditorFeature(imageSize: imageSize)
+    reset.effects.custom = custom
+
+    let resetWrite = session.document(afterResetTo: reset, of: document)
+    document = try #require(resetWrite)
+
+    #expect(document.feature.effects.grain == nil)
+    #expect(document.feature.effects.custom == custom)
+    #expect(!document.feature.hasAnyEffect)
+    document.undo()
+    #expect(document.feature == initial)
+  }
+
   // MARK: - Initial document
 
   @Test func `A resumed feature is installed unchanged`() {

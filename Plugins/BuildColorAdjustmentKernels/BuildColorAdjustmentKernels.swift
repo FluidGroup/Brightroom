@@ -4,16 +4,20 @@ import PackagePlugin
 /// Builds the general Core Image kernels as package resources from their sources.
 ///
 /// SwiftPM does not expose Metal compiler flags on a target. These declared build
-/// commands preserve the Core Image sampler ABI and rebuild when either shader
-/// changes, without compiling source at runtime.
+/// commands preserve the Core Image sampler ABI and rebuild the libraries when
+/// a shader or its shared color-space header changes.
 @main
 struct BuildColorAdjustmentKernels: BuildToolPlugin {
 
   func createBuildCommands(context: PluginContext, target: any Target) async throws -> [Command] {
     let sources = [
+      target.directoryURL.appending(path: "StandardAdjustmentKernels.metal"),
       target.directoryURL.appending(path: "ToneCurveKernels.metal"),
       target.directoryURL.appending(path: "ColorMixerKernels.metal"),
+      target.directoryURL.appending(path: "PointCurveKernels.metal"),
+      target.directoryURL.appending(path: "GrainKernels.metal"),
     ]
+    let colorSpaceHeader = target.directoryURL.appending(path: "ColorAdjustmentWorkingSpace.metalh")
 
     // Plugin output directories may be shared across destination builds. Fixed
     // platform names keep each declared output independent of the active SDK.
@@ -38,7 +42,7 @@ struct BuildColorAdjustmentKernels: BuildToolPlugin {
           "-fmetal-math-mode=fast",
           "-fmetal-math-fp32-functions=fast",
         ] + sources.map(\.path) + ["-o", output.path],
-        inputFiles: sources,
+        inputFiles: sources + [colorSpaceHeader],
         outputFiles: [output]
       )
     }

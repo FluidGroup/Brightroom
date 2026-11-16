@@ -207,14 +207,12 @@ public struct ContrastFeature: ImageEffect, Equatable {
   }
 }
 
-/// A saturation adjustment.
+/// Adjusts the color intensity of the whole image.
 public struct SaturationFeature: ImageEffect, Equatable {
 
-  /// The saturation offset passed to `CIColorControls` as `1 + value`. `0` is
-  /// neutral, `-1` removes all color.
+  /// The saturation offset. Zero is neutral and −1 removes all color.
   public var value: Double
 
-  /// Creates a saturation adjustment.
   public init(value: Double) {
     self.value = value
   }
@@ -233,26 +231,23 @@ public struct ExposureFeature: ImageEffect, Equatable {
   }
 }
 
-/// A highlight recovery adjustment.
+/// A normalized highlight recovery adjustment.
 public struct HighlightsFeature: ImageEffect, Equatable {
 
-  /// The highlight recovery value. It is applied as `1 - value`. `0` is
-  /// neutral.
+  /// The normalized highlight recovery. Positive values reduce highlights; zero is neutral.
   public var value: Double
 
-  /// Creates a highlight adjustment.
   public init(value: Double) {
     self.value = value
   }
 }
 
-/// A shadow lift adjustment.
+/// A normalized shadow lift adjustment.
 public struct ShadowsFeature: ImageEffect, Equatable {
 
-  /// The shadow amount passed to `CIHighlightShadowAdjust`. `0` is neutral.
+  /// The normalized shadow lift. Positive values lift shadows; zero is neutral.
   public var value: Double
 
-  /// Creates a shadow adjustment.
   public init(value: Double) {
     self.value = value
   }

@@ -220,19 +220,21 @@ extension EditingDocument {
   /// `ExportRenderer.render(from:feature:options:)` for the output options.
   @concurrent
   public func render(
-    options: ExportRenderer.Options = .init()
+    options: ExportRenderer.Options = .init(),
+    adjustmentRendering: AdjustmentRendering = .standard
   ) async throws -> RenderedImage {
-    try render(options: options, device: .automatic)
+    try render(options: options, device: .automatic, adjustmentRendering: adjustmentRendering)
   }
 
   /// The synchronous render core, internal so tests can compare devices and
   /// benchmarks can skip the executor hop.
   func render(
     options: ExportRenderer.Options,
-    device: ExportRenderer.Device
+    device: ExportRenderer.Device,
+    adjustmentRendering: AdjustmentRendering = .standard
   ) throws -> RenderedImage {
     let startTime = CACurrentMediaTime()
-    let rendered = try ExportRenderer().render(
+    let rendered = try ExportRenderer(adjustmentRendering: adjustmentRendering).render(
       from: source.makeCIImage(),
       feature: feature,
       options: options,
