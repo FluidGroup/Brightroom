@@ -83,18 +83,14 @@ open Dev/Brightroom.xcodeproj
    iOS, AppKit on macOS). On macOS, `ImageEditorCanvas` shows the document's
    evaluated output with zoom and pan; the built-in editor and crop and brush
    editing are iOS only for now
-   - `Sources/BrightroomUI/ImageEditor/` - the built-in editor `ImageEditor`,
-     its root feature `ImageEditorFeature`, and `ImageEditorDocument`
-     (`EditingDocument<ImageEditorFeature>`), which the host owns with its
-     history
-   - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
-     `ImageEditorCanvas` (value inputs, `onCropGuideChange`), its
-     `ImageEditorCanvasReader`/`ImageEditorCanvasProxy` for commands (iOS
-     only), the internal UIKit `EditingCanvasView`, and its Metal surface;
-     the AppKit `EditingCanvasView` is in `Canvas/AppKit/`
-   - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
-   - `Sources/BrightroomUI/Debug/` - `FeatureTreeOutline`, SwiftUI rows that
-     show the `FeatureTreeNode`s BrightroomParametric builds from a feature
+   - One SwiftPM target, with three source directories under `Sources/BrightroomUI/`:
+     - `Shared/`: public SwiftUI entry points and their availability,
+       `ImageEditorFeature` and `ImageEditorDocument`, canvas geometry,
+       navigation and rendering, and platform-neutral components
+     - `iOS/`: the UIKit canvas and its SwiftUI bridge, crop and brush
+       interactions, and the built-in editor screen and controls
+     - `macOS/`: the AppKit canvas and its SwiftUI bridge, including mouse
+       and trackpad input
    - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
      through a binding
 
@@ -210,7 +206,7 @@ The project uses swift-state-graph for observable state. When modifying state-re
   kernel that assumes a color space does the same
 - Performance-critical operations use Metal instead of Core Image
 - The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
-  and `EditingCanvasRenderer` (`Sources/BrightroomUI/Canvas/`). The pieces
+  and `EditingCanvasRenderer` (`Sources/BrightroomUI/Shared/Canvas/`). The pieces
   both platforms share are platform-neutral: `CanvasMetalSurface` (the Metal
   half of a canvas surface, used by the UIKit crop and tool surfaces and by
   the AppKit canvas), `CanvasNavigation` (zoom and pan as a value, which the
@@ -221,8 +217,8 @@ The project uses swift-state-graph for observable state. When modifying state-re
   a zoom that settles) are closed forms of that time, and SwiftUI's `Spring`
   computes the springs. The UIKit tool surface zooms and pans with a
   `UIScrollView` (`CropScrollView`)
-- In BrightroomUI, a UIKit-bound file is wrapped whole in `#if os(iOS)` and
-  an AppKit-only file (`Canvas/AppKit/`) in `#if os(macOS)`. A shared file
+- In BrightroomUI, keep UIKit-only files in `iOS/`, wrapped in `#if os(iOS)`,
+  and AppKit-only files in `macOS/`, wrapped in `#if os(macOS)`. A shared file
   branches with `#if os(iOS) ... #elseif os(macOS) ... #endif`: AppKit code
   never sits in a bare `#else`, and `canImport` is not used. Mac Catalyst is
   `os(iOS)` and uses the UIKit canvas

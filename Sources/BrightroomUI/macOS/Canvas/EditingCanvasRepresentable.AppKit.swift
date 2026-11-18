@@ -1,6 +1,3 @@
-// The AppKit counterpart of the UIKit `EditingCanvasRepresentable` in
-// ImageEditorCanvas.swift; the `.AppKit` suffix keeps the file names apart.
-
 #if os(macOS)
 import SwiftUI
 
