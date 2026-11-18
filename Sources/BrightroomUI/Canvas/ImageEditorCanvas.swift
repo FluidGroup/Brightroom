@@ -19,11 +19,28 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
 import UIKit
+#endif
 import SwiftUI
 import BrightroomEngine
 import BrightroomParametric
 
+/// A canvas that shows an `ImageEditorDocument`'s output and edits it through
+/// a binding.
+///
+/// On iOS the canvas edits the part of the feature `editingTarget(_:)`
+/// picks: the crop, with a crop guide and the scroll surface, or the local
+/// blur, with a brush.
+///
+/// On macOS the canvas views only, for now: it shows the document's output
+/// (effects, local blur, crop and vignette) for every editing target, and the
+/// trackpad or the mouse zooms and pans it. It writes nothing to the
+/// document. Pass `.editingTarget(nil)` to ask for a viewer: that is
+/// portable, and it keeps meaning a viewer when crop editing comes to macOS.
+/// The crop and brush modifiers, the overlay initializer and
+/// `ImageEditorCanvasReader` are unavailable on macOS. At the fit, where it
+/// has nothing to scroll, it passes scroll events on to the views around it.
 public struct ImageEditorCanvas: View {
 
   /// The `straightenAngle(_:isEditing:)` input.
@@ -40,7 +57,7 @@ public struct ImageEditorCanvas: View {
   /// document with one of another image while a change is still queued.
   @MainActor
   static func apply(
-    _ change: EditingCanvasView.FeatureChange,
+    _ change: (inout ImageEditorFeature) -> Void,
     preparedFor source: SourceImage,
     to document: Binding<ImageEditorDocument>
   ) {
@@ -126,6 +143,7 @@ public struct ImageEditorCanvas: View {
   ///   - cropOutsideOverlay: Draws over the image outside the crop guide,
   ///     with the same interaction as `cropInsideOverlay`. **Fixed at
   ///     creation.** Same contract as `cropInsideOverlay`.
+  @available(macOS, unavailable, message: "The macOS canvas has no crop guide yet.")
   public init<InsideOverlay: View, OutsideOverlay: View>(
     document: Binding<ImageEditorDocument>,
     areAnimationsEnabled: Bool = true,
@@ -148,15 +166,24 @@ public struct ImageEditorCanvas: View {
   /// See `init(document:areAnimationsEnabled:contentInsets:cropInsideOverlay:cropOutsideOverlay:)`
   /// for how the document is written back and displayed.
   ///
+  /// On macOS the canvas shows the document's output and writes nothing (see
+  /// `ImageEditorCanvas`).
+  ///
   /// - Parameters:
   ///   - document: The edited document.
-  ///   - areAnimationsEnabled: Applied on every update.
+  ///   - areAnimationsEnabled: Applied on every update. On macOS it decides
+  ///     whether the zoom and pan motions that start animate. When it is
+  ///     false, or when the system's Reduce Motion setting is on, the way
+  ///     back from a rubber band and a zoom toggle complete at once, and
+  ///     momentum stops at an edge instead of bouncing.
   ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
   ///     and the layout direction that resolves their leading and trailing
   ///     edges, once when it is mounted; later values are ignored. A host
   ///     that derives the insets from safe area or size class must give this
   ///     view a new identity (for example with `.id`) for new insets to take
-  ///     effect.
+  ///     effect. They inset the crop guide only: with a `.localBlur` or nil
+  ///     editing target the image fits the full bounds. On macOS the value
+  ///     is accepted and not used; the image fits the full bounds.
   public init(
     document: Binding<ImageEditorDocument>,
     areAnimationsEnabled: Bool = true,
@@ -210,6 +237,7 @@ public struct ImageEditorCanvas: View {
     ZStack {
       switch previewSourceLoader.phase {
       case .loaded(let previewSource):
+        #if os(iOS)
         EditingCanvasRepresentable(
           source: EditingCanvasSource(previewSource),
           feature: displayedFeature ?? document.wrappedValue.feature,
@@ -233,6 +261,17 @@ public struct ImageEditorCanvas: View {
         // the canvas instead of leaving it bound to the old image.
         .id(previewSource.source)
         .transition(.opacity.animation(.smooth))
+        #elseif os(macOS)
+        EditingCanvasRepresentable(
+          source: EditingCanvasSource(previewSource),
+          feature: displayedFeature ?? document.wrappedValue.feature,
+          areAnimationsEnabled: areAnimationsEnabled,
+          editingTarget: editingTarget
+        )
+        // `EditingCanvasView` binds its source once, at creation, as on iOS.
+        .id(previewSource.source)
+        .transition(.opacity.animation(.smooth))
+        #endif
       case .failed:
         // Nothing to edit; the host's own controls stay the way out.
         ContentUnavailableView(
@@ -264,6 +303,7 @@ public struct ImageEditorCanvas: View {
   /// turn, so `action` can write to state; only the latest guide is
   /// reported. A guide equal to the last one reported is not reported
   /// again. The latest `action` is used; it is re-bound on every update.
+  @available(macOS, unavailable, message: "The macOS canvas has no crop guide yet.")
   public consuming func onCropGuideChange(
     _ action: @escaping @MainActor (CropGuide) -> Void
   ) -> Self {
@@ -274,6 +314,7 @@ public struct ImageEditorCanvas: View {
   /// Sets whether the crop guide ignores touches. The image can still be
   /// moved and zoomed under the guide to change the crop. The guide is
   /// interactive by default; the value is applied on every update.
+  @available(macOS, unavailable, message: "The macOS canvas has no crop guide yet.")
   public consuming func cropGuideDisabled(_ disabled: Bool = true) -> Self {
     self.isCropGuideDisabled = disabled
     return self
@@ -283,6 +324,7 @@ public struct ImageEditorCanvas: View {
   ///
   /// Clipping is disabled by default. Changes are applied to the mounted
   /// canvas on each update.
+  @available(macOS, unavailable, message: "The macOS canvas has no crop guide yet.")
   public consuming func clipsToGuide(_ clipsToGuide: Bool) -> Self {
     self.clipsToGuide = clipsToGuide
     return self
@@ -312,6 +354,7 @@ public struct ImageEditorCanvas: View {
   ///     `ImageEditorCanvasProxy.applyPendingCrop()` records an edit still
   ///     in progress at the angle on screen before writing; ending the edit
   ///     and applying in the same action writes the recorded crop.
+  @available(macOS, unavailable, message: "The macOS canvas does not edit the crop yet.")
   public consuming func straightenAngle(_ angle: Angle?, isEditing: Bool = false) -> Self {
     self.straightenAngleInput = StraightenAngleInput(angle: angle, isEditing: isEditing)
     return self
@@ -336,6 +379,7 @@ public struct ImageEditorCanvas: View {
   /// output sideways turns the ratio. Passing the same
   /// value again does not restore it; follow the lock through
   /// `onCropGuideChange(_:)` (`lockedAspectRatio`) instead.
+  @available(macOS, unavailable, message: "The macOS canvas does not edit the crop yet.")
   public consuming func lockedAspectRatio(_ ratio: AspectRatio?) -> Self {
     self.lockedAspectRatioInput = ratio
     return self
@@ -345,6 +389,12 @@ public struct ImageEditorCanvas: View {
   /// adjustment point); nil views the output only. The default is `.crop`.
   ///
   /// Leaving `.crop` commits the visible crop to the document.
+  ///
+  /// On macOS the canvas edits nothing yet: it shows the output for every
+  /// target, and writes nothing. In debug builds of BrightroomUI it logs once
+  /// per mounted canvas when a non-nil target (the default `.crop` included)
+  /// reaches it. `.editingTarget(nil)` is the portable way to ask for a
+  /// viewer, and keeps that meaning when crop editing comes to macOS.
   public consuming func editingTarget(_ target: Target?) -> Self {
     self.editingTarget = target
     return self
@@ -353,11 +403,14 @@ public struct ImageEditorCanvas: View {
   /// Sets the brush that paints `localBlur`, including how its strokes are
   /// smoothed. The diameter may be authored in viewport points or image
   /// pixels; the canvas resolves it against its own geometry.
+  @available(macOS, unavailable, message: "The macOS canvas does not paint yet.")
   public consuming func brush(_ brush: Brush) -> Self {
     self.brush = brush
     return self
   }
 }
+
+#if os(iOS)
 
 /// Hosts an `EditingCanvasView` once the image and the document are available.
 ///
@@ -727,3 +780,5 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
   }
 
 }
+
+#endif

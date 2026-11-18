@@ -2,7 +2,6 @@ import BrightroomEngine
 import BrightroomParametric
 import CoreGraphics
 import SwiftUI
-import UIKit
 
 /// Selects how an editing canvas host builds the image shown by its
 /// viewport.

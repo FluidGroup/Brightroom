@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import UIKit
 
 extension EditingCanvasView {
@@ -92,3 +94,5 @@ extension EditingCanvasView {
   }
 
 }
+
+#endif

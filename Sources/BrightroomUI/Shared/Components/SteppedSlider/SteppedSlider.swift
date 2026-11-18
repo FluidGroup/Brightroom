@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -911,4 +913,6 @@ private extension SteppedSliderTickContext {
     abs(value - markerValue) < 0.000_001
   }
 }
+#endif
+
 #endif

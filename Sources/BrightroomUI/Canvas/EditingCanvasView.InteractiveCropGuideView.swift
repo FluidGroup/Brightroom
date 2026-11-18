@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import UIKit
 import BrightroomEngine
 import BrightroomParametric
@@ -1238,3 +1240,5 @@ private extension NSLayoutConstraint {
     return self
   }
 }
+
+#endif

@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import CoreImage
 import Metal
 import UIKit
@@ -167,3 +169,5 @@ enum FilterSwatch {
     return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
   }
 }
+
+#endif

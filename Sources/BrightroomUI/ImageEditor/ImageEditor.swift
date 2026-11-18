@@ -81,6 +81,9 @@ import BrightroomParametric
  Render the document with `EditingDocument.render(options:)`.
 
  You might use `ImageEditorCanvas` to create a fully customized user interface.
+
+ The editor is iOS only: its initializer is unavailable on macOS, where
+ `ImageEditorCanvas` shows a document's output.
  */
 public struct ImageEditor: View {
 
@@ -155,6 +158,7 @@ public struct ImageEditor: View {
   ///     `UndoManager`) would let the user undo the Cancel. Such a host
   ///     either hides Cancel, or binds the editor to a copy and assigns the
   ///     copy to its document on Done.
+  @available(macOS, unavailable, message: "The built-in editor is iOS only; use ImageEditorCanvas to view a document on macOS.")
   public init(
     document: Binding<ImageEditorDocument>,
     options: Options = .init(),
@@ -172,6 +176,7 @@ public struct ImageEditor: View {
   public var body: some View {
     // One loader per source image, shared by the canvas and the filter swatches.
     PreviewSourceReader(source: document.source) { previewSourceLoader in
+      #if os(iOS)
       ImageEditorContent(
         document: $document,
         previewSourceLoader: previewSourceLoader,
@@ -180,6 +185,10 @@ public struct ImageEditor: View {
         onDone: onDone,
         onCancel: onCancel
       )
+      #else
+      // Unreachable: the initializer is unavailable outside iOS.
+      EmptyView()
+      #endif
     }
     .id(document.source)
   }

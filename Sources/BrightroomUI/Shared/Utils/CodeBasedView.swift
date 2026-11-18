@@ -6,6 +6,8 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
+#if os(iOS)
+
 import UIKit
 
 /**
@@ -22,3 +24,5 @@ class CodeBasedView : UIView {
     fatalError("init(coder:) has not been implemented")
   }
 }
+
+#endif

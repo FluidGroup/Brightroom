@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import CoreImage
 import Foundation
 import Testing
@@ -210,3 +212,5 @@ struct BlurChainEntryExtentTests {
     return data
   }
 }
+
+#endif

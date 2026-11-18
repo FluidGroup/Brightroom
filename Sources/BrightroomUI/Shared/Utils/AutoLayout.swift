@@ -6,6 +6,8 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
+#if os(iOS)
+
 import UIKit
 
 @MainActor
@@ -21,3 +23,5 @@ enum AutoLayoutTools {
     ])
   }
 }
+
+#endif

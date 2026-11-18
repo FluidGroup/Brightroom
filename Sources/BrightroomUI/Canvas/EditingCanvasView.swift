@@ -19,54 +19,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 import MetalKit
 
 import BrightroomEngine
 import BrightroomParametric
-
-/// The prepared image an `EditingCanvasView` edits over.
-struct EditingCanvasSource {
-
-  /// The oriented, downsampled, GPU-resident editing source (zero origin).
-  let editingSourceImage: CIImage
-
-  /// The oriented source size at full resolution: the domain the feature is
-  /// authored in.
-  let imageSize: CGSize
-
-  init(_ previewSource: PreviewSource) {
-    self.editingSourceImage = previewSource.image
-    self.imageSize = previewSource.source.pixelSize
-  }
-
-  init(editingSourceImage: CIImage, imageSize: CGSize) {
-    self.editingSourceImage = editingSourceImage
-    self.imageSize = imageSize
-  }
-}
-
-extension ImageEditorFeature.Effects {
-
-  /// The global effects as the canvas factories take them: nil when no effect
-  /// is present, so the canvas can sample its cached source instead of
-  /// evaluating an identity graph.
-  var canvasEffect: AnyImageEffect? {
-    self == Self() ? nil : AnyImageEffect(self)
-  }
-}
-
-extension ImageEditorFeature {
-
-  /// The effect the canvas draws after the crop (the vignette), or nil.
-  ///
-  /// It is drawn over the crop frame of each displayed frame instead of
-  /// being part of the render images, so changing it never rebuilds them.
-  var canvasPostCropEffect: AnyImageEffect? {
-    vignette.map { AnyImageEffect($0) }
-  }
-}
 
 /// A UIKit canvas that edits an `ImageEditorFeature`: value in, changes out.
 ///
@@ -93,7 +53,7 @@ extension ImageEditorFeature {
 ///
 /// - TODO:
 ///   - Implicit animations occurs in first time load with remote image.
-final class EditingCanvasView: UIView {
+final class EditingCanvasView: UIView, ViewportDisplayLinkOwner {
 
   /// A change EditingCanvasView made to the feature: a crop commit or a brush stroke.
   ///
@@ -132,11 +92,6 @@ final class EditingCanvasView: UIView {
     let kind: ScrollViewAdjustmentKind
     let baselineCrop: CropGuideState
   }
-
-  typealias CanvasStrokeCommitHandler = (
-    EditingCanvasStrokeRecord,
-    @escaping () -> Void
-  ) -> Void
 
   /**
    A view that covers the area out of cropping extent.
@@ -1054,72 +1009,6 @@ extension EditingCanvasView {
       self.sourceExtent = previewSourceImage.extent
       self.effects = feature.effects
       self.localBlur = feature.localBlur
-    }
-  }
-
-  /// How the canvas composites the feature's blur mask.
-  ///
-  /// Internal (not private) so tests can verify the stroke-domain mapping.
-  enum CanvasRenderPlan: Equatable {
-
-    /// No blur is composited: the canvas shows the global effects only.
-    case viewportBase
-
-    /// The blur mask is composited over the global effects.
-    case localBlur(LocalAdjustmentFeature<GaussianBlurFeature>)
-
-    /// `.localBlur` when the mask is present, rooted at a brush, and has at
-    /// least one stroke. An empty brush changes nothing at export, so the
-    /// canvas does not composite it either.
-    init(localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?) {
-      guard
-        let localBlur,
-        case let .brush(brush) = localBlur.mask,
-        brush.strokes.isEmpty == false
-      else {
-        self = .viewportBase
-        return
-      }
-      self = .localBlur(localBlur)
-    }
-
-    var canvasMode: EditingCanvasMode {
-      switch self {
-      case .viewportBase:
-        return .viewportBase
-      case let .localBlur(layer):
-        return .localAdjustment(effect: AnyImageEffect(layer.content))
-      }
-    }
-
-    /// The committed strokes as canvas display records (y-down).
-    ///
-    /// The feature stores strokes in the working space (y-up) of the
-    /// pre-crop source domain.
-    ///
-    /// - Parameters:
-    ///   - geometry: The crop-output geometry when the destination canvas
-    ///     displays the crop output, or nil when the canvas is sized to the
-    ///     source image.
-    ///   - domainHeight: The oriented source height.
-    func committedStrokes(
-      in geometry: EditingCanvasCropOutputGeometry?,
-      domainHeight: CGFloat
-    ) -> [EditingCanvasStrokeRecord] {
-      switch self {
-      case .viewportBase:
-        return []
-      case let .localBlur(layer):
-        let sourceRecords = layer.mask.brushStrokes.map {
-          EditingCanvasStrokeRecord(workingSpaceStroke: $0, domainHeight: domainHeight)
-        }
-        guard let geometry else {
-          return sourceRecords
-        }
-        return sourceRecords.map {
-          geometry.outputRecord(fromSourceRecord: $0)
-        }
-      }
     }
   }
 
@@ -2429,15 +2318,6 @@ extension CGRect {
 
 }
 
-extension CanvasViewport {
-  var editingCanvasViewport: EditingCanvasRenderer.Viewport {
-    .init(
-      visibleContentRect: visibleContentRect,
-      contentToCanvasTransform: contentToCanvasTransform
-    )
-  }
-}
-
 extension UIScrollView {
 
   fileprivate var maxContentOffset: CGPoint {
@@ -2760,57 +2640,4 @@ extension EditingCanvasView: UIGestureRecognizerDelegate {
   }
 }
 
-extension EditingCanvasView {
-
-  /// Memoized canvas records for the committed blur-mask strokes.
-  ///
-  /// Mapping every stamp (working space to canvas, then into the crop
-  /// output) is linear in the painted stamps, and `updateDisplay()` runs on
-  /// every host update. An unchanged mask compares equal cheaply (its stroke
-  /// arrays are shared), and returning the same record arrays lets the
-  /// canvas renderer's own equality check short-circuit too.
-  struct CommittedStrokeRecords {
-
-    private var source: (
-      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
-      records: [EditingCanvasStrokeRecord]
-    )?
-
-    private var output: (
-      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
-      geometry: EditingCanvasCropOutputGeometry,
-      records: [EditingCanvasStrokeRecord]
-    )?
-
-    /// Records in the source domain (y-down), for a canvas sized to the
-    /// source image.
-    mutating func sourceRecords(
-      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
-      domainHeight: CGFloat
-    ) -> [EditingCanvasStrokeRecord] {
-      if let source, source.localBlur == localBlur {
-        return source.records
-      }
-      let records = CanvasRenderPlan(localBlur: localBlur)
-        .committedStrokes(in: nil, domainHeight: domainHeight)
-      source = (localBlur, records)
-      return records
-    }
-
-    /// Records in the crop-output domain of `geometry`, for the tool canvas.
-    mutating func outputRecords(
-      localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?,
-      geometry: EditingCanvasCropOutputGeometry,
-      domainHeight: CGFloat
-    ) -> [EditingCanvasStrokeRecord] {
-      if let output, output.localBlur == localBlur, output.geometry == geometry {
-        return output.records
-      }
-      let records = sourceRecords(localBlur: localBlur, domainHeight: domainHeight).map {
-        geometry.outputRecord(fromSourceRecord: $0)
-      }
-      output = (localBlur, geometry, records)
-      return records
-    }
-  }
-}
+#endif

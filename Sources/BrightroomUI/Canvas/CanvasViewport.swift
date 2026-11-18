@@ -89,3 +89,12 @@ struct CanvasViewport {
     )
   }
 }
+
+extension CanvasViewport {
+  var editingCanvasViewport: EditingCanvasRenderer.Viewport {
+    .init(
+      visibleContentRect: visibleContentRect,
+      contentToCanvasTransform: contentToCanvasTransform
+    )
+  }
+}

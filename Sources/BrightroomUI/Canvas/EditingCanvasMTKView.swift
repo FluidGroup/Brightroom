@@ -1,12 +1,19 @@
 import BrightroomEngine
 import BrightroomParametric
 import MetalKit
+#if os(iOS)
 import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 /// Hosts an editing canvas's drawable and brush input for a surface-owned frame loop.
 ///
 /// The host applies a viewport and calls `drawIfNeeded()` each visible frame. This
 /// view never schedules its own display link or setNeedsDisplay-driven render.
+///
+/// On macOS it takes no events (`hitTest(_:)` returns nil) and is not an
+/// accessibility element, so input and accessibility belong to its host view.
 final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
   /// Brush gesture state, including the active live stamps waiting for display.
@@ -38,9 +45,16 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
 
     super.init(frame: .zero, device: device)
 
+    #if os(iOS)
     backgroundColor = .clear
     isOpaque = false
     layer.isOpaque = false
+    #elseif os(macOS)
+    layer?.isOpaque = false
+    // A frame drawn before a resize keeps its pixel size instead of being
+    // stretched to the new bounds.
+    layer?.contentsGravity = .topLeft
+    #endif
     framebufferOnly = false
     colorPixelFormat = EditingCanvasImageProcessing.drawablePixelFormat
     clearColor = MTLClearColor(red: 0, green: 0, blue: 0, alpha: 0)
@@ -51,11 +65,18 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
     // Commit the sampled viewport with the surrounding Core Animation frame,
     // including overlays whose presentation geometry supplied that sample.
     presentsWithTransaction = true
+    #if os(iOS)
     isMultipleTouchEnabled = true
+    #endif
     delegate = self
+    #if os(iOS)
     accessibilityIdentifier = "editing-canvas-metal-view"
     isAccessibilityElement = true
     accessibilityLabel = "Brush mask renderer"
+    #elseif os(macOS)
+    setAccessibilityIdentifier("editing-canvas-metal-view")
+    setAccessibilityElement(false)
+    #endif
     isHidden = true
     if let metalLayer = layer as? CAMetalLayer {
       metalLayer.maximumDrawableCount = 3
@@ -69,7 +90,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   /// encodes into the drawable are interpreted as Display-P3 by the compositor —
   /// one conversion, no double color management. MTKView (re)creates its
   /// CAMetalLayer/drawable from `colorPixelFormat`, so the layer colorspace is
-  /// (re)asserted here and again from `didMoveToWindow`. This is SDR Display-P3
+  /// (re)asserted here and again when the view moves to a window. This is SDR Display-P3
   /// (no EDR); it matches the export's Display-P3 tag.
   private func applyColorSpaceContract() {
     guard let metalLayer = layer as? CAMetalLayer else { return }
@@ -81,6 +102,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
     fatalError("init(coder:) has not been implemented")
   }
 
+  #if os(iOS)
   override func didMoveToWindow() {
     super.didMoveToWindow()
 
@@ -100,6 +122,42 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
     let maximum = screen?.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond
     return min(max(maximum, 60), 120)
   }
+  #elseif os(macOS)
+  override var isOpaque: Bool { false }
+
+  /// Events pass through to the host view, which owns input on macOS.
+  override func hitTest(_ point: NSPoint) -> NSView? {
+    nil
+  }
+
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+
+    guard window != nil else {
+      // The AppKit canvas takes no brush input yet, so no stroke is active
+      // here; dropping one keeps a stroke from carrying into another window,
+      // as on iOS.
+      cancelActiveStroke()
+      return
+    }
+
+    applyColorSpaceContract()
+    refreshFrameRate()
+    needsCanvasDisplay = true
+  }
+
+  /// Takes the frame rate of the screen the window is on now. The host calls
+  /// it when the window moves to another screen, which does not move this
+  /// view to another window.
+  func refreshFrameRate() {
+    preferredFramesPerSecond = Self.targetFrameRate(for: window?.screen)
+  }
+
+  static func targetFrameRate(for screen: NSScreen?) -> Int {
+    let maximum = screen?.maximumFramesPerSecond ?? NSScreen.main?.maximumFramesPerSecond ?? 60
+    return min(max(maximum, 60), 120)
+  }
+  #endif
 
   func configure(
     brush: EditingCanvasBrush,
@@ -154,6 +212,14 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   /// retained image and viewport inputs have not changed.
   func setNeedsCanvasDisplay() {
     needsCanvasDisplay = true
+  }
+
+  /// Whether the next `drawIfNeeded()` would draw: an input changed, or the
+  /// bounds differ from the last presented frame. It stays true after a draw
+  /// that found no drawable, so a host can tell "nothing changed" from "not
+  /// presented yet" and keep its frames running.
+  var hasPendingDisplay: Bool {
+    needsCanvasDisplay || lastDrawnSize != bounds.size
   }
 
   func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {

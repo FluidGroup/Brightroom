@@ -6,6 +6,8 @@
 //  Copyright © 2021 muukii. All rights reserved.
 //
 
+#if os(iOS)
+
 import SwiftUI
 import UIKit
 
@@ -278,3 +280,5 @@ extension EditingCanvasView {
     }
   }
 }
+
+#endif

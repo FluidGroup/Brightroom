@@ -43,9 +43,10 @@ jobs:
         with:
           xcode-version: "27.2"
       - uses: actions/checkout@v7
-      # Runs every package test target: BrightroomParametricTests and
+      # Runs every package test target: BrightroomParametricTests,
       # BrightroomEngineDocumentTests (documents, history, and the editor's
-      # document flows).
+      # document flows), and BrightroomCanvasTests (canvas navigation and the
+      # canvas's render path).
       # The document tests render on the GPU; run serially, like the test job,
       # because parallel GPU tests hang the CI simulator.
       - name: Test package
@@ -68,14 +69,56 @@ jobs:
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify
-      # BrightroomParametric and BrightroomEngine also support macOS.
-      # BrightroomUI does not yet, so the package test scheme cannot build
-      # there; this keeps the two macOS modules compiling.
-      - name: Build for macOS
+
+  macos:
+    runs-on: xcode-27
+    timeout-minutes: 30
+
+    steps:
+      - uses: maxim-lobanov/setup-xcode@v1.7.0
+        with:
+          xcode-version: "27.2"
+      - uses: actions/checkout@v7
+      # Builds BrightroomUI, BrightroomEngine and BrightroomParametric for
+      # macOS.
+      - name: Build
         run: |
           set -o pipefail && xcodebuild \
-            -scheme BrightroomEngine \
+            -scheme BrightroomUI \
             -destination 'platform=macOS' \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify
+      # Runs BrightroomCanvasTests (including the AppKit canvas) and
+      # BrightroomEngineDocumentTests on macOS. BrightroomParametricTests is
+      # not run here: three of its tests fail on macOS with rendering
+      # tolerance differences that predate the macOS canvas and are not yet
+      # understood. The tests render on the GPU; run serially, like the other
+      # test steps.
+      - name: Test package
+        run: |
+          set -o pipefail && xcodebuild \
+            -scheme Brightroom-Package \
+            test \
+            -destination 'platform=macOS' \
+            -only-testing:BrightroomCanvasTests \
+            -only-testing:BrightroomEngineDocumentTests \
+            -parallel-testing-enabled NO \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 180 \
+            -skipMacroValidation \
+            -skipPackagePluginValidation \
+            | xcbeautify
+      # The demo's target names a development team; the runner has no signing
+      # certificate, so this build does not sign.
+      - name: Build ParametricMacDemo
+        run: |
+          set -o pipefail && xcodebuild \
+            -project ./Dev/Brightroom.xcodeproj \
+            -scheme ParametricMacDemo \
+            -destination 'platform=macOS' \
+            build \
+            CODE_SIGNING_ALLOWED=NO \
             -skipMacroValidation \
             -skipPackagePluginValidation \
             | xcbeautify

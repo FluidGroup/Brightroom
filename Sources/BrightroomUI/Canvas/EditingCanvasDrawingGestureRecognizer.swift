@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import UIKit
 
 final class EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
@@ -127,3 +129,5 @@ final class EditingCanvasDrawingGestureRecognizer: UIGestureRecognizer {
     state = .cancelled
   }
 }
+
+#endif

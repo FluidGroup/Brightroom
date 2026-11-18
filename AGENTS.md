@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Brightroom is a composable image editor library for iOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components.
+Brightroom is a composable image editor library for iOS and macOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components (on macOS, BrightroomUI has the canvas as a viewer; the built-in editor is iOS only).
 
 ## Build Commands
 
@@ -13,8 +13,14 @@ Brightroom is a composable image editor library for iOS, powered by Metal for hi
 # Build BrightroomUI (includes BrightroomEngine and BrightroomParametric)
 cd Dev && xcodebuild -scheme BrightroomUI -destination 'generic/platform=iOS Simulator' -skipMacroValidation -skipPackagePluginValidation build
 
+# Build BrightroomUI for macOS
+xcodebuild -scheme BrightroomUI -destination 'platform=macOS' -skipMacroValidation -skipPackagePluginValidation build
+
 # Build SwiftUI Demo app
 cd Dev && xcodebuild -scheme SwiftUIDemo -destination 'generic/platform=iOS Simulator' -skipMacroValidation -skipPackagePluginValidation build
+
+# Build ParametricMacDemo (macOS; without the team's signing certificate, add CODE_SIGNING_ALLOWED=NO)
+xcodebuild -project Dev/Brightroom.xcodeproj -scheme ParametricMacDemo -destination 'platform=macOS' -skipMacroValidation -skipPackagePluginValidation build
 ```
 
 Note: `swift build` does not work due to macOS version constraints. Always use `xcodebuild` with the Dev/Brightroom.xcodeproj.
@@ -73,15 +79,19 @@ open Dev/Brightroom.xcodeproj
      (`ImageDecoding`) and the preview's GPU upload (`PreviewTextureUpload`)
    - Uses swift-state-graph for observable state (`PreviewSourceLoader.phase`)
 
-3. **BrightroomUI** - SwiftUI image editing components (UIKit internally)
+3. **BrightroomUI** - SwiftUI image editing components (UIKit internally on
+   iOS, AppKit on macOS). On macOS, `ImageEditorCanvas` shows the document's
+   evaluated output with zoom and pan; the built-in editor and crop and brush
+   editing are iOS only for now
    - `Sources/BrightroomUI/ImageEditor/` - the built-in editor `ImageEditor`,
      its root feature `ImageEditorFeature`, and `ImageEditorDocument`
      (`EditingDocument<ImageEditorFeature>`), which the host owns with its
      history
    - `Sources/BrightroomUI/Canvas/` - the editing canvas: the public
      `ImageEditorCanvas` (value inputs, `onCropGuideChange`), its
-     `ImageEditorCanvasReader`/`ImageEditorCanvasProxy` for commands, the
-     internal UIKit `EditingCanvasView`, and its Metal surface
+     `ImageEditorCanvasReader`/`ImageEditorCanvasProxy` for commands (iOS
+     only), the internal UIKit `EditingCanvasView`, and its Metal surface;
+     the AppKit `EditingCanvasView` is in `Canvas/AppKit/`
    - `Sources/BrightroomUI/Shared/` - Shared UI utilities and components
    - `Sources/BrightroomUI/Debug/` - `FeatureTreeOutline`, SwiftUI rows that
      show the `FeatureTreeNode`s BrightroomParametric builds from a feature
@@ -200,7 +210,22 @@ The project uses swift-state-graph for observable state. When modifying state-re
   kernel that assumes a color space does the same
 - Performance-critical operations use Metal instead of Core Image
 - The editing canvas (`EditingCanvasView`) draws through `EditingCanvasMTKView`
-  and `EditingCanvasRenderer` (`Sources/BrightroomUI/Canvas/`)
+  and `EditingCanvasRenderer` (`Sources/BrightroomUI/Canvas/`). The pieces
+  both platforms share are platform-neutral: `CanvasMetalSurface` (the Metal
+  half of a canvas surface, used by the UIKit crop and tool surfaces and by
+  the AppKit canvas), `CanvasNavigation` (zoom and pan as a value, which the
+  AppKit canvas drives), and `ViewportDisplayLink`
+- `CanvasNavigation` reads no clock and owns no view: a host passes input
+  with its time and reads a `CanvasViewport`. Its motions (the bounce at a
+  limit, the deceleration after a gesture, the way back from a rubber band,
+  a zoom that settles) are closed forms of that time, and SwiftUI's `Spring`
+  computes the springs. The UIKit tool surface zooms and pans with a
+  `UIScrollView` (`CropScrollView`)
+- In BrightroomUI, a UIKit-bound file is wrapped whole in `#if os(iOS)` and
+  an AppKit-only file (`Canvas/AppKit/`) in `#if os(macOS)`. A shared file
+  branches with `#if os(iOS) ... #elseif os(macOS) ... #endif`: AppKit code
+  never sits in a bare `#else`, and `canImport` is not used. Mac Catalyst is
+  `os(iOS)` and uses the UIKit canvas
 - Brush stamps have one rasterizer, the package `BrushStampPipeline`
   (BrightroomParametric): the canvas draws live strokes with it into its mask
   texture, and `MaskRasterizer` draws a brush mask with it into Core Image tiles
@@ -213,6 +238,8 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Parametric tests are in `Tests/BrightroomParametricTests/`
 - Document tests (`EditingDocument`, its history, `SourceImage`, and the
   ImageEditor document flows) are in `Tests/BrightroomEngineDocumentTests/`
+- Canvas tests (`CanvasNavigation`, the canvas's shared render path, and on
+  macOS the AppKit canvas) are in `Tests/BrightroomCanvasTests/`
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 - Test files marked "Public API only" play a host app: evaluate through
@@ -228,10 +255,20 @@ xcodebuild -project Dev/Brightroom.xcodeproj -scheme BrightroomEngineTests test 
   -default-test-execution-time-allowance 180 \
   -skipMacroValidation -skipPackagePluginValidation
 
-# Package tests: BrightroomParametricTests and BrightroomEngineDocumentTests
+# Package tests: BrightroomParametricTests, BrightroomEngineDocumentTests and
+# BrightroomCanvasTests
 # (CI runs this command; add -only-testing:<target> to run one target)
 xcodebuild -scheme Brightroom-Package test \
   -destination 'platform=iOS Simulator,name=<simulator>' \
+  -parallel-testing-enabled NO -test-timeouts-enabled YES \
+  -default-test-execution-time-allowance 180 \
+  -skipMacroValidation -skipPackagePluginValidation
+
+# Package tests on macOS (CI runs this command). BrightroomParametricTests is
+# left out: three of its tests fail on macOS with tolerance differences
+xcodebuild -scheme Brightroom-Package test -destination 'platform=macOS' \
+  -only-testing:BrightroomCanvasTests \
+  -only-testing:BrightroomEngineDocumentTests \
   -parallel-testing-enabled NO -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 180 \
   -skipMacroValidation -skipPackagePluginValidation
@@ -239,11 +276,15 @@ xcodebuild -scheme Brightroom-Package test \
 
 ### Demo App
 - **SwiftUI Demo**: `Dev/Sources/SwiftUIDemo/` - SwiftUI examples and UIKit-based checks wrapped with representables
-- **ParametricMacDemo**: `Dev/ParametricMacDemo/` - the parametric engine on macOS
+- **ParametricMacDemo**: `Dev/ParametricMacDemo/` - the parametric engine on
+  macOS, and `ImageEditorCanvas` as a viewer (`-startScreen canvas` opens that
+  screen at launch)
 
 ## Common Tasks
 
 ### Presenting the Built-in Editor
+The built-in editor is iOS only.
+
 ```swift
 import BrightroomEngine
 import BrightroomParametric
@@ -295,8 +336,9 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 4. Do not store edits in `PreviewSourceLoader`; it only prepares the preview
 
 ## Platform Requirements
-- iOS 17.0+ (BrightroomUI)
-- iOS 17.0+ and macOS 14.0+ (BrightroomParametric, BrightroomEngine;
-  `SourceImage(image:)` takes a `UIImage` and exists only where UIKit does)
+- iOS 17.0+ and macOS 14.0+ (BrightroomParametric, BrightroomEngine,
+  BrightroomUI; `SourceImage(image:)` takes a `UIImage` and exists only where
+  UIKit does; on macOS, BrightroomUI has the canvas as a viewer and no
+  built-in editor)
 - Swift 6.3+ (Swift 6 language mode)
-- Supports iPhone and iPad
+- Supports iPhone, iPad, and Mac

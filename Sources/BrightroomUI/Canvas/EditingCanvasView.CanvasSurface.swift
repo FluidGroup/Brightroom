@@ -19,6 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+#if os(iOS)
+
 import UIKit
 import MetalKit
 
@@ -26,46 +28,6 @@ import BrightroomEngine
 import BrightroomParametric
 
 extension EditingCanvasView {
-
-  /// Drives the fixed canvas for the lifetime of the visible editor.
-  ///
-  /// The run loop retains this proxy, not the editor. Gesture boundaries never
-  /// start or stop the link: every displayed frame samples the scroll geometry,
-  /// while the canvas submits Metal work only when its input changes.
-  @MainActor
-  final class ViewportDisplayLink: NSObject {
-    weak var owner: EditingCanvasView?
-    private var displayLink: CADisplayLink?
-
-    func start(maximumFramesPerSecond: Int) {
-      if displayLink == nil {
-        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
-        link.add(to: .main, forMode: .common)
-        displayLink = link
-      }
-      let maximum = Float(maximumFramesPerSecond)
-      displayLink?.preferredFrameRateRange = .init(
-        minimum: min(60, maximum), maximum: maximum, preferred: maximum
-      )
-    }
-
-    func invalidate() {
-      displayLink?.invalidate()
-      displayLink = nil
-    }
-
-    isolated deinit {
-      invalidate()
-    }
-
-    @objc private func tick(_ link: CADisplayLink) {
-      guard let owner else {
-        invalidate()
-        return
-      }
-      owner.drawViewportFrame()
-    }
-  }
 
   /// Owns the shared UIKit view graph that hosts the crop and tool surfaces.
   ///
@@ -105,56 +67,15 @@ extension EditingCanvasView {
     }
   }
 
-  /// The post-crop pass of one displayed frame: the effect the feature
-  /// evaluates after its final crop, and where the crop output lies on the
-  /// canvas. See `EditingCanvasRenderer.setPostCrop(effect:frame:chainEntry:)`.
-  struct CanvasPostCrop: Equatable {
-    let effect: AnyImageEffect
-    /// The crop output on the canvas, in canvas points.
-    let frame: CGRect
-    /// The whole source in the surface's content coordinates.
-    let chainEntry: CGRect
-
-    /// The pass on a tool surface, whose content is the crop output: the
-    /// frame is the content's bounds where the viewport places them.
-    init?(
-      effect: AnyImageEffect?,
-      geometry: EditingCanvasCropOutputGeometry,
-      viewport: CanvasViewport
-    ) {
-      guard let effect else { return nil }
-      self.effect = effect
-      self.frame = geometry.outputBounds.applying(viewport.contentToCanvasTransform)
-      self.chainEntry = CGRect(origin: .zero, size: geometry.sourceImageSize)
-        .applying(geometry.inputToOutputTransform)
-    }
-
-    /// The pass on the crop surface, whose content is the source: the crop
-    /// output is what the crop guide frames.
-    ///
-    /// - Parameter guideFrame: The crop guide on the canvas, sampled with the
-    ///   viewport of the same frame.
-    init?(effect: AnyImageEffect?, guideFrame: CGRect, imageSize: CGSize) {
-      guard let effect else { return nil }
-      self.effect = effect
-      self.frame = guideFrame
-      self.chainEntry = CGRect(origin: .zero, size: imageSize)
-    }
-  }
-
   /// Common core shared by the Crop and Tool surfaces: a UIScrollView that
   /// owns pan/zoom physics over a transparent zooming view. The Metal canvas
-  /// lives in the fixed host coordinate space, outside the scroll hierarchy.
+  /// lives in the fixed host coordinate space, outside the scroll hierarchy;
+  /// `CanvasMetalSurface` owns it and draws it.
   ///
   /// These are reference types because UIKit may re-enter scroll-view delegate
   /// callbacks while a surface is updating its views and layers.
-  class CanvasSurface: NSObject, UIScrollViewDelegate {
+  class CanvasSurface: CanvasMetalSurface, UIScrollViewDelegate {
     let scrollView = CropScrollView()
-    var canvasView: EditingCanvasMTKView?
-    var canvasSize: CGSize?
-    /// The mapping of the last frame submitted for display, also used to
-    /// map drawing gestures back into the surface's editing domain.
-    var displayedViewport: CanvasViewport?
 
     /// The transparent view the scroll view zooms to produce navigation geometry.
     let zoomingView: UIView
@@ -204,90 +125,6 @@ extension EditingCanvasView {
       @unknown default:
         return false
       }
-    }
-
-    @discardableResult
-    func ensureCanvasView(
-      in hostView: UIView,
-      canvasSize: CGSize,
-      brush: EditingCanvasBrush,
-      smoothing: ImageEditorCanvas.Brush.Smoothing,
-      onStrokeCommit: @escaping CanvasStrokeCommitHandler
-    ) -> EditingCanvasMTKView? {
-      if let canvasView, self.canvasSize == canvasSize {
-        return canvasView
-      }
-
-      removeCanvasView()
-
-      guard
-        canvasSize.width > 0,
-        canvasSize.height > 0,
-        let device = MTLCreateSystemDefaultDevice()
-      else {
-        return nil
-      }
-
-      let view = EditingCanvasMTKView(canvasSize: canvasSize, device: device)
-      view.isUserInteractionEnabled = false
-      view.isHidden = true
-      view.configure(brush: brush, smoothing: smoothing)
-      view.onStrokeCommit = onStrokeCommit
-      view.frame = hostView.bounds
-      hostView.addSubview(view)
-      canvasView = view
-      self.canvasSize = canvasSize
-      return view
-    }
-
-    func removeCanvasView() {
-      displayedViewport = nil
-      canvasView?.removeFromSuperview()
-      canvasView = nil
-      canvasSize = nil
-    }
-
-    func hideCanvasView() {
-      canvasView?.isHidden = true
-      // A hidden canvas draws nothing, so it keeps no drawable-size image
-      // under the post-crop pass (the crop surface after crop editing).
-      canvasView?.releasePreFinishCache()
-    }
-
-    func configureCanvas(
-      brush: EditingCanvasBrush,
-      smoothing: ImageEditorCanvas.Brush.Smoothing
-    ) {
-      canvasView?.configure(brush: brush, smoothing: smoothing)
-    }
-
-    func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
-      canvasView?.setCommittedStrokes(records)
-    }
-
-    /// Samples the viewport and submits a changed frame without moving the canvas.
-    ///
-    /// - Parameter postCrop: The pass drawn after the crop, sampled with
-    ///   `viewport`, or nil when the feature has none.
-    func draw(viewport: CanvasViewport?, postCrop: CanvasPostCrop?) {
-      guard let canvasView else { return }
-      displayedViewport = viewport
-      guard let viewport else {
-        canvasView.isHidden = true
-        canvasView.releasePreFinishCache()
-        return
-      }
-      canvasView.isHidden = false
-      if canvasView.contentScaleFactor != viewport.contentScaleFactor {
-        canvasView.contentScaleFactor = viewport.contentScaleFactor
-      }
-      canvasView.setViewport(viewport.editingCanvasViewport)
-      canvasView.setPostCrop(
-        effect: postCrop?.effect,
-        frame: postCrop?.frame ?? .null,
-        chainEntry: postCrop?.chainEntry ?? .null
-      )
-      canvasView.drawIfNeeded()
     }
 
     func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -498,19 +335,6 @@ extension EditingCanvasView {
   /// stroke back into the pre-crop Feature domain before saving it.
   final class ToolSurface: CanvasSurface {
 
-    /// Inputs that determine the output of
-    /// `EditingCanvasRenderImageFactory.makeCropOutputRenderImages`. The source
-    /// image is compared by identity; `EditingCanvasSource` stores it as an
-    /// immutable property, so a new editing source always produces a new
-    /// instance. Strokes are not part of the key: committing one keeps the
-    /// render images and their bakes.
-    struct CanvasRenderInputKey: Equatable {
-      var sourceImage: ObjectIdentifier
-      var effects: ImageEditorFeature.Effects
-      var geometry: EditingCanvasCropOutputGeometry
-      var mode: EditingCanvasMode
-    }
-
     let contentView: UIView
     let drawingGestureRecognizer = EditingCanvasDrawingGestureRecognizer(target: nil, action: nil)
     /// A memo of the crop that produced the currently published
@@ -583,39 +407,19 @@ extension EditingCanvasView {
       mode: EditingCanvasMode,
       committedStrokes: [EditingCanvasStrokeRecord]
     ) {
-      guard geometry.outputSize == canvasSize, let canvasView else {
+      guard geometry.outputSize == canvasSize, canvasView != nil else {
         return
       }
       publishOutputGeometry(geometry)
 
-      let inputKey = CanvasRenderInputKey(
-        sourceImage: ObjectIdentifier(source.editingSourceImage),
+      updateCropOutput(
+        source: source,
         effects: effects,
         geometry: geometry,
-        mode: mode
+        mode: mode,
+        committedStrokes: committedStrokes,
+        key: &currentCanvasRenderInputKey
       )
-
-      // Hosts call this on every state update (stroke commits, brush changes,
-      // unrelated SwiftUI re-renders). Rebuilding identical render-image graphs
-      // would discard the canvas's viewport texture caches each time.
-      if currentCanvasRenderInputKey != inputKey || canvasView.hasRenderImages == false {
-        guard
-          let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-            editingSourceImage: source.editingSourceImage,
-            effects: effects.canvasEffect,
-            geometry: geometry,
-            mode: mode
-          )
-        else {
-          return
-        }
-
-        canvasView.setRenderImages(images)
-        currentCanvasRenderInputKey = inputKey
-      }
-
-      canvasView.setCommittedStrokes(committedStrokes)
-      canvasView.isHidden = false
     }
 
     func applyMode(
@@ -638,3 +442,5 @@ extension EditingCanvasView {
 
   }
 }
+
+#endif

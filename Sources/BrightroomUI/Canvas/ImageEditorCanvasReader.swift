@@ -36,6 +36,9 @@ import SwiftUI
 ///
 /// Call the proxy from actions, such as a button's, not while the content
 /// is being built.
+///
+/// Unavailable on macOS, where the canvas views only and takes no commands.
+@available(macOS, unavailable, message: "The macOS canvas views only and takes no commands yet.")
 public struct ImageEditorCanvasReader<Content: View>: View {
 
   @State private var registry = ImageEditorCanvasRegistry()
@@ -64,6 +67,9 @@ public struct ImageEditorCanvasReader<Content: View>: View {
 /// canvas is still preparing its image. With several canvases under one
 /// reader, commands go to the one mounted most recently that is still
 /// mounted.
+///
+/// Unavailable on macOS, where the canvas views only and takes no commands.
+@available(macOS, unavailable, message: "The macOS canvas views only and takes no commands yet.")
 @MainActor
 public struct ImageEditorCanvasProxy {
 
@@ -84,14 +90,18 @@ public struct ImageEditorCanvasProxy {
   /// you want through the binding, and the lock through
   /// `lockedAspectRatio(_:)`, instead of calling this.
   public func resetCrop() {
+    #if os(iOS)
     registry.canvasView?.resetCrop()
+    #endif
   }
 
   /// Turns the output a further quarter counterclockwise on screen, turning
   /// a locked aspect ratio with it. The document is not written; apply the
   /// pending crop to write it.
   public func rotateCounterclockwise() {
+    #if os(iOS)
     registry.canvasView?.rotateCounterclockwise()
+    #endif
   }
 
   /// Writes the crop guide's pending crop to the document's
@@ -106,7 +116,9 @@ public struct ImageEditorCanvasProxy {
   /// with `isEditing: true` as of the canvas's last update) is first
   /// recorded at the angle on screen, as the end of the edit records it.
   public func applyPendingCrop() {
+    #if os(iOS)
     registry.canvasView?.applyPendingCrop()
+    #endif
   }
 }
 
@@ -117,6 +129,10 @@ public struct ImageEditorCanvasProxy {
 /// must not change SwiftUI state.
 @MainActor
 final class ImageEditorCanvasRegistry {
+
+  // Only the UIKit canvas takes commands. On macOS the reader and the proxy
+  // are unavailable, so the registry is never given a canvas there.
+  #if os(iOS)
 
   private struct Entry {
     weak var canvasView: EditingCanvasView?
@@ -143,6 +159,7 @@ final class ImageEditorCanvasRegistry {
   func unregister(_ canvasView: EditingCanvasView) {
     entries.removeAll { $0.canvasView == nil || $0.canvasView === canvasView }
   }
+  #endif
 }
 
 extension EnvironmentValues {
