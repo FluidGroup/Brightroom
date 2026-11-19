@@ -84,9 +84,27 @@ struct AppKitCanvasHostingTests {
     #expect(abs(transform.ty - (bounds.height - Self.imageSize.height * fit) / 2) < 1e-9)
     #expect(viewport.contentScaleFactor == window.backingScaleFactor)
 
-    // The renderer writes the drawable in screen order; Core Animation must
-    // not flip it on the way to the screen inside the flipped host.
+    // The canvas anchors its drawable at the top left (`contentsGravity`),
+    // so a frame drawn before a resize stays there instead of being
+    // stretched. Core Animation would anchor it at the bottom left if the
+    // layer's contents counted as flipped; the picture itself is never
+    // turned over, and `CanvasOutputRenderTests` checks its orientation.
+    // That count runs up the layer's superlayers, which it gets when AppKit
+    // next commits the views to Core Animation. The canvas can draw its
+    // first frame before that, so wait until the layer is in the window's
+    // layer tree.
     let metalLayer = try #require(canvasView.layer as? CAMetalLayer)
+    let hostLayer = try #require(hostingView.layer, "The hosting view is not layer-backed")
+    var isInLayerTree = false
+    for _ in 0..<250 {
+      isInLayerTree = sequence(first: metalLayer as CALayer, next: \.superlayer)
+        .contains { $0 === hostLayer }
+      if isInLayerTree {
+        break
+      }
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    try #require(isInLayerTree, "The Metal layer did not join the window's layer tree")
     #expect(metalLayer.contentsAreFlipped() == false)
   }
 
