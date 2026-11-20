@@ -58,6 +58,12 @@ let package = Package(
       name: "BrightroomEngineDocumentTests",
       dependencies: ["BrightroomEngine", "BrightroomUI", "BrightroomParametric"]
     ),
+    // Canvas tests: `CanvasNavigation` and the canvas's shared render path
+    // (iOS and macOS), and on macOS the AppKit canvas and its SwiftUI hosting.
+    .testTarget(
+      name: "BrightroomCanvasTests",
+      dependencies: ["BrightroomEngine", "BrightroomUI", "BrightroomParametric"]
+    ),
     .plugin(
       name: "BuildColorAdjustmentKernels",
       capability: .buildTool()

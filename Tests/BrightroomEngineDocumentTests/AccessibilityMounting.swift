@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import Darwin
 import SwiftUI
 import Testing
@@ -114,3 +116,5 @@ private enum AccessibilityAutomation {
 // Globals, because the `atexit` handler is a C function that captures nothing.
 nonisolated(unsafe) private var accessibilityAutomationInitialValue: Int32 = 0
 nonisolated(unsafe) private var setAccessibilityAutomation: (@convention(c) (Int32) -> Void)?
+
+#endif

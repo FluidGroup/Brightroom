@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import CoreGraphics
 import SwiftUI
 import Testing
@@ -211,3 +213,5 @@ struct ImageEditorAccessibilityTests {
     return element.perform(selector)?.takeUnretainedValue() as? String
   }
 }
+
+#endif

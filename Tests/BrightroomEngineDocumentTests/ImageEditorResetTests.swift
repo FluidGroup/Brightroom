@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import CoreGraphics
 import SwiftUI
 import Testing
@@ -316,3 +318,5 @@ extension EditingCanvasView {
     layoutIfNeeded()
   }
 }
+
+#endif

@@ -35,7 +35,7 @@ enum CanvasCompositionPreview {
     editingDownsample: CGFloat = 1
   ) throws -> CGImage {
     let imageSize = CGSize(width: source.width, height: source.height)
-    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur)
+    let plan = CanvasRenderPlan(localBlur: document.localBlur)
     let editingSource = editingDownsample == 1
       ? CIImage(cgImage: source)
       : CIImage(cgImage: source)

@@ -31,11 +31,11 @@ Choose the product that matches what you want to build:
 
 | Product | Purpose | Platforms |
 | --- | --- | --- |
-| `BrightroomUI` | The built-in image editor and a reusable editing canvas for SwiftUI | iOS 17+ |
-| `BrightroomEngine` | Source images, editing documents with undo history, and rendering | iOS 17+ |
+| `BrightroomUI` | The built-in image editor and a reusable editing canvas for SwiftUI | iOS 17+, macOS 14+ (the canvas as a viewer; the built-in editor is iOS only) |
+| `BrightroomEngine` | Source images, editing documents with undo history, and rendering | iOS 17+, macOS 14+ |
 | `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies and no SwiftUI | iOS 17+, macOS 14+ |
 
-The Swift package requires **Swift 6.3 or later** and uses Swift 6 language mode. Use an Xcode toolchain that includes Swift 6.3 or later. The built-in UI uses UIKit internally; UIKit apps can present it through `UIHostingController`.
+The Swift package requires **Swift 6.3 or later** and uses Swift 6 language mode. Use an Xcode toolchain that includes Swift 6.3 or later. BrightroomUI uses UIKit internally on iOS and AppKit on macOS; UIKit apps can present it through `UIHostingController`.
 
 ## Installation
 
@@ -125,7 +125,7 @@ The editor prepares the image itself. Each completed operation, such as a filter
 
 For large images, prefer `SourceImage(contentsOf:)` or `SourceImage(data:)`, which decode only when the image is rendered or prepared. `SourceImage(asset:)` loads a Photos asset. To start from a crop that frames a face, create the document with `await ImageEditorDocument(source:initialCrop:)` and `.faceDetection(aspectRatio:)`; `.aspectRatio(_:)` starts from a centered crop of a ratio.
 
-Customize the aspect ratio policy and filters through `ImageEditor.Options`, and button labels through `ImageEditor.LocalizedStrings`. Filters default to an empty list; supply your own `FilterFeature` values through `options.filters`. An effect of your own that every edit of the image should include (an automatic retouch, say) goes in the document's `feature.effects.custom`, evaluated after the editor's adjustments; the editor never edits it, and Reset keeps it. The [sample filters](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you; put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Canvas/ImageEditorCanvasReader.swift) to rotate, reset, or apply the crop from your own controls. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+Customize the aspect ratio policy and filters through `ImageEditor.Options`, and button labels through `ImageEditor.LocalizedStrings`. Filters default to an empty list; supply your own `FilterFeature` values through `options.filters`. An effect of your own that every edit of the image should include (an automatic retouch, say) goes in the document's `feature.effects.custom`, evaluated after the editor's adjustments; the editor never edits it, and Reset keeps it. The [sample filters](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you; put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvasReader.swift) to rotate, reset, or apply the crop from your own controls. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
 
 ### Saving and Resuming an Edit
 
@@ -194,7 +194,7 @@ open Dev/Brightroom.xcodeproj
 ```
 
 - **SwiftUIDemo** — the built-in image editor, custom canvas interfaces, image rendering, parametric features, and video processing on iOS.
-- **ParametricMacDemo** — the standalone parametric engine on macOS.
+- **ParametricMacDemo** — the standalone parametric engine, and the editing canvas as a viewer, on macOS.
 
 Select a scheme and a matching run destination in Xcode. To build the iOS demo from the command line:
 

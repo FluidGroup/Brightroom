@@ -170,7 +170,7 @@ no synchronous gesture flush. Quarter-turn crops (straighten → crop → quarte
 turn, `CropFeature.OutputGeometry`) are covered by unit and UI tests on the
 Simulator but have not been verified on a physical device.
 
-Files: `Sources/BrightroomUI/Canvas/EditingCanvasView.swift`
+Files: `Sources/BrightroomUI/iOS/Canvas/EditingCanvasView.swift`
 (`applyPendingCrop()`, `record()`).
 
 ### 6. (If global spatial effects land) downsample the global-effect preview too
@@ -185,7 +185,7 @@ sharpen, displacement) is ever added to the global effects, that path would
 materialize a full-canvas intermediate and could OOM on huge sources; apply the
 same source-resolution-then-upscale treatment there.
 
-Files: `Sources/BrightroomUI/Canvas/EditingCanvasRenderImageFactory.swift`.
+Files: `Sources/BrightroomUI/Shared/Canvas/EditingCanvasRenderImageFactory.swift`.
 
 ### 7. Texture bit-depth / memory for the GPU-resident source + content bake
 
@@ -223,8 +223,8 @@ Open:
   re-introduce per-frame cost (it shouldn't — pointwise on a GPU texture).
 
 Files: `Sources/BrightroomEngine/Engine/PreviewTextureUpload.swift`,
-`Sources/BrightroomUI/Canvas/EditingCanvasContentBake.swift`,
-`Sources/BrightroomUI/Canvas/EditingCanvasMTKView.swift`
+`Sources/BrightroomUI/Shared/Canvas/EditingCanvasContentBake.swift`,
+`Sources/BrightroomUI/Shared/Canvas/EditingCanvasMTKView.swift`
 (`preparedAdjustedLayer`),
-`Sources/BrightroomUI/Canvas/EditingCanvasImageProcessing.swift`
+`Sources/BrightroomUI/Shared/Canvas/EditingCanvasImageProcessing.swift`
 (`colorTextureFormat`).

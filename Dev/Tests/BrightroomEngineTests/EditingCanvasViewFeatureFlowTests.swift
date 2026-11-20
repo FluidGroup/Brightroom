@@ -215,7 +215,7 @@ struct EditingCanvasViewFeatureFlowTests {
   @Test(arguments: MasksThatAreNotABrush.all)
   func `A mask that is not a brush has no canvas strokes and still exports`(mask: Mask) throws {
     let feature = makeFeature(localBlurMask: mask)
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: feature.localBlur) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: feature.localBlur) == .viewportBase)
 
     let source = makeSource(size: imageSize)
     let renderer = FeatureRenderer()
