@@ -377,7 +377,7 @@ struct CompositionBehaviorTests {
     )
     #expect(ColorMixerFeature(bands: first) == ColorMixerFeature(bands: first))
     #expect(
-      ColorMixerFeature(bands: first, algorithm: .oklch)
+      ColorMixerFeature(bands: first)
         == ColorMixerFeature(bands: first)
     )
   }

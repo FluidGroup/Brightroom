@@ -23,8 +23,9 @@ enum EditingCanvasRenderImageFactory {
     editingSourceImage: CIImage,
     effects: AnyImageEffect?,
     canvasSize: CGSize,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
+    mode: EditingCanvasMode,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) throws -> EditingCanvasRenderImages? {
     let canvasRect = CGRect(origin: .zero, size: canvasSize)
     let previewSourceImage = ImageGeometry.removingExtentOffset(editingSourceImage)
     let sourceImage = displayOrientedImage(previewSourceImage, canvasSize: previewSourceImage.extent.size)
@@ -50,12 +51,13 @@ enum EditingCanvasRenderImageFactory {
     // (modulo the inherent downscale/upscale resampling difference). An
     // absolute radius is full-resolution pixels, so `renderScale` shrinks it
     // to the editing source.
-    let sourceBase = EditingCanvasImageProcessing.clippedToSourceAlpha(
+    let sourceBase = try EditingCanvasImageProcessing.clippedToSourceAlpha(
       applying(
         effects,
         to: sourceImage,
         chainEntryExtent: displaySourceExtent,
-        renderScale: renderScale
+        renderScale: renderScale,
+        adjustmentRendering: adjustmentRendering
       ),
       source: sourceImage
     )
@@ -73,11 +75,12 @@ enum EditingCanvasRenderImageFactory {
       usesPreparedBaseImage = false
 
     case let .localAdjustment(localEffect):
-      let sourceAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(
+      let sourceAdjusted = try EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyForPreview(
           to: sourceBase,
           chainEntryExtent: displaySourceExtent,
-          renderScale: renderScale
+          renderScale: renderScale,
+          adjustmentRendering: adjustmentRendering
         ),
         source: sourceImage
       )
@@ -99,7 +102,8 @@ enum EditingCanvasRenderImageFactory {
       adjusted: adjustedImage,
       hasGlobalEffects: effects != nil,
       hasLocalEffect: hasLocalEffect,
-      usesPreparedBaseImage: usesPreparedBaseImage
+      usesPreparedBaseImage: usesPreparedBaseImage,
+      adjustmentRendering: adjustmentRendering
     )
   }
 
@@ -114,8 +118,9 @@ enum EditingCanvasRenderImageFactory {
     editingSourceImage: CIImage,
     effects: AnyImageEffect?,
     geometry: EditingCanvasCropOutputGeometry,
-    mode: EditingCanvasMode
-  ) -> EditingCanvasRenderImages? {
+    mode: EditingCanvasMode,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) throws -> EditingCanvasRenderImages? {
     let canvasRect = geometry.outputBounds
     let sourceRect = CGRect(origin: .zero, size: geometry.sourceImageSize)
     let previewSourceImage = ImageGeometry.removingExtentOffset(editingSourceImage)
@@ -149,12 +154,13 @@ enum EditingCanvasRenderImageFactory {
     // extent), so it upscales to the same fractional radius the
     // full-resolution export produces; an absolute radius is scaled by
     // `renderScale`.
-    let displayFiltered = EditingCanvasImageProcessing.clippedToSourceAlpha(
+    let displayFiltered = try EditingCanvasImageProcessing.clippedToSourceAlpha(
       applying(
         effects,
         to: displaySourceImage,
         chainEntryExtent: displaySourceImage.extent,
-        renderScale: renderScale
+        renderScale: renderScale,
+        adjustmentRendering: adjustmentRendering
       ),
       source: displaySourceImage
     )
@@ -175,11 +181,12 @@ enum EditingCanvasRenderImageFactory {
       hasLocalEffect = false
 
     case let .localAdjustment(localEffect):
-      let displayAdjusted = EditingCanvasImageProcessing.clippedToSourceAlpha(
-        localEffect.applyIgnoringFailure(
+      let displayAdjusted = try EditingCanvasImageProcessing.clippedToSourceAlpha(
+        localEffect.applyForPreview(
           to: displayFiltered,
           chainEntryExtent: displaySourceImage.extent,
-          renderScale: renderScale
+          renderScale: renderScale,
+          adjustmentRendering: adjustmentRendering
         ),
         source: displaySourceImage
       )
@@ -200,7 +207,8 @@ enum EditingCanvasRenderImageFactory {
       adjusted: adjustedImage,
       hasGlobalEffects: effects != nil,
       hasLocalEffect: hasLocalEffect,
-      usesPreparedBaseImage: true
+      usesPreparedBaseImage: true,
+      adjustmentRendering: adjustmentRendering
     )
   }
 
@@ -209,15 +217,17 @@ enum EditingCanvasRenderImageFactory {
     _ effects: AnyImageEffect?,
     to image: CIImage,
     chainEntryExtent: CGRect,
-    renderScale: Double
-  ) -> CIImage {
+    renderScale: Double,
+    adjustmentRendering: AdjustmentRendering
+  ) throws -> CIImage {
     guard let effects else {
       return image
     }
-    return effects.applyIgnoringFailure(
+    return try effects.applyForPreview(
       to: image,
       chainEntryExtent: chainEntryExtent,
-      renderScale: renderScale
+      renderScale: renderScale,
+      adjustmentRendering: adjustmentRendering
     )
   }
 

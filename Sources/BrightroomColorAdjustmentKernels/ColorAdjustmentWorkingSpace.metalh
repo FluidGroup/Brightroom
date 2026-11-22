@@ -1,0 +1,25 @@
+// Copyright (c) 2026 Hiroshi Kimura (Muukii)
+
+#pragma once
+#include <metal_stdlib>
+
+namespace brightroom {
+
+// Linear Display-P3 D65 and ROMM RGB D50, with Bradford white-point adaptation.
+static inline metal::float3 linearP3ToROMM(metal::float3 p3) {
+  using namespace metal;
+  return float3(
+    dot(p3, float3(0.63169122f, 0.21392818f, 0.15438059f)),
+    dot(p3, float3(0.08320432f, 0.88585751f, 0.03093817f)),
+    dot(p3, float3(-0.00127273f, 0.05075510f, 0.95051763f)));
+}
+
+static inline metal::float3 linearROMMToP3(metal::float3 romm) {
+  using namespace metal;
+  return float3(
+    dot(romm, float3(1.63256448f, -0.37976861f, -0.25279587f)),
+    dot(romm, float3(-0.15370188f, 1.16671309f, -0.01301121f)),
+    dot(romm, float3(0.01039326f, -0.06280787f, 1.05241461f)));
+}
+
+} // namespace brightroom

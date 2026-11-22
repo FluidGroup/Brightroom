@@ -30,6 +30,8 @@ import Foundation
 /// evaluation a pure function of (parameters, input, context).
 public struct FeatureEvaluationContext: Sendable {
 
+  public let adjustmentRendering: AdjustmentRendering
+
   /// The presentation time of the image being evaluated.
   ///
   /// Video renderers supply the exact AVFoundation composition time for each
@@ -69,7 +71,7 @@ public struct FeatureEvaluationContext: Sendable {
   /// full resolution with the default of 1. Brightroom's canvas evaluates
   /// over a downsampled editing source and sets its downsample factor, so a
   /// host's absolute radius previews at the size it exports.
-  package let renderScale: Double
+  public let renderScale: Double
 
   /// Creates an evaluation context.
   ///
@@ -79,11 +81,13 @@ public struct FeatureEvaluationContext: Sendable {
   package init(
     chainEntryExtent: CGRect? = nil,
     presentationTime: CMTime = .zero,
-    renderScale: Double = 1
+    renderScale: Double = 1,
+    adjustmentRendering: AdjustmentRendering = .standard
   ) {
     self.chainEntryExtent = chainEntryExtent
     self.presentationTime = presentationTime
     self.renderScale = renderScale
+    self.adjustmentRendering = adjustmentRendering
   }
 
   /// Returns the extent that a diagonal-based radius must resolve against when
@@ -105,7 +109,8 @@ public struct FeatureEvaluationContext: Sendable {
     .init(
       chainEntryExtent: extent,
       presentationTime: presentationTime,
-      renderScale: renderScale
+      renderScale: renderScale,
+      adjustmentRendering: adjustmentRendering
     )
   }
 
@@ -115,7 +120,17 @@ public struct FeatureEvaluationContext: Sendable {
     .init(
       chainEntryExtent: chainEntryExtent,
       presentationTime: presentationTime,
-      renderScale: scale
+      renderScale: scale,
+      adjustmentRendering: adjustmentRendering
+    )
+  }
+
+  /// Delegates to the original recipes without re-entering an external implementation.
+  public func usingStandardAdjustments() -> Self {
+    .init(
+      chainEntryExtent: chainEntryExtent,
+      presentationTime: presentationTime,
+      renderScale: renderScale
     )
   }
 }

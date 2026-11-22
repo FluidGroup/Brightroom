@@ -63,7 +63,7 @@ enum CanvasCompositionPreview {
       )
       geometry = cropOutput
       images = try #require(
-        EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+        try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
           editingSourceImage: editingSource,
           effects: document.effects.canvasEffect,
           geometry: cropOutput,
@@ -73,7 +73,7 @@ enum CanvasCompositionPreview {
     } else {
       geometry = nil
       images = try #require(
-        EditingCanvasRenderImageFactory.makeRenderImages(
+        try EditingCanvasRenderImageFactory.makeRenderImages(
           editingSourceImage: editingSource,
           effects: document.effects.canvasEffect,
           canvasSize: imageSize,

@@ -26,6 +26,8 @@ import BrightroomParametric
 
 public struct ImageEditorCanvas: View {
 
+  @Environment(\.adjustmentRendering) private var adjustmentRendering
+
   /// The `straightenAngle(_:isEditing:)` input.
   struct StraightenAngleInput: Equatable {
     var angle: Angle?
@@ -213,6 +215,7 @@ public struct ImageEditorCanvas: View {
         EditingCanvasRepresentable(
           source: EditingCanvasSource(previewSource),
           feature: displayedFeature ?? document.wrappedValue.feature,
+          adjustmentRendering: adjustmentRendering,
           onFeatureChange: { [document] change in
             Self.apply(change, preparedFor: previewSource.source, to: document)
           },
@@ -366,6 +369,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
 
   let source: EditingCanvasSource
   let feature: ImageEditorFeature
+  var adjustmentRendering: AdjustmentRendering = .standard
   let onFeatureChange: @MainActor (_ change: EditingCanvasView.FeatureChange) -> Void
   let cropInsideOverlay: ((CropInteraction) -> AnyView)?
   let cropOutsideOverlay: ((CropInteraction) -> AnyView)?
@@ -402,6 +406,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     }
 
     view.isGuideInteractionEnabled = isCropGuideDisabled == false
+    view.setAdjustmentRendering(adjustmentRendering)
     view.areAnimationsEnabled = areAnimationsEnabled
     view.clipsToGuide = clipsToGuide
     view.setBrush(brush)
@@ -467,6 +472,7 @@ struct EditingCanvasRepresentable: UIViewRepresentable {
     // - While feature changes are queued, the owner still holds the
     //   feature from before them, so they are applied to it for display.
     context.coordinator.applySwiftUIInputs {
+      canvasView.setAdjustmentRendering(adjustmentRendering)
       if canvasView.clipsToGuide != clipsToGuide {
         canvasView.clipsToGuide = clipsToGuide
       }
