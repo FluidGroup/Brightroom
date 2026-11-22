@@ -196,30 +196,40 @@ extension EditingCanvasView {
         return
       }
 
-      let key = CanvasInputKey(source: source, feature: feature, crop: crop)
+      let key = CanvasInputKey(
+        source: source,
+        feature: feature,
+        crop: crop,
+        adjustmentRendering: adjustmentRendering
+      )
       guard currentCanvasInputKey != key || canvasView.hasRenderImages == false else {
         canvasView.isHidden = false
         return
       }
 
       let renderPlan = CanvasRenderPlan(localBlur: feature.localBlur)
-      guard
-        let images = EditingCanvasRenderImageFactory.makeRenderImages(
-          editingSourceImage: source.editingSourceImage,
-          effects: feature.effects.canvasEffect,
-          canvasSize: crop.imageSize,
-          mode: renderPlan.canvasMode
-        )
-      else {
-        return
-      }
+      do {
+        guard
+          let images = try EditingCanvasRenderImageFactory.makeRenderImages(
+            editingSourceImage: source.editingSourceImage,
+            effects: feature.effects.canvasEffect,
+            canvasSize: crop.imageSize,
+            mode: renderPlan.canvasMode,
+            adjustmentRendering: adjustmentRendering
+          )
+        else {
+          return
+        }
 
-      canvasView.setRenderImages(images)
-      // This canvas is sized to crop.imageSize, so the records are in the
-      // source domain.
-      canvasView.setCommittedStrokes(committedStrokes())
-      canvasView.isHidden = false
-      currentCanvasInputKey = key
+        canvasView.setRenderImages(images)
+        // This canvas is sized to crop.imageSize, so the records are in the source domain.
+        canvasView.setCommittedStrokes(committedStrokes())
+        canvasView.isHidden = false
+        currentCanvasInputKey = key
+      } catch {
+        currentCanvasInputKey = nil
+        canvasView.setRenderingFailure(error)
+      }
     }
 
     func applyMode(isActive: Bool) {

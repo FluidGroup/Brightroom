@@ -78,6 +78,75 @@ struct EditingCanvasViewFeatureFlowTests {
     return feature
   }
 
+  private enum RenderingFailure: Error { case resource }
+
+  private struct RenderingProbe: Sendable {
+
+    var rendering: AdjustmentRendering {
+      var setup = AdjustmentRendering.Setup()
+      setup.replace(ExposureFeature.self, with: .init(identity: renderingIdentity) { feature, image, context in
+        try apply(feature, to: image, context: context)
+      })
+      return setup.makeRendering()
+    }
+
+    let amount: Double
+    var fails = false
+
+    var renderingIdentity: AdjustmentRendering.Identity {
+      .init(implementation: "canvas.probe", version: "1", configuration: "\(amount);fails=\(fails)")
+    }
+
+    func apply(_ feature: ExposureFeature, to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
+      if fails { throw RenderingFailure.resource }
+      return image.applyingFilter("CIExposureAdjust", parameters: [kCIInputEVKey: amount])
+    }
+  }
+
+  @Test(arguments: [true, false])
+  func `Selection updates the real crop and tool surface keys without writing edits`(isCrop: Bool) throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.exposure = ExposureFeature(ev: 0.5)
+    let harness = makeLoadedCanvasView(feature: feature, target: isCrop ? .crop : nil)
+    harness.canvasView.frame = CGRect(x: 0, y: 0, width: 400, height: 400)
+    harness.canvasView.layoutIfNeeded()
+    let surface = isCrop ? harness.canvasView.cropSurface as EditingCanvasView.CanvasSurface
+      : harness.canvasView.toolSurface
+    let canvas = try #require(surface.canvasView)
+    #expect(canvas.hasRenderImages)
+    for amount in [1.0, 2.0] {
+      let rendering = RenderingProbe(amount: amount).rendering
+      harness.canvasView.setAdjustmentRendering(rendering)
+      if isCrop {
+        #expect(harness.canvasView.cropSurface.currentCanvasInputKey?.adjustmentIdentity == rendering.identity)
+      } else {
+        #expect(harness.canvasView.toolSurface.currentCanvasRenderInputKey?.adjustmentIdentity == rendering.identity)
+      }
+      #expect(surface.canvasView === canvas)
+      #expect(canvas.renderingError == nil)
+      #expect(harness.emitted.isEmpty)
+      #expect(harness.box.owned == feature)
+    }
+  }
+
+  @Test(arguments: [true, false])
+  func `An external failure is visible and returning to a previous selection recovers`(isCrop: Bool) throws {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.exposure = ExposureFeature(ev: 1)
+    let harness = makeLoadedCanvasView(feature: feature, target: isCrop ? .crop : nil)
+    let surface = isCrop ? harness.canvasView.cropSurface as EditingCanvasView.CanvasSurface
+      : harness.canvasView.toolSurface
+    let canvas = try #require(surface.canvasView)
+    harness.canvasView.setAdjustmentRendering(RenderingProbe(amount: 1, fails: true).rendering)
+    #expect(canvas.renderingError is RenderingFailure)
+    let label = canvas.subviews.first { $0.accessibilityIdentifier == "editing-canvas-rendering-failure" }
+    #expect(label?.isHidden == false)
+    harness.canvasView.setAdjustmentRendering(.standard)
+    #expect(canvas.renderingError == nil)
+    #expect(label?.isHidden == true)
+    #expect(harness.emitted.isEmpty)
+  }
+
   @Test func `Loading reports the first crop guide to the bound handler`() throws {
     let harness = makeLoadedCanvasView(feature: makeAngledFeature(degrees: 10))
 
@@ -592,6 +661,56 @@ struct EditingCanvasViewFeatureFlowTests {
     harness.canvasView.setEditingTarget(nil)
     harness.canvasView.setEditingTarget(.localBlur)
 
+    #expect(harness.emitted.isEmpty)
+  }
+
+  @Test func `Tool viewing stays fitted and centered through repeated canvas resizes`() {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.grain = .init(amount: 100, size: 100, roughness: 100)
+    let harness = makeLoadedCanvasView(feature: feature, target: nil)
+    let canvasView = harness.canvasView
+    canvasView.areAnimationsEnabled = false
+    let surface = canvasView.toolSurface
+
+    let landscape = CGSize(width: 420, height: 260)
+    let portrait = CGSize(width: 400, height: 500)
+    for size in [landscape, portrait, landscape, portrait, landscape] {
+      canvasView.frame = CGRect(origin: .zero, size: size)
+      canvasView.layoutIfNeeded()
+
+      let fit = min(size.width / imageSize.width, size.height / imageSize.height)
+      #expect(abs(surface.scrollView.zoomScale - fit) < 0.001)
+      let displayedFrame = surface.contentView.convert(surface.contentView.bounds, to: canvasView)
+      #expect(abs(displayedFrame.midX - canvasView.bounds.midX) < 0.5)
+      #expect(abs(displayedFrame.midY - canvasView.bounds.midY) < 0.5)
+      #expect(canvasView.bounds.insetBy(dx: -0.5, dy: -0.5).contains(displayedFrame))
+      #expect(harness.emitted.isEmpty)
+      #expect(canvasView.proposedCrop?.makeCropFeature() == feature.crop)
+    }
+  }
+
+  @Test func `Grain previews and equal layouts preserve tool navigation`() {
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.grain = .init(amount: 20)
+    let harness = makeLoadedCanvasView(feature: feature, target: nil)
+    let canvasView = harness.canvasView
+    canvasView.areAnimationsEnabled = false
+    canvasView.frame = CGRect(x: 0, y: 0, width: 420, height: 260)
+    canvasView.layoutIfNeeded()
+
+    let scrollView = canvasView.toolSurface.scrollView
+    scrollView.setZoomScale(scrollView.minimumZoomScale * 2, animated: false)
+    scrollView.setContentOffset(CGPoint(x: 80, y: 40), animated: false)
+    let zoom = scrollView.zoomScale
+    let offset = scrollView.contentOffset
+
+    feature.effects.grain?.amount = 80
+    canvasView.setFeature(feature)
+    canvasView.setNeedsLayout()
+    canvasView.layoutIfNeeded()
+
+    #expect(scrollView.zoomScale == zoom)
+    #expect(scrollView.contentOffset == offset)
     #expect(harness.emitted.isEmpty)
   }
 

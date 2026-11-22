@@ -8,10 +8,7 @@ import Foundation
 nonisolated struct ColorMixerRenderPlan: Equatable, Sendable {
 
   /// Increment when band anchors, interpolation, or color transforms change.
-  static let semanticVersion = 1
-
-  /// Selects how the normalized band corrections are evaluated.
-  let algorithm: ColorMixerFeature.Algorithm
+  static let semanticVersion = 3
 
   let hue0: SIMD4<Float>
   let hue1: SIMD4<Float>
@@ -22,11 +19,9 @@ nonisolated struct ColorMixerRenderPlan: Equatable, Sendable {
 
   /// Compiles normalized corrections, or returns `nil` for an exact bypass.
   init?(
-    bands: ColorMixerFeature.Bands,
-    algorithm: ColorMixerFeature.Algorithm = .oklch
+    bands: ColorMixerFeature.Bands
   ) {
     guard bands.isIdentity == false else { return nil }
-    self.algorithm = algorithm
     let values = ColorMixerFeature.Band.allCases.map { bands[$0] }
     hue0 = Self.pack(values[0].hue, values[1].hue, values[2].hue, values[3].hue)
     hue1 = Self.pack(values[4].hue, values[5].hue, values[6].hue, values[7].hue)
@@ -62,22 +57,17 @@ extension ColorMixerFeature {
   /// interpolation, or color transforms change without an authored-value change.
   public nonisolated struct RenderKey: Hashable, Sendable {
 
-    /// The rendering implementation represented by this identity.
-    public let algorithm: ColorMixerFeature.Algorithm
-
     /// The color-transform semantics represented by this identity.
     let semanticVersion = ColorMixerRenderPlan.semanticVersion
     private let values: [Float]
 
     /// Creates an identity only when the Mixer changes rendered pixels.
     public init?(
-      activeBands bands: Bands,
-      algorithm: ColorMixerFeature.Algorithm = .oklch
+      activeBands bands: Bands
     ) {
-      guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
+      guard let plan = ColorMixerRenderPlan(bands: bands) else {
         return nil
       }
-      self.algorithm = plan.algorithm
       values = [
         plan.hue0.x, plan.hue0.y, plan.hue0.z, plan.hue0.w,
         plan.hue1.x, plan.hue1.y, plan.hue1.z, plan.hue1.w,
@@ -94,7 +84,7 @@ extension ColorMixerFeature {
   }
 }
 
-/// Independent CPU implementation of the extended-linear Display-P3 mixer.
+/// Independent CPU implementation of the original OKLCh mixer for numeric tests.
 nonisolated enum ColorMixerReferenceProcessor {
 
   /// A perceptual cylindrical coordinate used by focused numeric tests.
@@ -134,10 +124,9 @@ nonisolated enum ColorMixerReferenceProcessor {
   /// Applies an authored value while preserving an exact neutral identity.
   static func processPremultiplied(
     _ pixel: SIMD4<Double>,
-    bands: ColorMixerFeature.Bands,
-    algorithm: ColorMixerFeature.Algorithm = .oklch
+    bands: ColorMixerFeature.Bands
   ) -> SIMD4<Double> {
-    guard let plan = ColorMixerRenderPlan(bands: bands, algorithm: algorithm) else {
+    guard let plan = ColorMixerRenderPlan(bands: bands) else {
       return pixel
     }
     return processPremultiplied(pixel, plan: plan)
@@ -148,13 +137,10 @@ nonisolated enum ColorMixerReferenceProcessor {
     _ rgb: SIMD3<Double>,
     plan: ColorMixerRenderPlan
   ) -> SIMD3<Double> {
-    switch plan.algorithm {
-    case .oklch:
-      return processOKLCh(rgb, plan: plan)
-    }
+    return processOKLCh(rgb, plan: plan)
   }
 
-  /// Evaluates the original OKLCh correction independently of algorithm dispatch.
+  /// Evaluates the standard OKLCh correction independently of the GPU kernel.
   private static func processOKLCh(
     _ rgb: SIMD3<Double>,
     plan: ColorMixerRenderPlan

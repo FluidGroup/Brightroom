@@ -23,12 +23,17 @@ let package = Package(
         // Included by the compiled `.metal` sources; not a standalone package
         // input.
         "BrushStampFalloff.metalh"
+      ],
+      resources: [
+        .process("BrushMaskRenderShader.metal"),
+        .process("ParametricKernels.metal"),
       ]
     ),
     // General Core Image kernels require different Metal flags from the
     // stitchable and live brush shaders in BrightroomParametric.
     .target(
       name: "BrightroomColorAdjustmentKernels",
+      exclude: ["ColorAdjustmentWorkingSpace.metalh"],
       plugins: [
         .plugin(name: "BuildColorAdjustmentKernels")
       ]

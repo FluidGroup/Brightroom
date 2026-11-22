@@ -117,20 +117,9 @@ enum EditingCanvasImageProcessing {
   }
 }
 
-extension EditingCanvasImageProcessing {
-
-  /// The evaluation context the canvas shares across calls, so the kernel
-  /// registry is not rebuilt for every preview graph.
-  static let evaluationContext = FeatureEvaluationContext()
-}
-
 extension ImageEffect {
 
-  /// Applies the effect for a canvas preview, returning `image` unchanged when
-  /// evaluation fails.
-  ///
-  /// Failures are programmer errors in built-in effects; a custom effect that
-  /// throws degrades to identity rather than poisoning the whole preview.
+  /// Applies a preview recipe without converting failures to successful images.
   ///
   /// - Parameters:
   ///   - chainEntryExtent: The chain-entry extent of the current render
@@ -140,20 +129,18 @@ extension ImageEffect {
   ///   - renderScale: Pixels of this render per pixel of the full-resolution
   ///     source, so an absolute radius covers as much of the picture as it
   ///     does at export. It is required for the same reason.
-  func applyIgnoringFailure(
+  func applyForPreview(
     to image: CIImage,
     chainEntryExtent: CGRect,
-    renderScale: Double
-  ) -> CIImage {
-    let context = EditingCanvasImageProcessing.evaluationContext
-      .withChainEntryExtent(chainEntryExtent)
-      .withRenderScale(renderScale)
-    do {
-      return try apply(to: image, context: context)
-    } catch {
-      assertionFailure("Effect evaluation failed: \(error)")
-      return image
-    }
+    renderScale: Double,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) throws -> CIImage {
+    let context = FeatureEvaluationContext(
+      chainEntryExtent: chainEntryExtent,
+      renderScale: renderScale,
+      adjustmentRendering: adjustmentRendering
+    )
+    return try apply(to: image, context: context)
   }
 }
 

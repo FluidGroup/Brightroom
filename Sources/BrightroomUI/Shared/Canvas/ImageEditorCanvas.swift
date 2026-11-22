@@ -40,6 +40,8 @@ import BrightroomParametric
 /// has nothing to scroll, it passes scroll events on to the views around it.
 public struct ImageEditorCanvas: View {
 
+  @Environment(\.adjustmentRendering) private var adjustmentRendering
+
   /// The `straightenAngle(_:isEditing:)` input.
   struct StraightenAngleInput: Equatable {
     var angle: Angle?
@@ -238,6 +240,7 @@ public struct ImageEditorCanvas: View {
         EditingCanvasRepresentable(
           source: EditingCanvasSource(previewSource),
           feature: displayedFeature ?? document.wrappedValue.feature,
+          adjustmentRendering: adjustmentRendering,
           onFeatureChange: { [document] change in
             Self.apply(change, preparedFor: previewSource.source, to: document)
           },
@@ -262,6 +265,7 @@ public struct ImageEditorCanvas: View {
         EditingCanvasRepresentable(
           source: EditingCanvasSource(previewSource),
           feature: displayedFeature ?? document.wrappedValue.feature,
+          adjustmentRendering: adjustmentRendering,
           areAnimationsEnabled: areAnimationsEnabled,
           editingTarget: editingTarget
         )

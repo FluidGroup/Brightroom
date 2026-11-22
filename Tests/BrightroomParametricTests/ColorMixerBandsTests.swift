@@ -44,7 +44,6 @@ struct ColorMixerBandsTests {
     #expect(ColorMixerFeature.RenderKey(activeBands: .neutral) == nil)
     let feature = ColorMixerFeature(bands: .neutral)
     #expect(feature.bands.isIdentity)
-    #expect(feature.algorithm == .oklch)
     let image = CIImage(color: CIColor(red: 0.3, green: 0.5, blue: 0.7))
       .cropped(to: CGRect(x: 0, y: 0, width: 4, height: 4))
     #expect(try feature.apply(to: image, context: .init()) === image)
@@ -69,14 +68,13 @@ struct ColorMixerBandsTests {
       ColorMixerFeature.RenderKey(activeBands: changed)
     )
     let explicitIdentity = try #require(
-      ColorMixerFeature.RenderKey(activeBands: first, algorithm: .oklch)
+      ColorMixerFeature.RenderKey(activeBands: first)
     )
 
     #expect(
       ColorMixerFeature.RenderKey(activeBands: .neutral) == nil
     )
     #expect(firstIdentity.semanticVersion == ColorMixerRenderPlan.semanticVersion)
-    #expect(firstIdentity.algorithm == .oklch)
     #expect(firstIdentity == equivalentIdentity)
     #expect(firstIdentity == explicitIdentity)
     #expect(Set([firstIdentity, explicitIdentity]).count == 1)
@@ -109,8 +107,7 @@ struct ColorMixerBandsTests {
   @Test
   func restoredFeatureRebuildsAuthoredValuesAndDerivedEnabledState() throws {
     let active = ColorMixerFeature(
-      bands: .init(red: .init(hue: 10.0.nextUp, saturation: -45, luminance: 20)),
-      algorithm: .oklch
+      bands: .init(red: .init(hue: 10.0.nextUp, saturation: -45, luminance: 20))
     )
     let neutral = ColorMixerFeature(bands: .neutral)
 
@@ -119,7 +116,6 @@ struct ColorMixerBandsTests {
 
     #expect(restoredActive == active)
     #expect(restoredActive.bands == active.bands)
-    #expect(restoredActive.algorithm == .oklch)
     #expect(ColorMixerFeature.RenderKey(activeBands: restoredActive.bands) != nil)
     #expect(restoredNeutral == neutral)
     #expect(restoredNeutral.bands == .neutral)
@@ -136,7 +132,7 @@ struct ColorMixerBandsTests {
     )
   }
 
-  /// Rebuilds a feature from the scalar values and algorithm identifier a
+  /// Rebuilds a feature from the scalar values a
   /// host would store.
   private static func restore(_ feature: ColorMixerFeature) throws -> ColorMixerFeature {
     var adjustment = ColorMixerFeature.Bands.neutral
@@ -151,8 +147,7 @@ struct ColorMixerBandsTests {
       )
     }
     return ColorMixerFeature(
-      bands: adjustment,
-      algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: feature.algorithm.rawValue))
+      bands: adjustment
     )
   }
 }

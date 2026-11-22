@@ -498,7 +498,6 @@ extension ToneCurveFeature: FeatureTreeFieldReflection {
 extension ColorMixerFeature: FeatureTreeFieldReflection {
   var reflectedFields: [FeatureTreeNode.Field] {
     [
-      .init(name: "Algorithm", value: algorithm.rawValue),
       .init(name: "Neutral", value: bands.isIdentity ? "yes" : "no"),
     ]
   }

@@ -154,7 +154,11 @@ extension ContrastFeature {
 extension SaturationFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
+    return image.applyingFilter(
       "CIColorControls",
       parameters: [kCIInputSaturationKey: 1 + value]
     )
@@ -168,6 +172,9 @@ extension ExposureFeature {
     guard abs(ev) > 0.0001 else {
       return image
     }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
     return image.applyingFilter(
       "CIExposureAdjust",
       parameters: [kCIInputEVKey: ev]
@@ -179,7 +186,11 @@ extension ExposureFeature {
 extension HighlightsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
+    return image.applyingFilter(
       "CIHighlightShadowAdjust",
       parameters: ["inputHighlightAmount": 1 - value]
     )
@@ -190,7 +201,11 @@ extension HighlightsFeature {
 extension ShadowsFeature {
 
   public func apply(to image: CIImage, context: FeatureEvaluationContext) throws -> CIImage {
-    image.applyingFilter(
+    guard value != 0 else { return image }
+    if let output = try context.adjustmentRendering.apply(self, to: image, context: context) {
+      return output
+    }
+    return image.applyingFilter(
       "CIHighlightShadowAdjust",
       parameters: ["inputShadowAmount": value]
     )

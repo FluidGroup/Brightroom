@@ -6,7 +6,7 @@ import Foundation
 
 extension ColorMixerFeature {
 
-  /// A fixed hue region shared by Color Mixer algorithms.
+  /// A fixed hue region shared by Color Mixer implementations.
   ///
   /// Declaration order is render-significant and follows the cyclic sequence
   /// used by the packed Metal parameters. Additions therefore require a render
@@ -27,7 +27,7 @@ extension ColorMixerFeature {
     public var id: Self { self }
   }
 
-  /// Corrections interpreted by a Color Mixer feature's selected algorithm.
+  /// Corrections interpreted by the configured Color Mixer implementation.
   public nonisolated struct BandCorrection: Equatable, Sendable {
 
     /// The supported range shared by Hue, Saturation, and Luminance.

@@ -583,6 +583,13 @@ final class EditingCanvasView: UIView, ViewportDisplayLinkOwner {
     updateDisplay()
   }
 
+  func setAdjustmentRendering(_ rendering: AdjustmentRendering) {
+    guard cropSurface.adjustmentRendering != rendering else { return }
+    cropSurface.adjustmentRendering = rendering
+    toolSurface.adjustmentRendering = rendering
+    updateDisplay()
+  }
+
   /// Displays `feature`.
   ///
   /// When its crop differs from the crop EditingCanvasView holds (for example after an
@@ -992,6 +999,7 @@ extension EditingCanvasView {
   /// The inputs that decide the crop surface's render images. Equal keys keep
   /// the canvas's render images and bakes.
   struct CanvasInputKey: Equatable {
+    var adjustmentIdentity: AdjustmentRendering.Identity
     var imageSize: CGSize
     var sourceImage: ObjectIdentifier
     var sourceExtent: CGRect
@@ -1000,7 +1008,13 @@ extension EditingCanvasView {
     /// stroke commit.
     var localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?
 
-    init(source: EditingCanvasSource, feature: ImageEditorFeature, crop: CropGuideState) {
+    init(
+      source: EditingCanvasSource,
+      feature: ImageEditorFeature,
+      crop: CropGuideState,
+      adjustmentRendering: AdjustmentRendering = .standard
+    ) {
+      self.adjustmentIdentity = adjustmentRendering.identity
       let previewSourceImage = ImageGeometry.removingExtentOffset(source.editingSourceImage)
       self.imageSize = crop.imageSize
       // Extent alone cannot detect a same-size source replacement (the
@@ -1327,7 +1341,7 @@ extension EditingCanvasView {
     let previousFrame = state.frame
     if previousFrame != frame {
       state.frame = frame
-      updateCropLayout()
+      updateCropLayout(animatesLayout: false)
       // The resolved image-space brush depends on the view bounds; re-resolve
       // in the same layout pass so a stroke cannot begin with a stale width.
       refreshCanvasBrushIfNeeded()
@@ -1605,10 +1619,6 @@ extension EditingCanvasView {
 
     let contentSize = geometry.outputSize
     let isContentSizeChanged = toolSurface.contentView.bounds.size != contentSize
-    let shouldResetToolSurface = syncsViewportFromCropSurface
-      || isContentSizeChanged
-      || toolSurface.lastAppliedCrop?.isPixelEquivalent(to: crop) != true
-
     // Resolve and validate the frame BEFORE any write so a degenerate layout
     // pass cannot leave the surface half-configured.
     let toolFrame = self
@@ -1617,6 +1627,11 @@ extension EditingCanvasView {
     guard toolFrame.width > 0, toolFrame.height > 0 else {
       return
     }
+
+    let shouldResetToolSurface = syncsViewportFromCropSurface
+      || isContentSizeChanged
+      || toolSurface.scrollView.bounds.size != toolFrame.size
+      || toolSurface.lastAppliedCrop?.isPixelEquivalent(to: crop) != true
 
     if isContentSizeChanged {
       // `contentView` is the zoom view; while a zoom transform is applied,

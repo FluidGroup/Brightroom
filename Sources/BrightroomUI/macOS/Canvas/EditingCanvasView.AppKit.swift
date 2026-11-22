@@ -124,6 +124,16 @@ final class EditingCanvasView: NSView, ViewportDisplayLinkOwner {
     requestFrames()
   }
 
+  /// Builds the render images with `rendering`'s calculations, as an export
+  /// passed the same selection renders them.
+  func setAdjustmentRendering(_ rendering: AdjustmentRendering) {
+    guard surface.adjustmentRendering != rendering else { return }
+    surface.adjustmentRendering = rendering
+    updateContent()
+    drawFrame()
+    requestFrames()
+  }
+
   /// Reports, once per canvas, that the canvas does not edit `target` on
   /// macOS and shows the output instead. The log is written in debug builds
   /// only (`EditorLog`).

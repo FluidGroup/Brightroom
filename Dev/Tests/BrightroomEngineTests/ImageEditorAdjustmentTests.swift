@@ -8,6 +8,64 @@ struct ImageEditorAdjustmentTests {
 
   private let imageSize = CGSize(width: 64, height: 48)
 
+  @Test func `effects initializer references remain source compatible`() {
+    let original = ImageEditorFeature.Effects.init(
+      preset:exposure:brightness:whiteBalance:highlights:shadows:saturation:contrast:
+      sharpen:unsharpMask:gaussianBlur:fade:custom:
+    )
+    let grading = ImageEditorFeature.Effects.init(
+      preset:exposure:brightness:whiteBalance:highlights:shadows:saturation:contrast:
+      colorGrading:sharpen:unsharpMask:gaussianBlur:fade:custom:
+    )
+
+    #expect(original(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, []) == .init())
+    #expect(grading(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, []) == .init())
+    #expect(ImageEditorFeature.Effects(grain: nil) == .init())
+  }
+
+  @Test func `grain has dedicated controls and does not use the single value slider`() {
+    #expect(ImageEditor.Adjustment.allCases.contains(.grain))
+    #expect(ImageEditor.Adjustment.grain.sliderRange == nil)
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects.grain = .init(amount: 20, size: 42, roughness: 70, seed: 12)
+    let initial = feature
+
+    ImageEditor.Adjustment.grain.apply(sliderValue: 50, to: &feature)
+
+    #expect(feature == initial)
+  }
+
+  @Test func `grain initializer composes grading and renders after spatial effects`() throws {
+    let grain = GrainFeature.CameraRaw(amount: 60, size: 42, roughness: 70, seed: 12)
+    let grading = ColorGradingFeature(global: .init(hue: 52, saturation: 30))
+    let fade = FadeFeature(intensity: 0.4)
+    let blur = GaussianBlurFeature(radius: .absolute(2))
+    let custom = BrightnessFeature(value: 0.1)
+    let effects = ImageEditorFeature.Effects(
+      colorGrading: grading,
+      gaussianBlur: blur,
+      fade: fade,
+      grain: grain,
+      custom: [AnyImageEffect(custom)]
+    )
+    #expect(effects.grain == grain)
+    #expect(effects.colorGrading == grading)
+
+    let source = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.8))
+      .cropped(to: CGRect(origin: .zero, size: imageSize))
+    let context = FeatureEvaluationContext().withChainEntryExtent(source.extent)
+    let graded = try grading.apply(to: source, context: context)
+    let blurred = try blur.apply(to: graded, context: context)
+    let faded = try fade.apply(to: blurred, context: context)
+    let grained = try grain.apply(to: faded, context: context)
+    let expected = try custom.apply(to: grained, context: context)
+    let actual = try effects.apply(to: source, context: context)
+    let ciContext = CIContext(options: [.workingColorSpace: NSNull(), .outputColorSpace: NSNull()])
+    let expectedPixels = try #require(ciContext.createCGImage(expected, from: source.extent))
+    let actualPixels = try #require(ciContext.createCGImage(actual, from: source.extent))
+    #expect(expectedPixels.dataProvider?.data == actualPixels.dataProvider?.data)
+  }
+
   @Test func `blur adjustment writes value-form gaussian blur`() {
     var feature = ImageEditorFeature(imageSize: imageSize)
 

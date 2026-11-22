@@ -15,24 +15,18 @@ struct ColorMixerRecipeTests {
     #expect(ColorMixerRenderPlan(bands: .neutral) == nil)
     #expect(try ColorMixerRecipe.apply(to: image, bands: .neutral) === image)
     #expect(ColorMixerReferenceProcessor.processPremultiplied(pixel, bands: .neutral) == pixel)
-    for feature in [
-      ColorMixerFeature(bands: .neutral),
-      ColorMixerFeature(bands: .neutral, algorithm: .oklch),
-    ] {
-      #expect(feature.algorithm == .oklch)
-      #expect(feature.bands.isIdentity)
-      #expect(try feature.apply(to: image, context: .init()) === image)
-    }
+    let feature = ColorMixerFeature(bands: .neutral)
+    #expect(feature.bands.isIdentity)
+    #expect(try feature.apply(to: image, context: .init()) === image)
   }
 
   @Test
-  func defaultAndExplicitOKLChProduceExactlyTheSameNonneutralPixels() throws {
+  func standardFeatureUsesTheOKLChRecipe() throws {
     let adjustment = ColorMixerFeature.Bands(
       red: .init(hue: 23, saturation: -24, luminance: 17),
       blue: .init(hue: -35, saturation: 40, luminance: -20)
     )
     let implicit = ColorMixerFeature(bands: adjustment)
-    let explicit = ColorMixerFeature(bands: adjustment, algorithm: .oklch)
     let pixels: [SIMD4<Float>] = [
       SIMD4(0.7, 0.1, 0.05, 1),
       SIMD4(-0.1, 0.3, 1.2, 1),
@@ -41,13 +35,10 @@ struct ColorMixerRecipeTests {
     let image = Self.makeImage(pixels)
 
     let implicitOutput = try implicit.apply(to: image, context: .init())
-    let explicitOutput = try explicit.apply(to: image, context: .init())
+    let explicitOutput = try ColorMixerRecipe.apply(to: image, bands: adjustment)
     let implicitPixels = Self.sample(implicitOutput, count: pixels.count)
     let explicitPixels = Self.sample(explicitOutput, count: pixels.count)
-
-    #expect(implicit.algorithm == .oklch)
     #expect(implicit.bands.isIdentity == false)
-    #expect(implicit == explicit)
     #expect(implicitOutput.extent == image.extent)
     #expect(explicitOutput.extent == image.extent)
     #expect(implicitPixels == explicitPixels)
@@ -262,14 +253,12 @@ struct ColorMixerRecipeTests {
       ColorMixerFeature.BandCorrection(validatingHue: 15, saturation: -20, luminance: -30)
     )
     let restored = ColorMixerFeature(
-      bands: ColorMixerFeature.Bands(red: red, blue: blue),
-      algorithm: try #require(ColorMixerFeature.Algorithm(rawValue: "oklch"))
+      bands: ColorMixerFeature.Bands(red: red, blue: blue)
     )
     let pixels: [SIMD4<Float>] = [SIMD4(0.7, 0.1, 0.05, 1), SIMD4(-0.1, 0.3, 1.2, 1)]
     let image = Self.makeImage(pixels)
     let output = try restored.apply(to: image, context: .init())
     let actual = Self.sample(output, count: pixels.count)
-    #expect(restored.algorithm == .oklch)
 
     for index in pixels.indices {
       let pixel = pixels[index]

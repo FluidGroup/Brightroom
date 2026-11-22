@@ -33,6 +33,15 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   /// Sampling an unchanged viewport must not acquire a drawable or submit GPU work.
   private var needsCanvasDisplay = true
   private var lastDrawnSize: CGSize?
+  private var inputError: (any Error)?
+  /// Covers the canvas while its image cannot be rendered.
+  #if os(iOS)
+  private let failureView = UILabel()
+  #elseif os(macOS)
+  private let failureView = RenderingFailureView()
+  #endif
+
+  var renderingError: (any Error)? { inputError ?? renderer.renderingError }
 
   /// Delivers a completed content-space stroke to the host. Completion signals
   /// that its rendering inputs have been refreshed; stale completions are ignored.
@@ -82,6 +91,17 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
       metalLayer.maximumDrawableCount = 3
     }
     applyColorSpaceContract()
+
+    #if os(iOS)
+    failureView.text = RenderingFailureView.message
+    failureView.textColor = .white
+    failureView.backgroundColor = .black
+    failureView.textAlignment = .center
+    failureView.numberOfLines = 0
+    failureView.accessibilityIdentifier = RenderingFailureView.accessibilityIdentifier
+    #endif
+    failureView.isHidden = true
+    addSubview(failureView)
 
     reset()
   }
@@ -174,8 +194,29 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   func setRenderImages(_ images: EditingCanvasRenderImages) {
+    inputError = nil
+    failureView.isHidden = true
     renderer.setRenderImages(images)
     needsCanvasDisplay = true
+  }
+
+  #if os(iOS)
+  override func layoutSubviews() {
+    super.layoutSubviews()
+    failureView.frame = bounds
+  }
+  #elseif os(macOS)
+  override func layout() {
+    super.layout()
+    failureView.frame = bounds
+  }
+  #endif
+
+  func setRenderingFailure(_ error: any Error) {
+    inputError = error
+    failureView.isHidden = false
+    isHidden = false
+    EditorLog.error(.editingCanvas, "Preview evaluation failed: \(error)")
   }
 
   func setCommittedStrokes(_ records: [EditingCanvasStrokeRecord]) {
@@ -242,6 +283,7 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
   }
 
   func draw(in view: MTKView) {
+    guard inputError == nil else { return }
     guard let drawable = currentDrawable,
           let descriptor = currentRenderPassDescriptor else { return }
 
@@ -255,6 +297,8 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
       activeStroke: activeStroke,
       preferredFramesPerSecond: preferredFramesPerSecond
     )) != nil else { return }
+
+    failureView.isHidden = renderer.renderingError == nil
 
     // The renderer has committed and waited until scheduling. Present directly
     // in the current Core Animation transaction, matching presentsWithTransaction.
@@ -412,3 +456,41 @@ final class EditingCanvasMTKView: MTKView, MTKViewDelegate {
     isHidden = false
   }
 }
+
+/// The message over a canvas whose image cannot be rendered: white on black,
+/// centred.
+#if os(iOS)
+private enum RenderingFailureView {
+  static let message = "The image could not be rendered"
+  static let accessibilityIdentifier = "editing-canvas-rendering-failure"
+}
+#elseif os(macOS)
+private final class RenderingFailureView: NSView {
+  static let message = "The image could not be rendered"
+  static let accessibilityIdentifier = "editing-canvas-rendering-failure"
+
+  private let label = NSTextField(labelWithString: message)
+
+  init() {
+    super.init(frame: .zero)
+    wantsLayer = true
+    layer?.backgroundColor = NSColor.black.cgColor
+    label.textColor = .white
+    label.alignment = .center
+    label.maximumNumberOfLines = 0
+    addSubview(label)
+    setAccessibilityIdentifier(Self.accessibilityIdentifier)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func layout() {
+    super.layout()
+    let height = label.sizeThatFits(NSSize(width: bounds.width, height: .greatestFiniteMagnitude)).height
+    label.frame = CGRect(x: 0, y: (bounds.height - height) / 2, width: bounds.width, height: height)
+  }
+}
+#endif

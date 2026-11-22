@@ -1,3 +1,4 @@
+import BrightroomParametric
 import CoreGraphics
 import Metal
 
@@ -21,6 +22,8 @@ typealias CanvasStrokeCommitHandler = (
 /// the viewport passed to `draw(viewport:postCrop:)`.
 @MainActor
 class CanvasMetalSurface: NSObject {
+  /// The calculations the render images are built with.
+  var adjustmentRendering: AdjustmentRendering = .standard
   var canvasView: EditingCanvasMTKView?
   var canvasSize: CGSize?
   /// The mapping of the last frame submitted for display, also used to
@@ -108,6 +111,7 @@ class CanvasMetalSurface: NSObject {
     }
 
     let inputKey = CanvasRenderInputKey(
+      adjustmentIdentity: adjustmentRendering.identity,
       sourceImage: ObjectIdentifier(source.editingSourceImage),
       effects: effects,
       geometry: geometry,
@@ -118,19 +122,26 @@ class CanvasMetalSurface: NSObject {
     // unrelated SwiftUI re-renders). Rebuilding identical render-image graphs
     // would discard the canvas's viewport texture caches each time.
     if key != inputKey || canvasView.hasRenderImages == false {
-      guard
-        let images = EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
-          editingSourceImage: source.editingSourceImage,
-          effects: effects.canvasEffect,
-          geometry: geometry,
-          mode: mode
-        )
-      else {
+      do {
+        guard
+          let images = try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+            editingSourceImage: source.editingSourceImage,
+            effects: effects.canvasEffect,
+            geometry: geometry,
+            mode: mode,
+            adjustmentRendering: adjustmentRendering
+          )
+        else {
+          return
+        }
+
+        canvasView.setRenderImages(images)
+        key = inputKey
+      } catch {
+        key = nil
+        canvasView.setRenderingFailure(error)
         return
       }
-
-      canvasView.setRenderImages(images)
-      key = inputKey
     }
 
     canvasView.setCommittedStrokes(committedStrokes)

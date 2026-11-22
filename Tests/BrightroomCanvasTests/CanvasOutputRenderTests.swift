@@ -165,7 +165,7 @@ struct CanvasOutputRenderTests {
     let geometry = try #require(EditingCanvasCropOutputGeometry(crop: crop))
     let plan = CanvasRenderPlan(localBlur: feature.localBlur)
     var strokeRecords = CommittedStrokeRecords()
-    let images = try #require(EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
+    let images = try #require(try EditingCanvasRenderImageFactory.makeCropOutputRenderImages(
       editingSourceImage: source.editingSourceImage,
       effects: feature.effects.canvasEffect,
       geometry: geometry,
