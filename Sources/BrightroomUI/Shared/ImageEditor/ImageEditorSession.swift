@@ -32,11 +32,13 @@ import BrightroomParametric
 ///   write, and a write that would only change the history is never made,
 ///   so hosts that register an undo step per write (FileDocument,
 ///   `UndoManager` in `onChange`) get one step per visible change.
-/// - The work of one tool visit is one history step, committed lazily: the
-///   first write of a tool visit commits the document before applying its
-///   change. Leaving a tool or tapping Done writes nothing by itself, so the
-///   last visit's work stays uncommitted until the next edit. `undo()`
-///   treats uncommitted changes as a step, so the steps are the same.
+/// - History steps are tool visits on iOS (`.toolVisit`) and completed
+///   operations on macOS (`.operation`). A step is committed lazily: the
+///   first write of a tool visit, and under `.operation` every write,
+///   commits the document before applying its change. Leaving a tool or
+///   tapping Done writes nothing by itself, so the last step stays
+///   uncommitted until the next edit. `undo()` treats uncommitted changes
+///   as a step, so the steps are the same.
 /// - A slider drag is shown through `liveFeature` and written once when the
 ///   drag ends.
 /// - Reset writes the initial feature as a history step of its own
@@ -55,26 +57,49 @@ import BrightroomParametric
 /// `DocumentEditorDemoView` does with "Edit a copy".
 struct ImageEditorSession {
 
+  /// What one step of the document's history holds.
+  enum HistoryStep: Equatable, Sendable {
+    /// iOS: the writes of one tool visit.
+    case toolVisit
+    /// macOS: each write. The inspector stays open beside the image, so tool
+    /// visits mean nothing there. Every write is an undo step, so a long
+    /// session reaches `History.limit` sooner than with tool visits.
+    case operation
+  }
+
   /// The document when the session started; Cancel restores it.
   private(set) var documentAtStart: ImageEditorDocument
+
+  let historyStep: HistoryStep
 
   /// The feature a control shows while it is being dragged, not yet written
   /// to the document. nil when nothing is in progress.
   private(set) var liveFeature: ImageEditorFeature?
 
-  /// Every document this session wrote, oldest first.
+  /// The documents written in the current tool visit: a write over one of
+  /// them continues the visit. Empty under `.operation`, where every write
+  /// is a step of its own.
   private var writes: [ImageEditorDocument] = []
 
-  /// The index in `writes` of the current tool visit's first write.
-  private var toolVisitStart = 0
-
-  init(documentAtStart: ImageEditorDocument) {
+  init(documentAtStart: ImageEditorDocument, historyStep: HistoryStep = .toolVisit) {
     self.documentAtStart = documentAtStart
+    self.historyStep = historyStep
   }
 
   /// The feature the canvas and the controls show.
   func displayedFeature(of document: ImageEditorDocument) -> ImageEditorFeature {
     liveFeature ?? document.feature
+  }
+
+  /// Shows `change` applied over the displayed feature, without writing it.
+  /// `liveFeature` is nil when the result equals the document's feature.
+  mutating func previewFeature(
+    over document: ImageEditorDocument,
+    change: (inout ImageEditorFeature) -> Void
+  ) {
+    var feature = displayedFeature(of: document)
+    change(&feature)
+    liveFeature = feature == document.feature ? nil : feature
   }
 
   /// Shows an adjustment slider value without writing it.
@@ -83,9 +108,9 @@ struct ImageEditorSession {
     parameter: ImageEditor.Adjustment,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    parameter.apply(sliderValue: sliderValue, to: &feature)
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      ImageEditor.AdjustmentChange.slider(parameter, sliderValue).apply(to: &$0)
+    }
   }
 
   /// Previews all grading axes together without adding a document history step.
@@ -93,21 +118,18 @@ struct ImageEditorSession {
     _ grading: ColorGradingFeature,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    // Keep an authored hue at zero saturation so returning to the wheel keeps
-    // the selected hue. Only a complete reset removes the optional feature.
-    feature.effects.colorGrading = grading == ColorGradingFeature() ? nil : grading
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      ImageEditor.AdjustmentChange.colorGrading(grading).apply(to: &$0)
+    }
   }
 
   mutating func previewGrain(
     _ grain: GrainFeature.CameraRaw,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    // Keep size, roughness and seed at zero amount so the next edit restores them.
-    feature.effects.grain = grain == .init(amount: 0) ? nil : grain
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      ImageEditor.AdjustmentChange.grain(grain).apply(to: &$0)
+    }
   }
 
   /// Drops the value shown by a control in progress, for example because
@@ -158,7 +180,7 @@ struct ImageEditorSession {
     of document: ImageEditorDocument
   ) -> ImageEditorDocument? {
     let written = self.document(after: document)
-    toolVisitStart = writes.count
+    writes.removeAll()
     return written
   }
 
@@ -178,13 +200,13 @@ struct ImageEditorSession {
     // Nothing to write: the live value is gone.
     _ = endToolVisit(of: document)
     let written = write(over: document) { $0.feature = initial }
-    toolVisitStart = writes.count
+    writes.removeAll()
     return written
   }
 
   /// Keeps the session for a document of the image it started with, and
-  /// restarts it for a document of another image, which the editor now
-  /// edits from its current state.
+  /// restarts it, with the same history step, for a document of another
+  /// image, which the editor now edits from its current state.
   ///
   /// A document of the same image that the session did not write (an undo,
   /// a redo, a change of the host's own) keeps the session: Cancel restores
@@ -195,7 +217,7 @@ struct ImageEditorSession {
     guard document.source != documentAtStart.source else {
       return
     }
-    self = ImageEditorSession(documentAtStart: document)
+    self = ImageEditorSession(documentAtStart: document, historyStep: historyStep)
   }
 
   /// The document Cancel writes, or nil when `document` already equals the
@@ -214,9 +236,10 @@ struct ImageEditorSession {
 
   /// Applies `change` over `document`, committing first when `document` is
   /// not one the current tool visit wrote: then its uncommitted changes, if
-  /// any, belong to an earlier visit (or to the host) and become their own
+  /// any, belong to an earlier step (or to the host) and become their own
   /// step. After an undo by the host back into the visit, the visit goes on
-  /// without a commit.
+  /// without a commit. Under `.operation` every write commits first, so each
+  /// write is a step of its own.
   private mutating func write(
     over document: ImageEditorDocument,
     change: (inout ImageEditorDocument) -> Void
@@ -224,14 +247,17 @@ struct ImageEditorSession {
     // A rebinding can reach a write before `onChange` reports it.
     noteDocument(document)
     var next = document
-    if writes[toolVisitStart...].contains(document) == false {
+    if writes.contains(document) == false {
       next.commit()
     }
     change(&next)
     guard next.feature != document.feature else {
       return nil
     }
-    writes.append(next)
+    // Under `.operation` no write continues another: the next one commits it.
+    if historyStep == .toolVisit {
+      writes.append(next)
+    }
     return next
   }
 }

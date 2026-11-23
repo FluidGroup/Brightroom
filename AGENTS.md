@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Brightroom is a composable image editor library for iOS and macOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components (on macOS, BrightroomUI has the canvas as a viewer; the built-in editor is iOS only).
+Brightroom is a composable image editor library for iOS and macOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components (on macOS, BrightroomUI has the built-in editor, with filters, adjustments and a histogram, and the canvas as a viewer; crop and brush editing are iOS only).
 
 ## Build Commands
 
@@ -80,17 +80,27 @@ open Dev/Brightroom.xcodeproj
    - Uses swift-state-graph for observable state (`PreviewSourceLoader.phase`)
 
 3. **BrightroomUI** - SwiftUI image editing components (UIKit internally on
-   iOS, AppKit on macOS). On macOS, `ImageEditorCanvas` shows the document's
-   evaluated output with zoom and pan; the built-in editor and crop and brush
-   editing are iOS only for now
+   iOS, AppKit on macOS). On macOS, `ImageEditor` shows the macOS editor
+   (its items in the window's toolbar, an inspector of switchable adjustment
+   sections with a gray-point eyedropper for white balance, a grouped filter
+   strip, a histogram with pointer readouts, Show Original, and zoom) over
+   `ImageEditorCanvas`, a viewer that shows the document's evaluated output
+   with zoom and pan; crop and brush editing are iOS only for now
    - One SwiftPM target, with three source directories under `Sources/BrightroomUI/`:
      - `Shared/`: public SwiftUI entry points and their availability,
-       `ImageEditorFeature` and `ImageEditorDocument`, canvas geometry,
-       navigation and rendering, and platform-neutral components
+       `ImageEditorFeature` and `ImageEditorDocument`, the editor core
+       (`ImageEditorSession`, which decides what both editors write, and
+       the macOS editor's `ImageEditorModel`, `ImageEditor.AdjustmentSection`,
+       `OutputAnalysis` and `GrayPoint`), canvas geometry, navigation and
+       rendering, and platform-neutral components
      - `iOS/`: the UIKit canvas and its SwiftUI bridge, crop and brush
-       interactions, and the built-in editor screen and controls
+       interactions, and the iOS editor's screen and controls
      - `macOS/`: the AppKit canvas and its SwiftUI bridge, including mouse
-       and trackpad input
+       and trackpad input, the macOS editor's views (`ImageEditorContent`,
+       its toolbar, inspector, filter strip and histogram panel, and
+       `HoldKeyMonitor`), the editor model's zoom commands, and
+       `ImageEditorCommands`, the menu bar commands a host adds to its
+       scene, which find the editor through a focused scene value
    - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
      through a binding
 
@@ -116,6 +126,14 @@ one word per concept in names and docs.
 - **PreviewSourceLoader** (package): per-image preview preparation owned by an
   editor view (`PreviewSourceReader`). It holds no edit and no history. Apps
   never create one.
+- **Editor model** (`ImageEditorModel`, internal): the macOS editor's state
+  and actions, kept apart from its views so tests drive it without a window
+  on both platforms. Actions take the binding and act on its latest
+  document; the model never keeps a binding (only the gray point's solve
+  holds one, until its result is applied or dropped) and never writes a
+  document of another image. One operation is live at a time: any other
+  action first writes it as its own step, and Cancel, an outside change or
+  the editor disappearing drops it.
 
 ### Editing Engine Vision
 
@@ -135,6 +153,19 @@ The project uses swift-state-graph for observable state. When modifying state-re
   binding once, never per gesture tick and never during a view update
 - A document compares by value; writes that leave the feature equal are
   dropped, so they add no history checkpoint
+- `ImageEditorModel` keeps its observable state in `@GraphStored`
+  properties. A node notifies on every set, so assign display-rate values
+  (zoom, pointer) only when they change
+- Controls never keep a value across time: they end their operations at the
+  mouse-up, the key-up (or when Command goes down, as AppKit then delivers
+  no key-up) or each VoiceOver step, and a deferred end (a key step that
+  focus or the window left) passes the operation's key, never its value.
+  An operation the model ends first (another action writes it, or Cancel
+  or an outside change drops it) previews and writes nothing more until
+  its control ends it
+- On macOS each completed operation is a history step of its own
+  (`ImageEditorSession.HistoryStep.operation`); on iOS a step is the work of
+  one tool visit (`.toolVisit`)
 
 ## Development Guidelines
 
@@ -156,14 +187,20 @@ The project uses swift-state-graph for observable state. When modifying state-re
    member, `if`, or leaving a node out). An exact neutral bypass (returning
    the input image itself) belongs inside `apply(to:context:)`.
 5. To surface it in ImageEditor, add an optional member to
-   `ImageEditorFeature.Effects` (its `body` order is the evaluation order) and
-   an `ImageEditor.Adjustment` case. An effect the output frame decides (one
-   that reads its input extent, like the vignette) is instead a top-level
-   optional member of `ImageEditorFeature` after `crop`, which the canvas
-   draws with its post-crop pass (`docs/vision-of-editing.md`, "Decided
-   Semantics"). A host's own effect gets no member: it goes in
-   `ImageEditorFeature.Effects.custom`, evaluated after the built-in
-   members, which the editor never edits and Reset keeps.
+   `ImageEditorFeature.Effects` (its `body` order is the evaluation order),
+   an `ImageEditor.Adjustment` case, and, in `ImageEditor.AdjustmentSection`
+   (the macOS inspector), a row in its section's `content` and the member in
+   that section's `copyMembers(from:to:)`; list the case in
+   `Adjustment.adjustModeCases` to show it in iOS's Adjust strip. A member
+   evaluated before `whiteBalance` also joins
+   `GrayPoint.effectsBeforeWhiteBalance(_:)`, which a test checks against the
+   body. An effect the output frame decides (one that reads its input
+   extent, like the vignette) is instead a top-level optional member of
+   `ImageEditorFeature` after `crop`, which the canvas draws with its
+   post-crop pass (`docs/vision-of-editing.md`, "Decided Semantics"). A
+   host's own effect gets no member: it goes in
+   `ImageEditorFeature.Effects.custom`, evaluated after the built-in members,
+   which the editor never edits and Reset keeps.
 6. Test it against an explicit Core Image recipe in
    `Tests/BrightroomParametricTests`.
 
@@ -234,6 +271,15 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Parametric tests are in `Tests/BrightroomParametricTests/`
 - Document tests (`EditingDocument`, its history, `SourceImage`, and the
   ImageEditor document flows) are in `Tests/BrightroomEngineDocumentTests/`
+- Editor tests are in `Tests/BrightroomEngineDocumentTests/` too: the
+  editor model (without a window, on both platforms), the effects' order,
+  the adjustment mapping and sections, the options, the filter swatches, the
+  output analysis and the gray point, and, on macOS only, the editor's
+  window, inspector, slider, filter strip, histogram panel and key monitor.
+  Window tests mount `ImageEditorContent` with their own `ImageEditorModel`;
+  their `Mounted` conforms to `WindowFixture`, which makes a window that
+  never shows on a screen, waits for its layout and sends it keys and
+  clicks in-process
 - Canvas tests (`CanvasNavigation`, the canvas's shared render path, and on
   macOS the AppKit canvas) are in `Tests/BrightroomCanvasTests/`
 - Focus on testing image processing logic, not UI
@@ -273,13 +319,15 @@ xcodebuild -scheme Brightroom-Package test -destination 'platform=macOS' \
 ### Demo App
 - **SwiftUI Demo**: `Dev/Sources/SwiftUIDemo/` - SwiftUI examples and UIKit-based checks wrapped with representables
 - **ParametricMacDemo**: `Dev/ParametricMacDemo/` - the parametric engine on
-  macOS, and `ImageEditorCanvas` as a viewer (`-startScreen canvas` opens that
+  macOS, `ImageEditorCanvas` as a viewer, and the built-in editor in a
+  navigation stack, with each write registered with the window's
+  `UndoManager` (`-startScreen canvas` or `-startScreen editor` opens that
   screen at launch)
 
 ## Common Tasks
 
 ### Presenting the Built-in Editor
-The built-in editor is iOS only.
+On iOS:
 
 ```swift
 import BrightroomEngine
@@ -322,6 +370,83 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 }
 ```
 
+On macOS, show the editor as a window's content, a `NavigationStack`
+destination or a split view's detail. It adds its items to the window's
+toolbar, around the title and subtitle the host sets:
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import SwiftUI
+
+struct EditorWindowContent: View {
+  // 1. The host owns the document, as on iOS
+  @State var document: ImageEditorDocument
+  var name: String
+  var didExport: (Result<CGImage, Error>) -> Void
+
+  var body: some View {
+    // 2. The editor's toolbar items surround the host's title and subtitle
+    NavigationStack {
+      ImageEditor(
+        document: $document,
+        onDone: {
+          // 3. Render the edited document
+          let document = document
+          Task {
+            do {
+              let rendered = try await document.render()
+              didExport(.success(try rendered.cgImage))
+            } catch {
+              didExport(.failure(error))
+            }
+          }
+        }
+      )
+      .navigationTitle(name)
+      .navigationSubtitle(pixelSize)
+    }
+  }
+
+  private var pixelSize: String {
+    let size = document.source.pixelSize
+    return "\(Int(size.width)) × \(Int(size.height))"
+  }
+}
+
+@main
+struct EditorApp: App {
+  var body: some Scene {
+    WindowGroup {
+      // The app's own view, which shows EditorWindowContent
+      ContentView()
+    }
+    // 4. Put the editor's commands in the menu bar: zoom, Show Original,
+    //    Show Histogram and Show Filters in View, and an Image menu.
+    //    InspectorCommands adds Show Inspector, for the adjustments
+    .commands {
+      InspectorCommands()
+      ImageEditorCommands()
+    }
+  }
+}
+```
+
+- `ImageEditorCommands` takes the editor's `ImageEditor.LocalizedStrings`
+  for its titles. Its items act on the editor in the key window and are
+  enabled when the editor's own controls are. Without it the editor's
+  shortcuts still work; with it the window takes each key before the menu
+  bar, so a key runs once
+- Edit > Undo is the host's: the editor registers nothing with an
+  `UndoManager`. A `FileDocument` host gets a step per write; a host that
+  keeps the document in its own state registers each write with the
+  environment's `undoManager` in its binding's setter, as
+  `Dev/ParametricMacDemo/EditorDemoView.swift` does
+- Sheets are not supported: a sheet has no window toolbar, so most of the
+  editor's controls would not show. To edit in a window of its own, open one
+  with `openWindow` and make the editor its content
+
 ### Adding Custom UI Component
 1. Create component in `Sources/BrightroomUI/`
 2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`);
@@ -334,7 +459,7 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 ## Platform Requirements
 - iOS 17.0+ and macOS 14.0+ (BrightroomParametric, BrightroomEngine,
   BrightroomUI; `SourceImage(image:)` takes a `UIImage` and exists only where
-  UIKit does; on macOS, BrightroomUI has the canvas as a viewer and no
-  built-in editor)
+  UIKit does; on macOS, BrightroomUI has the built-in editor without crop and
+  brush editing, and the canvas as a viewer)
 - Swift 6.3+ (Swift 6 language mode)
 - Supports iPhone, iPad, and Mac

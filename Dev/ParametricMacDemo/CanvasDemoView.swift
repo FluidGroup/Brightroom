@@ -8,11 +8,14 @@ import UniformTypeIdentifiers
 
 /// The demo's screens, chosen with the toolbar picker.
 ///
-/// Launching with `-startScreen canvas` selects the canvas screen at launch,
-/// so checks can open it without clicking.
+/// The editor screen hides the picker; its Done and Cancel return to the
+/// canvas screen. Launching with `-startScreen canvas` or
+/// `-startScreen editor` selects that screen at launch, so checks can open
+/// it without clicking.
 enum DemoScreen: String, CaseIterable, Identifiable {
   case parametric
   case canvas
+  case editor
 
   var id: String { rawValue }
 
@@ -20,6 +23,7 @@ enum DemoScreen: String, CaseIterable, Identifiable {
     switch self {
     case .parametric: "Parametric"
     case .canvas: "Canvas"
+    case .editor: "Editor"
     }
   }
 
@@ -29,28 +33,37 @@ enum DemoScreen: String, CaseIterable, Identifiable {
   }
 }
 
-/// Switches between the parametric screen and the canvas screen.
+/// Switches between the parametric, canvas and editor screens.
 struct DemoRootView: View {
 
   @State private var screen = DemoScreen.atLaunch
 
   var body: some View {
+    // The editor titles the window with its photo; the other screens title
+    // it themselves, so the photo's title goes when the editor does.
     Group {
       switch screen {
       case .parametric:
         ParametricMacDemoView()
+          .navigationTitle(screen.title)
       case .canvas:
         CanvasDemoView()
+          .navigationTitle(screen.title)
+      case .editor:
+        EditorDemoView(onClose: { screen = .canvas })
       }
     }
     .toolbar {
-      ToolbarItem(placement: .principal) {
-        Picker("Screen", selection: $screen) {
-          ForEach(DemoScreen.allCases) { screen in
-            Text(screen.title).tag(screen)
+      // The editor's title and subtitle take the toolbar's middle.
+      if screen != .editor {
+        ToolbarItem(placement: .principal) {
+          Picker("Screen", selection: $screen) {
+            ForEach(DemoScreen.allCases) { screen in
+              Text(screen.title).tag(screen)
+            }
           }
+          .pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
       }
     }
   }

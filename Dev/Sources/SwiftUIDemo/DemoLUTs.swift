@@ -16,7 +16,7 @@ enum DemoLUTs {
   /// The filters for the LUTs in the app bundle, loaded once.
   static let bundled: [FilterFeature] = {
     do {
-      return try filters(in: Bundle.main.bundleURL)
+      return try filters(in: Bundle.main.resourceURL ?? Bundle.main.bundleURL)
     } catch {
       assertionFailure("Could not load the bundled LUTs: \(error)")
       return []

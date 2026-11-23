@@ -146,6 +146,7 @@ struct ImageEditorContent: View {
               document: canvasDocumentBinding,
               displayedFeature: displayedFeature,
               previewSourceLoader: previewSourceLoader,
+              failureMessage: localizedStrings.imageLoadFailed,
               mode: editingMode,
               localBlurState: localBlurState,
               straightenAngle: straightenAngle,
@@ -166,7 +167,7 @@ struct ImageEditorContent: View {
               aspectRatioSelection: aspectRatioSelection,
               localBlurState: localBlurState,
               isLocalBlurPaintable: displayedFeature.isLocalBlurPaintable,
-              filters: options.filters,
+              filters: options.allFilters,
               filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
               currentFeature: displayedFeature,
               adjustmentParameter: adjustmentParameter,
@@ -660,6 +661,7 @@ private struct CanvasHost: View {
   @Binding var document: ImageEditorDocument
   let displayedFeature: ImageEditorFeature
   let previewSourceLoader: PreviewSourceLoader
+  let failureMessage: String
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
   let straightenAngle: Angle?
@@ -672,7 +674,8 @@ private struct CanvasHost: View {
     ImageEditorCanvas(
       document: $document,
       displayedFeature: displayedFeature,
-      previewSourceLoader: previewSourceLoader
+      previewSourceLoader: previewSourceLoader,
+      failureMessage: failureMessage
     )
     .cropGuideDisabled(mode != .crop)
     .straightenAngle(straightenAngle, isEditing: isStraightening)
@@ -1156,14 +1159,14 @@ private struct FilterChip: View {
   let action: () -> Void
 
   @Environment(\.displayScale) private var displayScale
-  @State private var image: UIImage?
+  @State private var image: CGImage?
 
   var body: some View {
     Button(action: action) {
       VStack(spacing: 6) {
         ZStack {
           if let image {
-            Image(uiImage: image)
+            Image(decorative: image, scale: displayScale)
               .resizable()
               .scaledToFill()
           } else {
@@ -1212,18 +1215,13 @@ private struct FilterChip: View {
   }
 
   /// Re-render only when the source thumbnail, the preset, or the scale changes.
-  private var renderKey: RenderKey {
-    RenderKey(
-      baseImageID: baseImage.map(ObjectIdentifier.init),
-      presetIdentifier: preset?.id,
-      scale: displayScale
+  private var renderKey: FilterSwatch.RenderKey {
+    FilterSwatch.RenderKey(
+      baseImage: baseImage.map(ObjectIdentifier.init),
+      presetID: preset?.id,
+      scale: displayScale,
+      rendering: AdjustmentRendering.standard.identity
     )
-  }
-
-  private struct RenderKey: Equatable {
-    let baseImageID: ObjectIdentifier?
-    let presetIdentifier: String?
-    let scale: CGFloat
   }
 }
 
@@ -1250,7 +1248,7 @@ private struct AdjustmentsControl: View {
     VStack(spacing: 4) {
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {
-          ForEach(ImageEditor.Adjustment.allCases) { parameter in
+          ForEach(ImageEditor.Adjustment.adjustModeCases) { parameter in
             AdjustmentButton(
               parameter: parameter,
               isSelected: parameter == selection,

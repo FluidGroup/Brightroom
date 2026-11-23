@@ -142,8 +142,9 @@ public struct InitialCrop: Sendable {
   /// `InitialCrop`): a 4:5 crop of a 4032 × 3024 photo is 2416 × 3020, not
   /// the 2418 × 3024 that snapping each edge gives.
   ///
-  /// The editor does not lock the ratio; pass
-  /// `ImageEditor.Options.aspectRatioPolicy` for that.
+  /// The editor does not lock the ratio; on iOS, pass
+  /// `ImageEditor.Options.aspectRatioPolicy` for that (the macOS editor does
+  /// not crop yet).
   public static func aspectRatio(_ aspectRatio: AspectRatio) -> InitialCrop {
     InitialCrop(policy: .aspectRatio(aspectRatio), framingAspectRatio: aspectRatio)
   }
@@ -163,8 +164,9 @@ public struct InitialCrop: Sendable {
   /// framing smaller than the editor's minimum crop size (128 pixels on its
   /// shorter side) grows about the face's center to that size, with
   /// `aspectRatio` exactly when its lowest terms are both at most 32 (see
-  /// `InitialCrop`). The editor does not lock the ratio; pass
-  /// `ImageEditor.Options.aspectRatioPolicy` for that.
+  /// `InitialCrop`). The editor does not lock the ratio; on iOS, pass
+  /// `ImageEditor.Options.aspectRatioPolicy` for that (the macOS editor does
+  /// not crop yet).
   public static func faceDetection(
     paddingBias: CGFloat = 1.3,
     aspectRatio: AspectRatio? = nil

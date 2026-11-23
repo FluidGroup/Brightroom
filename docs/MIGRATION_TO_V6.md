@@ -68,8 +68,11 @@ dependencies: [
 ```
 
 The requirements: iOS 17 and macOS 14 for every product, Swift 6.3 or later
-in Swift 6 language mode. On macOS, BrightroomUI has `ImageEditorCanvas` as a
-viewer; the built-in editor is iOS only. The products are the same.
+in Swift 6 language mode. On macOS, BrightroomUI has `ImageEditor` with
+filters and adjustments, and `ImageEditorCanvas` as a viewer; crop and brush
+editing are iOS only. To put the macOS editor's commands in the menu bar,
+add `ImageEditorCommands` and `InspectorCommands` to your scene's commands.
+The products are the same.
 
 BrightroomParametric no longer imports SwiftUI: the feature tree rows moved
 to BrightroomUI ([Debug Feature Tree](#debug-feature-tree)) and
@@ -1014,13 +1017,14 @@ How the editor writes to the binding:
 
 - Each completed operation (a filter tap, a slider drag, a brush stroke, an
   applied crop) is written once. Values in progress are not.
-- The work of one tool visit is one undo step. The commit happens with the
-  next visit's first write, so after Done the last visit may still be
-  uncommitted; `undo()` treats it as a step. Commit a copy before you save the
-  history.
+- On iOS the work of one tool visit is one undo step; on macOS, where the
+  adjustments stay beside the image, each completed operation is a step of
+  its own. The commit happens with the next step's first write, so after
+  Done the last step may still be uncommitted; `undo()` treats it as a step.
+  Commit a copy before you save the history.
 - The editor never registers anything with an `UndoManager`. Drive
   `document.undo()` and `redo()` from your own controls if you want them.
-- Reset restores every parameter to its initial value: no filter,
+- On iOS, Reset restores every parameter to its initial value: no filter,
   adjustments, or painted blur, and the crop the aspect-ratio policy starts
   with (under `.fixed`, the largest centered crop of the ratio, still
   locked). 5.x reset only the crop, and unlocked it. It is one write and an
@@ -1028,7 +1032,9 @@ How the editor writes to the binding:
   applied first, as leaving Crop applies it), shown in every mode whenever
   anything differs, and asks for no confirmation: `undo()` brings the edit
   back. Effects you put in `effects.custom` are kept (see
-  [Your own effects](#your-own-effects)).
+  [Your own effects](#your-own-effects)). On macOS, Revert to Original does
+  the same but keeps a crop that is the whole image, and Reset, under the
+  adjustments, returns only the inspector's adjustments to neutral.
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
 - Cancel writes back the document the editor opened with, history
@@ -1055,9 +1061,9 @@ canvas draws it inside the crop guide, centred on the guide as it moves.
 `ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
 `ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
-- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and eleven
-  adjustments, each an optional member, evaluated in declaration order, then
-  `custom`, effects of your own (see [Your own effects](#your-own-effects));
+- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and sixteen
+  optional effects, evaluated in declaration order, then `custom`, effects of
+  your own (see [Your own effects](#your-own-effects));
 - `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
 - `crop: CropFeature` — the final crop;
 - `vignette: VignetteFeature?` — the vignette, evaluated after the final crop.
@@ -1137,7 +1143,8 @@ before the painted blur and the final crop, in the editor's canvas as in the
 export. The editor's controls never read or write them: selecting a filter
 leaves them, the filter swatches preview the presets without them, and Reset
 keeps them, since no control could put them back; a document whose only
-effect is a custom one shows no Reset. Cancel and undo act on the whole
+effect is a custom one has nothing to reset (iOS shows no Reset, and macOS
+disables Revert to Original and Reset). Cancel and undo act on the whole
 document, so they treat the custom effects like any other member. To change
 a custom effect while the editor is open, write the document's
 `feature.effects.custom` through the binding yourself.

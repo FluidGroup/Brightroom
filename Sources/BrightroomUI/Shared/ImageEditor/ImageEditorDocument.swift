@@ -49,7 +49,7 @@ extension EditingDocument where Content == ImageEditorFeature {
 
 /// The document operations of ImageEditor's controls.
 ///
-/// They change `feature` only; the editor commits once per tool visit (see
+/// They change `feature` only; the editor commits once per history step (see
 /// `ImageEditorSession`).
 extension EditingDocument where Content == ImageEditorFeature {
 
@@ -78,8 +78,9 @@ extension EditingDocument where Content == ImageEditorFeature {
   }
 
   /// Whether the final crop differs from `initialCrop`, the crop
-  /// ImageEditor's Reset restores: the whole image, or the one the editor's
-  /// aspect-ratio policy starts with (`AspectRatioPolicy.initialFeature(imageSize:custom:)`).
+  /// ImageEditor's Reset (iOS) or Revert to Original (macOS) restores: the
+  /// whole image, or the one the editor's aspect-ratio policy starts with
+  /// (`AspectRatioPolicy.initialFeature(imageSize:custom:)`).
   ///
   /// The effects, the local blur, and the vignette are compared apart, by
   /// value (`ImageEditorFeature.hasAnyEffect`).
@@ -112,7 +113,8 @@ extension EditingDocument where Content == ImageEditorFeature {
 
 extension ImageEditor.Options.AspectRatioPolicy {
 
-  /// The feature ImageEditor's Reset restores for an image of `imageSize`:
+  /// The feature ImageEditor's Reset (iOS) and Revert to Original (macOS,
+  /// which keeps an unchanged crop) restore for an image of `imageSize`:
   /// no effects but `custom`, no local blur, no vignette, and the crop the
   /// policy starts with: the whole image, level and unturned, or under
   /// `.fixed`, the largest centered crop of the ratio as

@@ -24,12 +24,15 @@ import BrightroomParametric
 
 extension ImageEditor {
 
-  /// A global adjustment parameter editable in ImageEditor's Adjust mode.
+  /// A global adjustment parameter that ImageEditor's controls edit.
   ///
-  /// Color Grading and Grain have their own controls. Other parameters map a -100...100 (or 0...100 for zero-based ranges) slider
-  /// value onto the corresponding member of the feature: a member of
-  /// `ImageEditorFeature.Effects`, evaluated before the local blur and the
-  /// final crop, or `ImageEditorFeature.vignette`, evaluated after the crop.
+  /// iOS Adjust mode's strip lists `adjustModeCases`; the macOS inspector
+  /// lists the rows of its `AdjustmentSection`s. Color Grading and Grain have
+  /// their own controls. Other parameters map a -100...100 (or 0...100 for
+  /// zero-based ranges) slider value onto the corresponding member of the
+  /// feature: a member of `ImageEditorFeature.Effects`, evaluated before the
+  /// local blur and the final crop, or `ImageEditorFeature.vignette`,
+  /// evaluated after the crop.
   enum Adjustment: CaseIterable, Identifiable, Equatable {
     case exposure
     case brightness
@@ -42,6 +45,26 @@ extension ImageEditor {
     case gaussianBlur
     case vignette
     case grain
+    case tint
+    case blackPoint
+    case texture
+    case clarity
+
+    /// The parameters iOS Adjust mode's strip lists, in order. The macOS
+    /// inspector lists `AdjustmentSection` rows instead.
+    static let adjustModeCases: [Adjustment] = [
+      .exposure,
+      .brightness,
+      .contrast,
+      .saturation,
+      .colorGrading,
+      .warmth,
+      .highlights,
+      .shadows,
+      .gaussianBlur,
+      .vignette,
+      .grain,
+    ]
 
     var id: Self { self }
 
@@ -58,6 +81,10 @@ extension ImageEditor {
       case .gaussianBlur: return "Blur"
       case .vignette: return "Vignette"
       case .grain: return "Grain"
+      case .tint: return "Tint"
+      case .blackPoint: return "Black Point"
+      case .texture: return "Texture"
+      case .clarity: return "Clarity"
       }
     }
 
@@ -74,6 +101,10 @@ extension ImageEditor {
       case .gaussianBlur: return "drop.fill"
       case .vignette: return "circle.dashed.inset.filled"
       case .grain: return "circle.dotted"
+      case .tint: return "drop.halffull"
+      case .blackPoint: return "circle.bottomhalf.filled.inverse"
+      case .texture: return "circle.grid.cross"
+      case .clarity: return "camera.aperture"
       }
     }
 
@@ -86,7 +117,8 @@ extension ImageEditor {
       switch self {
       case .highlights, .gaussianBlur, .vignette:
         return true
-      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading, .grain:
+      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading, .grain,
+        .tint, .blackPoint, .texture, .clarity:
         return false
       }
     }
@@ -98,7 +130,8 @@ extension ImageEditor {
 
     /// The maximum effect value the slider's positive end maps to.
     ///
-    /// These mirror the slider maxima of Brightroom 5; the parametric features
+    /// The parameters Brightroom 5 had mirror its slider maxima; Tint, Black
+    /// Point, Texture and Clarity map one to one. Most parametric features
     /// carry unbounded values, so the slider scale is an ImageEditor policy.
     private var maximumFilterValue: Double {
       switch self {
@@ -112,6 +145,7 @@ extension ImageEditor {
       case .shadows: return 1
       case .gaussianBlur: return 100
       case .vignette: return 2
+      case .tint, .blackPoint, .texture, .clarity: return 100
       }
     }
 
@@ -140,6 +174,14 @@ extension ImageEditor {
         filterValue = effects.gaussianBlur?.proportionalValue ?? 0
       case .vignette:
         filterValue = feature.vignette?.value ?? 0
+      case .tint:
+        filterValue = effects.whiteBalance?.tint ?? 0
+      case .blackPoint:
+        filterValue = effects.blacks.map { -$0.amount } ?? 0
+      case .texture:
+        filterValue = effects.texture?.amount ?? 0
+      case .clarity:
+        filterValue = effects.clarity?.amount ?? 0
       }
 
       guard maximumFilterValue != 0 else {
@@ -152,9 +194,10 @@ extension ImageEditor {
     /// Writes a slider value into the feature.
     ///
     /// An existing effect is updated in place, so its parameters the slider
-    /// does not control (such as `WhiteBalanceFeature.tint`) are kept. A neutral
-    /// value removes the effect, including those parameters, so untouched
-    /// parameters stay absent.
+    /// does not control (such as `WhiteBalanceFeature.tint` for Warmth) are
+    /// kept. A neutral value removes the effect, including those parameters,
+    /// so untouched parameters stay absent, except white balance, removed only
+    /// when temperature and tint are both neutral.
     func apply(sliderValue: Double, to feature: inout ImageEditorFeature) {
       guard let sliderRange else { return }
       let clamped = min(
@@ -195,13 +238,18 @@ extension ImageEditor {
           make: { SaturationFeature(value: $0) },
           update: { $0.value = $1 }
         )
-      case .warmth:
-        Self.upsert(
-          value,
-          into: &feature.effects.whiteBalance,
-          make: { WhiteBalanceFeature(temperature: $0) },
-          update: { $0.temperature = $1 }
-        )
+      case .warmth, .tint:
+        var balance = feature.effects.whiteBalance ?? WhiteBalanceFeature(temperature: 0)
+        if self == .warmth {
+          balance.temperature = value ?? 0
+        } else {
+          balance.tint = value ?? 0
+        }
+        if balance.temperature == 0, balance.tint == 0 {
+          feature.effects.whiteBalance = nil
+        } else {
+          feature.effects.whiteBalance = balance
+        }
       case .highlights:
         Self.upsert(
           value,
@@ -229,6 +277,27 @@ extension ImageEditor {
           into: &feature.vignette,
           make: { VignetteFeature(value: $0) },
           update: { $0.value = $1 }
+        )
+      case .blackPoint:
+        Self.upsert(
+          value,
+          into: &feature.effects.blacks,
+          make: { BlacksFeature(amount: -$0) },
+          update: { $0.amount = -$1 }
+        )
+      case .texture:
+        Self.upsert(
+          value,
+          into: &feature.effects.texture,
+          make: { TextureFeature(amount: $0) },
+          update: { $0.amount = $1 }
+        )
+      case .clarity:
+        Self.upsert(
+          value,
+          into: &feature.effects.clarity,
+          make: { ClarityFeature(amount: $0) },
+          update: { $0.amount = $1 }
         )
       }
     }

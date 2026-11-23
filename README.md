@@ -31,7 +31,7 @@ Choose the product that matches what you want to build:
 
 | Product | Purpose | Platforms |
 | --- | --- | --- |
-| `BrightroomUI` | The built-in image editor and a reusable editing canvas for SwiftUI | iOS 17+, macOS 14+ (the canvas as a viewer; the built-in editor is iOS only) |
+| `BrightroomUI` | The built-in image editor and a reusable editing canvas for SwiftUI | iOS 17+, macOS 14+ (on macOS, filters and adjustments; crop and brush editing are iOS only) |
 | `BrightroomEngine` | Source images, editing documents with undo history, and rendering | iOS 17+, macOS 14+ |
 | `BrightroomParametric` | Typed features, masks, and Core Image rendering, with no third-party dependencies and no SwiftUI | iOS 17+, macOS 14+ |
 
@@ -123,9 +123,11 @@ struct PhotoEditor: View {
 
 The editor prepares the image itself. Each completed operation, such as a filter tap, a slider drag, a brush stroke, or an applied crop, is written to the binding once. On Cancel, the editor writes back the document it opened with, history included, discarding everything written since (your own writes to the binding too), and then calls `onCancel`; pass `nil` for `onCancel` to hide the Cancel button. The editor never registers anything with an `UndoManager`: undo and redo are `document.undo()` and `document.redo()`, so you can drive them from your own buttons.
 
+On macOS, show `ImageEditor` as a window's content, a `NavigationStack` destination, or a split view's detail; it adds its controls to the window's toolbar. To put its commands in the menu bar as well, add `InspectorCommands()` and `ImageEditorCommands()` to your scene's `commands`, giving `ImageEditorCommands` the `localizedStrings` you give the editor.
+
 For large images, prefer `SourceImage(contentsOf:)` or `SourceImage(data:)`, which decode only when the image is rendered or prepared. `SourceImage(asset:)` loads a Photos asset. To start from a crop that frames a face, create the document with `await ImageEditorDocument(source:initialCrop:)` and `.faceDetection(aspectRatio:)`; `.aspectRatio(_:)` starts from a centered crop of a ratio.
 
-Customize the aspect ratio policy and filters through `ImageEditor.Options`, and button labels through `ImageEditor.LocalizedStrings`. Filters default to an empty list; supply your own `FilterFeature` values through `options.filters`. An effect of your own that every edit of the image should include (an automatic retouch, say) goes in the document's `feature.effects.custom`, evaluated after the editor's adjustments; the editor never edits it, and Reset keeps it. The [sample filters](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you; put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvasReader.swift) to rotate, reset, or apply the crop from your own controls. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
+Customize the aspect ratio policy and filters through `ImageEditor.Options`, and most of the editor's text through `ImageEditor.LocalizedStrings`. Filters default to an empty list; supply your own `FilterFeature` values through `options.filters`. An effect of your own that every edit of the image should include (an automatic retouch, say) goes in the document's `feature.effects.custom`, evaluated after the editor's adjustments; the editor never edits it, and Reset keeps it. The [sample filters](Dev/Sources/SwiftUIDemo/DemoFilters.swift) are included only in the demo app. For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you; put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvasReader.swift) to rotate, reset, or apply the crop from your own controls. See the [SwiftUI demo](Dev/Sources/SwiftUIDemo/ContentView.swift) for complete integrations.
 
 ### Saving and Resuming an Edit
 
@@ -194,7 +196,7 @@ open Dev/Brightroom.xcodeproj
 ```
 
 - **SwiftUIDemo** — the built-in image editor, custom canvas interfaces, image rendering, parametric features, and video processing on iOS.
-- **ParametricMacDemo** — the standalone parametric engine, and the editing canvas as a viewer, on macOS.
+- **ParametricMacDemo** — the standalone parametric engine, the editing canvas as a viewer, and the built-in image editor, on macOS.
 
 Select a scheme and a matching run destination in Xcode. To build the iOS demo from the command line:
 

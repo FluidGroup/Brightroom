@@ -190,6 +190,45 @@ struct ImageEditorSessionTests {
     #expect(written == nil)
   }
 
+  @Test func `A preview equal to the document's feature leaves no live value`() throws {
+    let document = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: document)
+
+    session.previewFeature(over: document) { $0.effects.exposure = ExposureFeature(ev: 1) }
+    #expect(session.liveFeature == Fixtures.exposure(1))
+
+    // A preview applies over the displayed feature, the live value included.
+    session.previewFeature(over: document) { $0.effects.saturation = SaturationFeature(value: 0.5) }
+    #expect(session.liveFeature?.effects.exposure == ExposureFeature(ev: 1))
+    #expect(session.liveFeature?.effects.saturation == SaturationFeature(value: 0.5))
+
+    session.previewFeature(over: document) {
+      $0.effects.exposure = ExposureFeature(ev: 0)
+      $0.effects.saturation = nil
+    }
+    #expect(session.liveFeature == nil)
+    #expect(session.displayedFeature(of: document) == document.feature)
+    let written = session.document(after: document)
+    #expect(written == nil)
+  }
+
+  /// The previews apply a control's change: an authored hue at zero
+  /// saturation and a grain shape at zero amount stay, and a neutral grading
+  /// or grain removes its member.
+  @Test func `Grading and grain previews keep authored values and remove neutral ones`() throws {
+    let document = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: document)
+
+    session.previewColorGrading(ColorGradingFeature(global: .init(hue: 52)), over: document)
+    session.previewGrain(GrainFeature.CameraRaw(amount: 0, size: 42), over: document)
+    #expect(session.liveFeature?.effects.colorGrading == ColorGradingFeature(global: .init(hue: 52)))
+    #expect(session.liveFeature?.effects.grain == GrainFeature.CameraRaw(amount: 0, size: 42))
+
+    session.previewColorGrading(ColorGradingFeature(), over: document)
+    session.previewGrain(GrainFeature.CameraRaw(amount: 0), over: document)
+    #expect(session.liveFeature == nil)
+  }
+
   @Test func `Leaving a tool writes a live value as part of the visit`() throws {
     let document = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: document)
@@ -368,6 +407,102 @@ struct ImageEditorSessionTests {
     let session = ImageEditorSession(documentAtStart: opened)
     let other = EditingDocument(source: try SourceImage(data: data))
     #expect(session.documentForCancel(replacing: other) == nil)
+  }
+
+  // MARK: - Operation steps
+
+  @Test func `With operation steps, each write is a step of its own`() throws {
+    let host = Host(try Fixtures.makeDocument())
+    var session = ImageEditorSession(documentAtStart: host.document, historyStep: .operation)
+
+    for value in 1...2 {
+      if let next = session.document(after: host.document, change: { $0.feature.effects.exposure = ExposureFeature(ev: Double(value)) }) {
+        host.binding.wrappedValue = next
+      }
+    }
+
+    #expect(host.writes == 2)
+    #expect(host.document.history.undoStack == [Fixtures.exposure(0)], "The second write commits the first.")
+    #expect(host.document.hasUncommittedChanges, "The last write stays uncommitted until the next one.")
+    var undone = host.document
+    undone.undo()
+    #expect(undone.feature == Fixtures.exposure(1))
+    undone.undo()
+    #expect(undone.feature == Fixtures.exposure(0))
+    #expect(undone.canUndo == false)
+  }
+
+  @Test func `With operation steps, the previews of a drag are written as one step`() throws {
+    let host = Host(try Fixtures.makeDocument())
+    var session = ImageEditorSession(documentAtStart: host.document, historyStep: .operation)
+    if let next = session.document(after: host.document, change: { $0.feature.effects.saturation = SaturationFeature(value: 0.5) }) {
+      host.binding.wrappedValue = next
+    }
+    let saturated = host.document.feature
+
+    // A drag: a preview for every value, then one write when it ends.
+    for value in 1...50 {
+      session.previewFeature(over: host.document) { $0.effects.exposure = ExposureFeature(ev: Double(value) / 10) }
+    }
+    #expect(host.writes == 1, "Previews write nothing.")
+    if let next = session.document(after: host.document) {
+      host.binding.wrappedValue = next
+    }
+
+    #expect(host.writes == 2)
+    #expect(host.document.feature.effects.exposure == ExposureFeature(ev: 5))
+    #expect(host.document.history.undoStack == [Fixtures.exposure(0)])
+    var undone = host.document
+    undone.undo()
+    #expect(undone.feature == saturated, "One undo takes back the whole drag.")
+    undone.undo()
+    #expect(undone.feature == Fixtures.exposure(0))
+  }
+
+  /// The history keeps the write the host undid back to as a step of its
+  /// own, and drops the undone write, as a new edit drops a redo branch.
+  @Test func `With operation steps, a write after an undo by the host keeps the earlier write as a step`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: opened, historyStep: .operation)
+    let first = try #require(session.document(after: opened) {
+      $0.feature.effects.exposure = ExposureFeature(ev: 1)
+    })
+    let second = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(ev: 2)
+    })
+    #expect(second.history.undoStack == [Fixtures.exposure(0)])
+
+    // The host's UndoManager restores the value before the second write.
+    session.noteDocument(first)
+    var document = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(ev: 3)
+    })
+    #expect(document.history.undoStack == [Fixtures.exposure(0)], "The first write is committed: no visit continues.")
+    #expect(document.feature == Fixtures.exposure(3))
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(1))
+    document.undo()
+    #expect(document.feature == Fixtures.exposure(0))
+    #expect(document.history.redoStack == [Fixtures.exposure(3), Fixtures.exposure(1)], "Redo brings back exposure 1, then 3, never 2.")
+  }
+
+  @Test func `A restart for another image keeps the history step`() throws {
+    let opened = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: opened, historyStep: .operation)
+
+    // The host rebinds the editor to a document of another image.
+    let other = EditingDocument(source: try Fixtures.makeImage(), feature: Fixtures.exposure(-1))
+    session.noteDocument(other)
+    #expect(session.documentAtStart == other)
+    #expect(session.historyStep == .operation)
+
+    let first = try #require(session.document(after: other) {
+      $0.feature.effects.exposure = ExposureFeature(ev: 1)
+    })
+    let second = try #require(session.document(after: first) {
+      $0.feature.effects.exposure = ExposureFeature(ev: 2)
+    })
+    #expect(second.history.undoStack == [Fixtures.exposure(-1)], "The second write commits the first.")
   }
 
   // MARK: - Reset
