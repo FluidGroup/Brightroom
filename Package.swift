@@ -16,6 +16,10 @@ let package = Package(
     .package(url: "https://github.com/VergeGroup/swift-state-graph", exact: "0.17.0"),
   ],
   targets: [
+    // SwiftPM compiles the target's `.metal` sources into its default
+    // library without a resource declaration. Declaring them as resources
+    // makes Tuist's package integration compile each one twice, which Xcode
+    // rejects as duplicate tasks.
     .target(
       name: "BrightroomParametric",
       dependencies: ["BrightroomColorAdjustmentKernels"],
@@ -23,10 +27,6 @@ let package = Package(
         // Included by the compiled `.metal` sources; not a standalone package
         // input.
         "BrushStampFalloff.metalh"
-      ],
-      resources: [
-        .process("BrushMaskRenderShader.metal"),
-        .process("ParametricKernels.metal"),
       ]
     ),
     // General Core Image kernels require different Metal flags from the
