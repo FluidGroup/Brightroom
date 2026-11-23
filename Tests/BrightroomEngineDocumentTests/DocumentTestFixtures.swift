@@ -2,7 +2,6 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import Testing
-import UIKit
 import UniformTypeIdentifiers
 
 @testable import BrightroomEngine
@@ -13,7 +12,7 @@ import BrightroomParametric
 enum DocumentTestFixtures {
 
   /// A bitmap filled with `color`, 40 x 20 by default.
-  static func makeCGImage(width: Int = 40, height: Int = 20, color: UIColor = .red) throws -> CGImage {
+  static func makeCGImage(width: Int = 40, height: Int = 20, color: CGColor = CGColor(srgbRed: 1, green: 0, blue: 0, alpha: 1)) throws -> CGImage {
     let context = try #require(
       CGContext(
         data: nil,
@@ -25,7 +24,7 @@ enum DocumentTestFixtures {
         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
       )
     )
-    context.setFillColor(color.cgColor)
+    context.setFillColor(color)
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
     return try #require(context.makeImage())
   }

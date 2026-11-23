@@ -3,7 +3,9 @@ import CoreImage
 import Foundation
 import ImageIO
 import Testing
+#if os(iOS)
 import UIKit
+#endif
 
 @testable import BrightroomEngine
 import BrightroomParametric
@@ -34,6 +36,7 @@ struct DocumentCreationTests {
     #expect(image.makeCIImage().extent.size == Fixtures.rotatedJPEGSize)
   }
 
+  #if os(iOS)
   @Test func `A UIImage keeps its orientation`() throws {
     let cgImage = try Fixtures.makeCGImage()
     let image = SourceImage(image: UIImage(cgImage: cgImage, scale: 1, orientation: .right))
@@ -43,6 +46,7 @@ struct DocumentCreationTests {
     let upright = SourceImage(image: UIImage(cgImage: cgImage))
     #expect(upright.pixelSize == CGSize(width: 40, height: 20))
   }
+  #endif
 
   @Test func `A CGImage takes an explicit orientation`() throws {
     let cgImage = try Fixtures.makeCGImage()

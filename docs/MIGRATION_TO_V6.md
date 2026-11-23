@@ -67,9 +67,9 @@ dependencies: [
 ]
 ```
 
-The requirements do not change: iOS 17 (BrightroomUI and BrightroomEngine),
-iOS 17 and macOS 14 (BrightroomParametric), Swift 6.3 or later in Swift 6
-language mode. The products are the same.
+The requirements: iOS 17 and macOS 14 for every product, Swift 6.3 or later
+in Swift 6 language mode. On macOS, BrightroomUI has `ImageEditorCanvas` as a
+viewer; the built-in editor is iOS only. The products are the same.
 
 BrightroomParametric no longer imports SwiftUI: the feature tree rows moved
 to BrightroomUI ([Debug Feature Tree](#debug-feature-tree)) and
@@ -799,9 +799,9 @@ not change the ids of the nodes after it.
 
 The outline moved to BrightroomUI, so BrightroomParametric does not depend on
 SwiftUI for it. `FeatureTreeView` is removed: it only wrapped the outline in a
-`List`, so put the outline in a `List` of your own. BrightroomUI supports
-iOS only; on macOS, show the nodes that `FeatureTreeNode.nodes(for:)`
-returns, which stays in BrightroomParametric.
+`List`, so put the outline in a `List` of your own. The outline is available
+on iOS and macOS; without BrightroomUI, show the nodes that
+`FeatureTreeNode.nodes(for:)` returns, which stays in BrightroomParametric.
 
 | 5.1.1 | 6.0 |
 | --- | --- |

@@ -5,7 +5,7 @@ struct ParametricMacDemoApp: App {
 
   var body: some Scene {
     WindowGroup {
-      ParametricMacDemoView()
+      DemoRootView()
     }
     .defaultSize(width: 1180, height: 780)
   }

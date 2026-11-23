@@ -58,8 +58,10 @@
 		4BF934182614CAAB00E0637A /* screenshot-16bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934152614CAAB00E0637A /* screenshot-16bit-p3-alpha.png */; };
 		4BF934282614CB6000E0637A /* screenshot-8bit-lcd.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934272614CB6000E0637A /* screenshot-8bit-lcd.png */; };
 		4BF934412614D08300E0637A /* screenshot-8bit-p3-alpha.png in Resources */ = {isa = PBXBuildFile; fileRef = 4BF934402614D08300E0637A /* screenshot-8bit-p3-alpha.png */; };
+		5694601131517A636519374E /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 4D2C97FC7A9A0CC7283EDF38 /* BrightroomEngine */; };
 		8803B369987D47B7BEDAE2AA /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = 23449504C30943C981A14D75 /* BrightroomParametric */; };
 		8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = BC5DE159959545B49CA01241 /* BrightroomParametric */; };
+		A8FBFCD93E350D91256CF064 /* BrightroomUI in Frameworks */ = {isa = PBXBuildFile; productRef = 06691DAC9C2EDBBE484F9E38 /* BrightroomUI */; };
 		B027724C2FC2B70A006D7796 /* RevealSDK in Frameworks */ = {isa = PBXBuildFile; productRef = B027724B2FC2B70A006D7796 /* RevealSDK */; };
 		EEFA1F2CFBEE4B5AB3189151 /* BrightroomParametric in Frameworks */ = {isa = PBXBuildFile; productRef = E41DF318FBB3443697FEC673 /* BrightroomParametric */; };
 		FC06C87F2A53AF4500215B89 /* BrightroomEngine in Frameworks */ = {isa = PBXBuildFile; productRef = FC06C87E2A53AF4500215B89 /* BrightroomEngine */; };
@@ -913,6 +915,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				8F5D27B649664EF38B9F4C08 /* BrightroomParametric in Frameworks */,
+				5694601131517A636519374E /* BrightroomEngine in Frameworks */,
+				A8FBFCD93E350D91256CF064 /* BrightroomUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1488,6 +1492,8 @@
 			name = ParametricMacDemo;
 			packageProductDependencies = (
 				BC5DE159959545B49CA01241 /* BrightroomParametric */,
+				4D2C97FC7A9A0CC7283EDF38 /* BrightroomEngine */,
+				06691DAC9C2EDBBE484F9E38 /* BrightroomUI */,
 			);
 			productName = ParametricMacDemo;
 			productReference = 6B38D61DFBC1456792F529BB /* ParametricMacDemo.app */;
@@ -2147,7 +2153,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
@@ -2461,7 +2467,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = JX92XL88RZ;
+				DEVELOPMENT_TEAM = KU2QEJ9K3Z;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Parametric Mac Demo";
@@ -2551,6 +2557,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		06691DAC9C2EDBBE484F9E38 /* BrightroomUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomUI;
+		};
 		23449504C30943C981A14D75 /* BrightroomParametric */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomParametric;
@@ -2562,6 +2572,10 @@
 		4B487E6028EEC0670026A8CF /* BrightroomUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = BrightroomUI;
+		};
+		4D2C97FC7A9A0CC7283EDF38 /* BrightroomEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = BrightroomEngine;
 		};
 		B027724B2FC2B70A006D7796 /* RevealSDK */ = {
 			isa = XCSwiftPackageProductDependency;

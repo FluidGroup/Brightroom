@@ -84,7 +84,7 @@ struct MaskWorkingSpaceTests {
       document.appendLocalBlurStroke(record.workingSpaceStroke(domainHeight: height))
     }
 
-    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur)
+    let plan = CanvasRenderPlan(localBlur: document.localBlur)
     #expect(plan.committedStrokes(in: nil, domainHeight: height) == records)
   }
 

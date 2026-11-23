@@ -207,7 +207,7 @@ struct EditingPreviewExportParityTests {
         GaussianBlurFeature(radius: .absolute(8))
       }
     )
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: emptyDocument.localBlur) == .viewportBase)
 
     // Reference: same document with no blur mask at all.
     let globalOnlyDocument = Self.makeDocument(imageSize: imageSize, localBlur: nil)

@@ -6,7 +6,7 @@ import CoreGraphics
 @testable import BrightroomParametric
 @testable import BrightroomUI
 
-/// Guards the stroke coordinate contract of `EditingCanvasView.CanvasRenderPlan`.
+/// Guards the stroke coordinate contract of `CanvasRenderPlan`.
 ///
 /// Blur-mask strokes are stored in the working space (y-up) of the pre-crop
 /// source domain. The tool surface canvas displays the crop output, so the
@@ -42,7 +42,7 @@ struct EditingCanvasViewStrokeDomainTests {
 
   @Test func `Viewing strokes are mapped into crop output domain`() throws {
     let layer = makeLayer()
-    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: layer)
+    let plan = CanvasRenderPlan(localBlur: layer)
 
     // A non-identity final crop: offset extent plus a 90° rotation.
     let crop = CropGuideState(
@@ -75,7 +75,7 @@ struct EditingCanvasViewStrokeDomainTests {
 
   @Test func `Source domain canvas receives flipped source records`() {
     let layer = makeLayer()
-    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: layer)
+    let plan = CanvasRenderPlan(localBlur: layer)
 
     // CropSurface's rendered-edit-preview canvas is sized to the source image,
     // so a source-domain canvas receives the source records, y-down.
@@ -85,12 +85,12 @@ struct EditingCanvasViewStrokeDomainTests {
   }
 
   @Test func `Absent, empty, or non-brush-rooted mask selects the viewport base`() {
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: nil) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: nil) == .viewportBase)
 
     let empty = LocalAdjustmentFeature(mask: .brush(.init())) {
       GaussianBlurFeature(radius: .absolute(10))
     }
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: empty) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: empty) == .viewportBase)
 
     // The canvas composites only the brush-rooted shape ImageEditor authors.
     // A feathered empty brush selects nothing, so export changes nothing
@@ -100,12 +100,12 @@ struct EditingCanvasViewStrokeDomainTests {
     ) {
       GaussianBlurFeature(radius: .absolute(10))
     }
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: featheredEmpty) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: featheredEmpty) == .viewportBase)
 
     let layer = makeLayer()
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: layer) == .localBlur(layer))
+    #expect(CanvasRenderPlan(localBlur: layer) == .localBlur(layer))
     #expect(
-      EditingCanvasView.CanvasRenderPlan(localBlur: layer).canvasMode
+      CanvasRenderPlan(localBlur: layer).canvasMode
         == .localAdjustment(effect: AnyImageEffect(layer.content))
     )
   }

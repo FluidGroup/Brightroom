@@ -1,3 +1,5 @@
+#if os(iOS)
+
 import CoreGraphics
 import SwiftUI
 import Testing
@@ -499,3 +501,5 @@ struct HostedEditorTests {
     #expect(host.document == document)
   }
 }
+
+#endif

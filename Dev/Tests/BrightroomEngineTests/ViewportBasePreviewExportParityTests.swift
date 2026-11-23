@@ -37,7 +37,7 @@ struct ViewportBasePreviewExportParityTests {
   ) async throws {
     let source = Self.makeTexturedImage()
     let document = Self.makeDocument(quarterTurn: quarterTurn)
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: document.localBlur) == .viewportBase)
 
     let exported = try await EditingDocument(
       source: SourceImage(cgImage: source),
@@ -76,8 +76,8 @@ struct ViewportBasePreviewExportParityTests {
     ) {
       GaussianBlurFeature(radius: .absolute(4))
     }
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: unstroked.localBlur) == .viewportBase)
-    #expect(EditingCanvasView.CanvasRenderPlan(localBlur: stroked.localBlur) != .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: unstroked.localBlur) == .viewportBase)
+    #expect(CanvasRenderPlan(localBlur: stroked.localBlur) != .viewportBase)
 
     let before = try CanvasCompositionPreview.render(document: unstroked, source: source, throughCrop: true)
     let after = try CanvasCompositionPreview.render(document: stroked, source: source, throughCrop: true)

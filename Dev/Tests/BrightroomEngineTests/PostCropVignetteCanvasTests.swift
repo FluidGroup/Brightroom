@@ -121,7 +121,7 @@ struct PostCropVignetteCanvasTests {
     feature.vignette = VignetteFeature(value: 2)
 
     for guideFrame in [CGRect(x: 20, y: 10, width: 100, height: 80), CGRect(x: 50, y: 30, width: 100, height: 80)] {
-      let postCrop = try #require(EditingCanvasView.CanvasPostCrop(
+      let postCrop = try #require(CanvasPostCrop(
         effect: feature.canvasPostCropEffect,
         guideFrame: guideFrame,
         imageSize: size
@@ -284,11 +284,11 @@ struct PostCropVignetteCanvasTests {
     let outputSize = geometry.outputSize
     let outputBounds = geometry.outputBounds
     let editingSource = CIImage(cgImage: source)
-    let plan = EditingCanvasView.CanvasRenderPlan(localBlur: document.localBlur)
+    let plan = CanvasRenderPlan(localBlur: document.localBlur)
 
     let renderer: EditingCanvasRenderer
     let records: [EditingCanvasStrokeRecord]
-    let postCrop: EditingCanvasView.CanvasPostCrop?
+    let postCrop: CanvasPostCrop?
     switch route {
     case .cropViewportBase, .cropLocalAdjustment:
       renderer = EditingCanvasRenderer(canvasSize: imageSize, device: device)
@@ -305,7 +305,7 @@ struct PostCropVignetteCanvasTests {
         contentToCanvasTransform: geometry.inputToOutputTransform
       ))
       records = plan.committedStrokes(in: nil, domainHeight: imageSize.height)
-      postCrop = EditingCanvasView.CanvasPostCrop(
+      postCrop = CanvasPostCrop(
         effect: document.canvasPostCropEffect,
         guideFrame: outputBounds,
         imageSize: imageSize
@@ -331,7 +331,7 @@ struct PostCropVignetteCanvasTests {
         contentToCanvasTransform: .identity,
         contentScaleFactor: 1
       ))
-      postCrop = EditingCanvasView.CanvasPostCrop(
+      postCrop = CanvasPostCrop(
         effect: document.canvasPostCropEffect,
         geometry: geometry,
         viewport: viewport
