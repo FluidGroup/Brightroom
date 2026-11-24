@@ -24,72 +24,102 @@ import StateGraph
 
 import BrightroomParametric
 
-/// The pixels an editor shows for one source image: a small thumbnail and the
-/// downsampled editing source.
-package struct PreviewSource: Equatable, Sendable {
+/// The pixels an editor shows for one source image: a small thumbnail and a
+/// downsampled editing copy, decoded once.
+///
+/// Only a `PreviewSourceLoader` creates one. Pass it to the views that read
+/// the pixels the canvas shows, such as a histogram, filter swatches or a
+/// gray point; a feature they evaluate over it is authored over `source`.
+/// The editing copy is GPU-resident when a Metal device is available, and
+/// lives as long as the loader or any copy of this value. A document never
+/// holds one: it keeps only its `SourceImage`.
+public struct PreviewSource: Equatable, Sendable {
 
   /// The source image these pixels were prepared from. Its `pixelSize` is the
   /// domain documents of this image are authored in.
-  package let source: SourceImage
+  public let source: SourceImage
 
   /// A small oriented thumbnail (short side at most 180 pixels), used for
   /// previews such as filter swatches.
-  package let thumbnail: CIImage
+  public let thumbnail: CIImage
 
-  /// The oriented, downsampled editing source (zero origin). It is
-  /// GPU-resident when a Metal device is available.
-  package let image: CIImage
+  /// The oriented, downsampled editing copy (zero origin) that the canvas
+  /// shows: its short side is at most 2560 pixels. It is GPU-resident when a
+  /// Metal device is available.
+  public let image: CIImage
 }
 
-/// Prepares the preview pixels of one source image for BrightroomUI's editors.
+/// Prepares the preview pixels of one source image, once: the
+/// `PreviewSource` an editor's views share.
 ///
-/// Package access: editors in BrightroomUI (`ImageEditorCanvas`,
-/// `ImageEditor`) create a loader for their document's source image through
-/// `PreviewSourceReader` and keep it while they are shown. Apps never create
-/// one; a custom editor displays `SourceImage.makeCIImage(maxPixelSize:)`.
+/// Prepare one loader for each open image and share it with every view that
+/// shows the image, so the image is decoded once: pass it to
+/// `ImageEditorCanvas(document:previewSourceLoader:)`, and pass its
+/// `previewSource` to the views that read the canvas's pixels. In SwiftUI,
+/// `PreviewSourceReader` (BrightroomUI) creates the loader and keeps it for
+/// the lifetime of its identity, so give the reader an identity per source
+/// image:
 ///
-/// The loader holds no edit and no history: `EditingDocument` does. It only
-/// decodes the image once into a `PreviewSource`, which the editor's views
-/// share. Release it when the editor goes away; the document keeps only the
-/// lightweight `SourceImage`.
+/// ```swift
+/// PreviewSourceReader(source: document.source) { loader in
+///   ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+///   if let previewSource = loader.previewSource {
+///     // A histogram, filter swatches or a gray point: pass previewSource.
+///   }
+/// }
+/// .id(document.source)
+/// ```
+///
+/// The loader holds no edit and no history: `EditingDocument` does, and it
+/// keeps only the lightweight `SourceImage`. The prepared pixels, the
+/// GPU-resident editing copy included, live as long as the loader or any
+/// copy of its `PreviewSource`, so release the loader when the image closes.
 @MainActor
-package final class PreviewSourceLoader {
+public final class PreviewSourceLoader {
 
   // MARK: - Nested Types
 
   /// Where the loader is in preparing its `PreviewSource`.
-  package enum Phase: Equatable {
+  public enum Phase: Equatable, Sendable {
     /// `load()` has not been called.
     case idle
-    /// The image is being decoded and uploaded.
+    /// The image is being decoded and its editing copy uploaded.
     case loading
     /// The preview is ready.
     case loaded(PreviewSource)
     /// Preparation failed, for example because the image's pixels cannot be
     /// decoded although its header was readable, or because the file behind
-    /// the image changed. Editors show the failure and keep an exit available.
-    /// The loader does not retry.
+    /// the image changed. The failure is final: the loader does not retry.
+    /// Show the failure and keep a way out, as the canvas does.
     case failed
   }
 
   // MARK: - State Properties
 
-  /// Published on the main actor: `.idle`, then `.loading` once `load()` is
-  /// called, then `.loaded` or `.failed`.
-  @GraphStored package private(set) var phase: Phase = .idle
+  /// `.idle`, then `.loading` once `load()` is first called, then `.loaded`
+  /// or `.failed`. It changes on the main actor, and a SwiftUI view that
+  /// reads it updates when it changes.
+  public var phase: Phase {
+    currentPhase
+  }
 
   /// The prepared preview; nil until `phase` is `.loaded`.
-  package var previewSource: PreviewSource? {
+  public var previewSource: PreviewSource? {
     guard case .loaded(let previewSource) = phase else {
       return nil
     }
     return previewSource
   }
 
+  /// The storage of `phase`. Private, because `@GraphStored` gives its
+  /// storage node the property's access level, and a public node would let
+  /// any caller set the phase.
+  @GraphStored private var currentPhase: Phase = .idle
+
   // MARK: - Stored Properties
 
   /// The source image this loader prepares.
-  package let source: SourceImage
+  public let source: SourceImage
 
   private let prepare: @Sendable (SourceImage) async -> PreviewSource?
 
@@ -99,8 +129,9 @@ package final class PreviewSourceLoader {
 
   // MARK: - Initializers
 
-  /// Creates a loader that prepares `source` once `load()` is called.
-  package convenience init(source: SourceImage) {
+  /// Creates a loader that prepares `source` once `load()` is called. It
+  /// costs nothing until then.
+  public convenience init(source: SourceImage) {
     self.init(source: source, prepare: { await PreviewSource.make(from: $0) })
   }
 
@@ -126,9 +157,12 @@ package final class PreviewSourceLoader {
   /// SwiftUI `.task` whose view disappeared) neither cancels it for the others
   /// nor leaves `phase` at `.loading`; the cancelled caller still returns when
   /// the preparation ends. A started preparation always runs to its end.
-  package func load() async {
+  ///
+  /// The canvas calls it when it appears. A view that needs the pixels
+  /// without a canvas calls it too, for example in `.task`.
+  public func load() async {
     if preparation == nil {
-      phase = .loading
+      currentPhase = .loading
       let source = source
       let prepare = prepare
       // Detached, so the decode starts now rather than when the main actor
@@ -147,9 +181,9 @@ package final class PreviewSourceLoader {
           return
         }
         if let previewSource {
-          phase = .loaded(previewSource)
+          currentPhase = .loaded(previewSource)
         } else {
-          phase = .failed
+          currentPhase = .failed
         }
       }
     }

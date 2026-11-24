@@ -24,15 +24,32 @@ import SwiftUI
 
 import BrightroomEngine
 
-/// Gives its content one `PreviewSourceLoader` for the lifetime of this view's
-/// identity.
+/// Gives its content one `PreviewSourceLoader` for a source image, kept for
+/// the lifetime of this view's identity.
 ///
-/// Give it an identity per source image (`.id(source)`): the loader is created
-/// once per identity and released with it, so the GPU-resident editing source
-/// lives only while an editor shows the image. The content starts loading
-/// (`await loader.load()` in a `.task`); every view of one identity shares the
-/// loader, so the image is decoded once.
-struct PreviewSourceReader<Content: View>: View {
+/// Wrap the views of one open image in a reader, and give the reader an
+/// identity per source image with `.id(source)`: the loader is created once
+/// per identity and released with it, so the image is decoded once while it
+/// is open, and its GPU-resident editing copy lives only that long. A reader
+/// without that identity keeps the loader of the first source it was given.
+///
+/// The content shares the loader: pass it to
+/// `ImageEditorCanvas(document:previewSourceLoader:)`, and pass its
+/// `previewSource`, once loaded, to the views that read the canvas's pixels.
+/// The canvas starts loading when it appears; a view that needs the pixels
+/// without a canvas starts it with `.task { await loader.load() }`.
+///
+/// ```swift
+/// PreviewSourceReader(source: document.source) { loader in
+///   // One loader per image: the canvas and the other views share its decode.
+///   ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+///   if let previewSource = loader.previewSource {
+///     // A histogram, filter swatches or a gray point: pass previewSource.
+///   }
+/// }
+/// .id(document.source)
+/// ```
+public struct PreviewSourceReader<Content: View>: View {
 
   // `State(initialValue:)` is evaluated on every init but kept only for a
   // new identity. A loader costs nothing until `load()`, so the discarded
@@ -41,12 +58,16 @@ struct PreviewSourceReader<Content: View>: View {
 
   private let content: (PreviewSourceLoader) -> Content
 
-  init(source: SourceImage, @ViewBuilder content: @escaping (PreviewSourceLoader) -> Content) {
+  /// Creates a reader whose content receives the loader of `source`.
+  public init(
+    source: SourceImage,
+    @ViewBuilder content: @escaping (PreviewSourceLoader) -> Content
+  ) {
     self._loader = State(initialValue: PreviewSourceLoader(source: source))
     self.content = content
   }
 
-  var body: some View {
+  public var body: some View {
     content(loader)
   }
 }
