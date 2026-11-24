@@ -72,6 +72,9 @@ public enum GrayPoint {
   /// there is nothing to sample at the point: it is off the crop output or off the image, or the
   /// image cannot be evaluated there (it fails, or its colour is not finite).
   ///
+  /// The solve renders only the sampled area and single pixels, and runs to its end, also when the
+  /// calling task is cancelled.
+  ///
   /// - Parameters:
   ///   - outputPoint: A point of the crop output (full resolution, top-left origin), such as the
   ///     click a macOS canvas reports through `pointSampling(_:)`.

@@ -65,6 +65,11 @@ public enum FilterSwatch {
   /// off the calling actor; a nil preset renders the thumbnail alone. nil when
   /// the thumbnail is empty or the swatch would be smaller than a pixel.
   ///
+  /// When the calling task is already cancelled, such as a `.task(id:)` that
+  /// a newer value replaced, it returns nil without rendering. A rendering
+  /// that has started runs to its end, so check `Task.isCancelled` before
+  /// using the result.
+  ///
   /// The swatch is `pointSize` times `scale` pixels square, never larger than
   /// the thumbnail's short side, in 8-bit Display P3: show it at `scale`.
   /// Proportional radii resolve against the whole thumbnail, as the canvas
@@ -94,6 +99,11 @@ public enum FilterSwatch {
       ),
       adjustmentRendering: adjustmentRendering
     )
+    // The rendering is the expensive part, and once started it runs to its
+    // end, so a cancelled caller gets nothing before it starts.
+    guard !Task.isCancelled else {
+      return nil
+    }
     return makeImage(from: prepared, preset: preset, evaluationContext: evaluationContext)
   }
 

@@ -148,6 +148,11 @@ public struct OutputAnalysis: Sendable {
   /// preview source, so a tight crop keeps its detail. The crop is fitted to the image as the
   /// canvas fits it, so the analysis covers what the canvas shows.
   ///
+  /// When the calling task is already cancelled, such as a `.task(id:)` that a newer feature
+  /// replaced, it returns nil without rendering. A rendering that has started runs to its end,
+  /// and an analysis of an older feature can end after a newer one's, so check `Task.isCancelled`
+  /// before using the result.
+  ///
   /// - Parameters:
   ///   - feature: The feature the canvas shows. It is authored over `previewSource.source`; a
   ///     feature of another image is analysed over the wrong pixels.
@@ -210,6 +215,11 @@ public struct OutputAnalysis: Sendable {
     // tolerance keeps a side that floating-point error leaves just below a whole pixel.
     let width = max(1, Int((outputSize.width * scale + 1e-6).rounded(.down)))
     let height = max(1, Int((outputSize.height * scale + 1e-6).rounded(.down)))
+    // The rendering is the expensive part, and once started it runs to its end, so a cancelled
+    // caller gets nothing before it starts.
+    guard !Task.isCancelled else {
+      return nil
+    }
     var pixels = [UInt8](repeating: 0, count: width * height * 4)
     // Core Image writes the picture's top (its largest y) into row 0, premultiplied.
     context.render(

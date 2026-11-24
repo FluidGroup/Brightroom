@@ -140,6 +140,31 @@ struct EditorComponentsPublicAPITests {
     #expect(try Self.centre(of: filtered).green > Self.centre(of: original).green)
   }
 
+  // MARK: - Cancellation
+
+  @Test func `A cancelled task gets no analysis and no swatch, and its gray point still solves`() async throws {
+    let previewSource = try await Self.previewSource(of: Self.image(left: (140, 128, 112), right: (120, 128, 140)))
+    let feature = Self.wholeImage
+    let point = CGPoint(x: 16, y: 24)
+    // Asked for in a task that is not cancelled, each gives a result.
+    #expect(await OutputAnalysis.analyze(feature, over: previewSource) != nil)
+    #expect(await FilterSwatch.render(nil, over: previewSource, pointSize: 20, scale: 2) != nil)
+
+    let task = Task {
+      // Cancelled while it waits, as a newer value cancels a `.task(id:)`.
+      try? await Task.sleep(for: .seconds(60))
+      let analysis = await OutputAnalysis.analyze(feature, over: previewSource)
+      let swatch = await FilterSwatch.render(nil, over: previewSource, pointSize: 20, scale: 2)
+      let balance = try? await GrayPoint.solve(at: point, in: feature, over: previewSource).get()
+      return (hasAnalysis: analysis != nil, hasSwatch: swatch != nil, hasBalance: balance != nil)
+    }
+    task.cancel()
+    let results = await task.value
+    #expect(results.hasAnalysis == false)
+    #expect(results.hasSwatch == false)
+    #expect(results.hasBalance)
+  }
+
   // MARK: - Grading wheel
 
   #if os(iOS)

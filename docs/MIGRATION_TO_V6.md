@@ -1498,7 +1498,11 @@ BrightroomUI has no built-in editor, this is how you build one.
     `saturationLabel` for VoiceOver.
 
   The first three run off the main actor. Before you apply a result, check
-  that the document's `source` is still `previewSource.source`.
+  that the document's `source` is still `previewSource.source`. An analysis
+  or a swatch asked for in a task that is already cancelled returns nil
+  without rendering; one that has started runs to its end, so check
+  `Task.isCancelled` before you use its result. A gray point always runs to
+  its end.
 
 ```swift
 import BrightroomEngine
@@ -1553,7 +1557,14 @@ struct HistogramView: View {
     // Draw `analysis?.histogram.levels()`, for example with Swift Charts.
     Color.clear
       .task(id: feature) {
-        analysis = await OutputAnalysis.analyze(feature, over: previewSource)
+        // A newer feature cancels this task: the wait analyzes a slider drag
+        // once it pauses, and a cancelled task neither renders nor replaces
+        // the newer result.
+        try? await Task.sleep(for: .milliseconds(100))
+        let result = await OutputAnalysis.analyze(feature, over: previewSource)
+        if !Task.isCancelled {
+          analysis = result
+        }
       }
   }
 }

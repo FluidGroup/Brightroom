@@ -432,7 +432,14 @@ struct HistogramView: View {
     // Draw `analysis?.histogram.levels()`, for example with Swift Charts
     Color.clear
       .task(id: feature) {
-        analysis = await OutputAnalysis.analyze(feature, over: previewSource)
+        // A newer feature cancels this task: the wait analyzes a slider drag
+        // once it pauses, and a cancelled task neither renders nor replaces
+        // the newer result
+        try? await Task.sleep(for: .milliseconds(100))
+        let result = await OutputAnalysis.analyze(feature, over: previewSource)
+        if !Task.isCancelled {
+          analysis = result
+        }
       }
   }
 }
@@ -451,8 +458,11 @@ struct HistogramView: View {
   reports neutral) and `FilterSwatch.render(_:over:pointSize:scale:)` (a
   preset over the thumbnail) take a feature and the `PreviewSource` it is
   authored over, and run off the main actor: before applying a result,
-  check that the document's `source` is still `previewSource.source`.
-  `ColorGradingWheel` takes one range's correction: pass
+  check that the document's `source` is still `previewSource.source`. An
+  analysis or a swatch asked for in a task that is already cancelled
+  returns nil without rendering; one that has started runs to its end, so
+  check `Task.isCancelled` before using its result. A gray point always
+  runs to its end. `ColorGradingWheel` takes one range's correction: pass
   `interaction: .pointer` on the Mac, for the pointer and the arrow keys,
   and localized `rangeName`, `hueLabel` and `saturationLabel`
 - The macOS canvas is a viewer: `.editingTarget(nil)` asks for one and
