@@ -32,14 +32,14 @@ struct FilterSwatchTests {
 
   private static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
 
-  @Test func `A swatch is the point size times the scale, at most the thumbnail's shorter side`() async throws {
+  @Test func `A swatch is the point size times the display scale, at most the thumbnail's shorter side`() async throws {
     let previewSource = try Self.previewSource(thumbnail: Self.thumbnail { _ in Self.color })
 
-    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 30, scale: 2))
+    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 30, displayScale: 2))
     #expect(swatch.width == 60)
     #expect(swatch.height == 60)
 
-    let capped = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 60, scale: 3))
+    let capped = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 60, displayScale: 3))
     #expect(capped.width == 120)
     #expect(capped.height == 120)
   }
@@ -51,7 +51,7 @@ struct FilterSwatchTests {
     }
     let previewSource = try Self.previewSource(thumbnail: thumbnail)
 
-    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 120, scale: 1))
+    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 120, displayScale: 1))
     let pixels = try Self.rgba(swatch)
     let expected = Self.color + [255]
     let worst = pixels.indices.map { abs(Int(pixels[$0]) - Int(expected[$0 % 4])) }.max() ?? 0
@@ -66,7 +66,7 @@ struct FilterSwatchTests {
     // chain entry, whose diagonal (100) is a quarter of a 320 × 240
     // source's (400).
     let previewSource = try Self.previewSource(thumbnail: thumbnail, pixelSize: CGSize(width: 320, height: 240))
-    let swatch = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, scale: 1))
+    let swatch = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, displayScale: 1))
     let recipe = try Self.recipe(thumbnail: thumbnail, preset: Self.soften, pixels: 60, renderScale: 0.25)
     let differenceFromRecipe = try Self.difference(swatch, recipe)
     #expect(differenceFromRecipe <= 1)
@@ -74,7 +74,7 @@ struct FilterSwatchTests {
     // Over an 80 × 60 source, the chain entry is at full resolution.
     let fullResolution = try Self.previewSource(thumbnail: thumbnail, pixelSize: CGSize(width: 80, height: 60))
     let unscaled = try #require(
-      await FilterSwatch.render(Self.soften, over: fullResolution, pointSize: 60, scale: 1)
+      await FilterSwatch.render(Self.soften, over: fullResolution, pointSize: 60, displayScale: 1)
     )
     let unscaledRecipe = try Self.recipe(thumbnail: thumbnail, preset: Self.soften, pixels: 60, renderScale: 1)
     let differenceFromUnscaledRecipe = try Self.difference(unscaled, unscaledRecipe)
@@ -92,7 +92,7 @@ struct FilterSwatchTests {
         Self.soften,
         over: previewSource,
         pointSize: 60,
-        scale: 1,
+        displayScale: 1,
         adjustmentRendering: Self.exposureIgnored
       )
     )
@@ -106,7 +106,7 @@ struct FilterSwatchTests {
     let differenceFromRecipe = try Self.difference(swatch, recipe)
     #expect(differenceFromRecipe <= 1)
 
-    let standard = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, scale: 1))
+    let standard = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, displayScale: 1))
     let differenceFromStandard = try Self.difference(swatch, standard)
     #expect(differenceFromStandard > 16)
   }

@@ -145,7 +145,7 @@ PreviewSourceReader(source: document.source) { loader in
 
 - `OutputAnalysis.analyze(_:over:)` measures what the canvas shows, for a histogram and the color under the pointer.
 - `GrayPoint.solve(at:in:over:)` finds the white balance that makes an area of the picture neutral.
-- `FilterSwatch.render(_:over:pointSize:scale:)` renders a filter preset over the image's thumbnail, for a filter picker.
+- `FilterSwatch.render(_:over:pointSize:displayScale:)` renders a filter preset over the image's thumbnail, for a filter picker.
 - `ColorGradingWheel` sets the hue and saturation of one tonal range of color grading. It takes that range's correction, not the image.
 
 On macOS, BrightroomUI has no built-in editor yet, so this is how you build one. There the canvas is a viewer: it shows the document's output with zoom and pan, takes zoom commands through `ImageEditorCanvasReader`, and reports its zoom (`onZoomChange(_:)`) and the pixel under the pointer (`onPointerChange(_:)`). Crop and brush editing are iOS only for now.

@@ -455,14 +455,15 @@ struct HistogramView: View {
 - `OutputAnalysis.analyze(_:over:)` (a histogram, and the color at the
   point `onPointerChange(_:)` reports), `GrayPoint.solve(at:in:over:)` (the
   white balance that makes the area around a point `pointSampling(_:)`
-  reports neutral) and `FilterSwatch.render(_:over:pointSize:scale:)` (a
-  preset over the thumbnail) take a feature and the `PreviewSource` it is
-  authored over, and run off the main actor: before applying a result,
-  check that the document's `source` is still `previewSource.source`. An
-  analysis or a swatch asked for in a task that is already cancelled
-  returns nil without rendering; one that has started runs to its end, so
-  check `Task.isCancelled` before using its result. A gray point always
-  runs to its end. `ColorGradingWheel` takes one range's correction: pass
+  reports neutral) and
+  `FilterSwatch.render(_:over:pointSize:displayScale:)` (a preset over the
+  thumbnail) take a feature and the `PreviewSource` it is authored over,
+  and run off the main actor: before applying a result, check that the
+  document's `source` is still `previewSource.source`. An analysis or a
+  swatch asked for in a task that is already cancelled returns nil without
+  rendering; one that has started runs to its end, so check
+  `Task.isCancelled` before using its result. A gray point always runs to
+  its end. `ColorGradingWheel` takes one range's correction: pass
   `interaction: .pointer` on the Mac, for the pointer and the arrow keys,
   and localized `rangeName`, `hueLabel` and `saturationLabel`
 - The macOS canvas is a viewer: `.editingTarget(nil)` asks for one and

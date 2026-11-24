@@ -1207,19 +1207,19 @@ private struct FilterChip: View {
         preset,
         over: previewSource,
         pointSize: pointSize,
-        scale: displayScale
+        displayScale: displayScale
       )
       guard !Task.isCancelled else { return }
       image = rendered
     }
   }
 
-  /// Re-render only when the source thumbnail, the preset, or the scale changes.
+  /// Re-render only when the source thumbnail, the preset, or the display scale changes.
   private var renderKey: FilterSwatch.RenderKey {
     FilterSwatch.RenderKey(
       baseImage: previewSource.map { ObjectIdentifier($0.thumbnail) },
       presetID: preset?.id,
-      scale: displayScale,
+      displayScale: displayScale,
       rendering: AdjustmentRendering.standard.identity
     )
   }

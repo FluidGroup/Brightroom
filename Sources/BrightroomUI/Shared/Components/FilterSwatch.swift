@@ -57,7 +57,7 @@ public enum FilterSwatch {
   struct RenderKey: Equatable {
     var baseImage: ObjectIdentifier?
     var presetID: String?
-    var scale: CGFloat
+    var displayScale: CGFloat
     var rendering: AdjustmentRendering.Identity
   }
 
@@ -70,8 +70,9 @@ public enum FilterSwatch {
   /// that has started runs to its end, so check `Task.isCancelled` before
   /// using the result.
   ///
-  /// The swatch is `pointSize` times `scale` pixels square, never larger than
-  /// the thumbnail's short side, in 8-bit Display P3: show it at `scale`.
+  /// The swatch is `pointSize` times `displayScale` pixels square, never
+  /// larger than the thumbnail's short side, in 8-bit Display P3: show it at
+  /// `displayScale`, the display's pixels per point.
   /// Proportional radii resolve against the whole thumbnail, as the canvas
   /// resolves them against the whole image. Absolute radii are pixels of
   /// `previewSource.source` at full resolution, and scale down to the swatch
@@ -83,11 +84,11 @@ public enum FilterSwatch {
     _ preset: FilterFeature?,
     over previewSource: PreviewSource,
     pointSize: CGFloat,
-    scale: CGFloat,
+    displayScale: CGFloat,
     adjustmentRendering: AdjustmentRendering = .standard
   ) async -> CGImage? {
     guard
-      let prepared = normalizedSquare(base: previewSource.thumbnail, pointSize: pointSize, scale: scale)
+      let prepared = normalizedSquare(base: previewSource.thumbnail, pointSize: pointSize, displayScale: displayScale)
     else {
       return nil
     }
@@ -124,7 +125,7 @@ public enum FilterSwatch {
   private static func normalizedSquare(
     base: CIImage,
     pointSize: CGFloat,
-    scale: CGFloat
+    displayScale: CGFloat
   ) -> Prepared? {
     let extent = base.extent
     guard extent.isInfinite == false, extent.isEmpty == false else {
@@ -144,7 +145,7 @@ public enum FilterSwatch {
 
     // Downscale to the requested pixel size; never upscale past the source —
     // 8-bit swatches gain nothing from it.
-    let targetPixels = floor(min((pointSize * scale).rounded(), side))
+    let targetPixels = floor(min((pointSize * displayScale).rounded(), side))
     guard targetPixels >= 1 else {
       return nil
     }

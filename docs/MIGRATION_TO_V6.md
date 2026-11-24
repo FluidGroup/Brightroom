@@ -1488,7 +1488,7 @@ BrightroomUI has no built-in editor, this is how you build one.
   - `GrayPoint.solve(at:in:over:temperatureRange:tintRange:adjustmentRendering:)`
     returns the `WhiteBalanceFeature` that makes the area around a
     crop-output point neutral, or a `GrayPoint.Rejection`;
-  - `FilterSwatch.render(_:over:pointSize:scale:adjustmentRendering:)`
+  - `FilterSwatch.render(_:over:pointSize:displayScale:adjustmentRendering:)`
     renders a `FilterFeature` over the center square of the thumbnail;
   - `ColorGradingWheel` sets the hue and saturation of one range of a
     `ColorGradingFeature`, reporting each operation with `onChange`, `onEnd`
@@ -1928,9 +1928,9 @@ and `.proportional(_:)` is a fraction of the chain-entry diagonal where 100 is
 one twentieth of it. The editor's canvas previews over a downsampled copy of
 the source and scales an absolute radius by the same factor, so a host's
 `.absolute(_:)` radius previews at the size it exports. The filter swatches
-(the editor's, and `FilterSwatch.render(_:over:pointSize:scale:)`) scale it
-to the swatch the same way, so an absolute radius takes the same share of
-the picture in a swatch as on the canvas. In
+(the editor's, and `FilterSwatch.render(_:over:pointSize:displayScale:)`)
+scale it to the swatch the same way, so an absolute radius takes the same
+share of the picture in a swatch as on the canvas. In
 5.1.1 both radii were plain `Double`s on different scales: a sharpen radius of
 100 and an unsharp-mask radius of 1 were each a twentieth of the diagonal. A
 5.1.1 sharpen radius keeps its look as `.proportional(v)`; multiply an

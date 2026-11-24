@@ -121,21 +121,21 @@ struct EditorComponentsPublicAPITests {
 
   // MARK: - Filter swatches
 
-  @Test func `A swatch is the point size times the scale at most, in Display P3, and a preset changes it`() async throws {
+  @Test func `A swatch is the point size times the display scale at most, in Display P3, and a preset changes it`() async throws {
     // The thumbnail of a 64 × 48 image is the image itself, so a swatch is at most 48 pixels.
     let previewSource = try await Self.previewSource(of: Self.image(left: (90, 90, 90), right: (90, 90, 90)))
 
-    let original = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 20, scale: 2))
+    let original = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 20, displayScale: 2))
     #expect(original.width == 40)
     #expect(original.height == 40)
     #expect(original.colorSpace?.name == CGColorSpace.displayP3)
 
-    let capped = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 30, scale: 2))
+    let capped = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 30, displayScale: 2))
     #expect(capped.width == 48)
     #expect(capped.height == 48)
 
     let brighter = FilterFeature(name: "Brighter", id: "brighter", effects: [AnyImageEffect(ExposureFeature(ev: 1))])
-    let filtered = try #require(await FilterSwatch.render(brighter, over: previewSource, pointSize: 20, scale: 2))
+    let filtered = try #require(await FilterSwatch.render(brighter, over: previewSource, pointSize: 20, displayScale: 2))
     #expect(filtered.width == 40)
     #expect(try Self.centre(of: filtered).green > Self.centre(of: original).green)
   }
@@ -148,13 +148,13 @@ struct EditorComponentsPublicAPITests {
     let point = CGPoint(x: 16, y: 24)
     // Asked for in a task that is not cancelled, each gives a result.
     #expect(await OutputAnalysis.analyze(feature, over: previewSource) != nil)
-    #expect(await FilterSwatch.render(nil, over: previewSource, pointSize: 20, scale: 2) != nil)
+    #expect(await FilterSwatch.render(nil, over: previewSource, pointSize: 20, displayScale: 2) != nil)
 
     let task = Task {
       // Cancelled while it waits, as a newer value cancels a `.task(id:)`.
       try? await Task.sleep(for: .seconds(60))
       let analysis = await OutputAnalysis.analyze(feature, over: previewSource)
-      let swatch = await FilterSwatch.render(nil, over: previewSource, pointSize: 20, scale: 2)
+      let swatch = await FilterSwatch.render(nil, over: previewSource, pointSize: 20, displayScale: 2)
       let balance = try? await GrayPoint.solve(at: point, in: feature, over: previewSource).get()
       return (hasAnalysis: analysis != nil, hasSwatch: swatch != nil, hasBalance: balance != nil)
     }
