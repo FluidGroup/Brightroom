@@ -122,17 +122,14 @@ public struct ImageEditorCanvasProxy {
   }
 }
 
-/// The canvases mounted under one `ImageEditorCanvasReader`, in mount
-/// order.
+/// The canvases mounted under one registry in the environment
+/// (`imageEditorCanvasRegistry`), such as an `ImageEditorCanvasReader`'s, in
+/// mount order.
 ///
 /// It is not observable: registering happens during view updates, and
 /// must not change SwiftUI state.
 @MainActor
 final class ImageEditorCanvasRegistry {
-
-  // Only the UIKit canvas takes commands. On macOS the reader and the proxy
-  // are unavailable, so the registry is never given a canvas there.
-  #if os(iOS)
 
   private struct Entry {
     weak var canvasView: EditingCanvasView?
@@ -159,7 +156,6 @@ final class ImageEditorCanvasRegistry {
   func unregister(_ canvasView: EditingCanvasView) {
     entries.removeAll { $0.canvasView == nil || $0.canvasView === canvasView }
   }
-  #endif
 }
 
 extension EnvironmentValues {

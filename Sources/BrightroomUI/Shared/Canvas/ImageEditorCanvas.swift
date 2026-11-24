@@ -32,8 +32,13 @@ import BrightroomParametric
 ///
 /// On macOS the canvas views only, for now: it shows the document's output
 /// (effects, local blur, crop and vignette) for every editing target, and the
-/// trackpad or the mouse zooms and pans it. It writes nothing to the
-/// document. Pass `.editingTarget(nil)` to ask for a viewer: that is
+/// trackpad or the mouse zooms and pans it; dragging with the mouse pans once
+/// zoomed in. Zoomed in, a click gives it the keyboard (with Full Keyboard
+/// Access, so does Tab), and the arrow keys pan it by a tenth of its size, or
+/// nine tenths with Option. With Full Keyboard Access on, it shows the system
+/// focus ring inside its edges while it has the keyboard and is zoomed in.
+/// VoiceOver reads its zoom, such as "36%", as its value. It writes nothing
+/// to the document. Pass `.editingTarget(nil)` to ask for a viewer: that is
 /// portable, and it keeps meaning a viewer when crop editing comes to macOS.
 /// The crop and brush modifiers, the overlay initializer and
 /// `ImageEditorCanvasReader` are unavailable on macOS. At the fit, where it
@@ -87,6 +92,10 @@ public struct ImageEditorCanvas: View {
   /// as a slider value not yet written; nil shows the document.
   private let displayedFeature: ImageEditorFeature?
 
+  /// The message a built-in editor shows when the image's pixels cannot be
+  /// decoded; nil shows the canvas's own.
+  private let failureMessage: String?
+
   private var straightenAngleInput = StraightenAngleInput(angle: nil, isEditing: false)
   private var lockedAspectRatioInput: AspectRatio?
 
@@ -98,6 +107,13 @@ public struct ImageEditorCanvas: View {
   private let contentInsets: EdgeInsets?
   private var editingTarget: ImageEditorCanvas.Target? = .crop
   private var brush: Brush = .init(diameter: .viewportPoints(30))
+  #if os(macOS)
+  private var onZoomChange: (@MainActor (Zoom) -> Void)?
+  private var onPointerChange: (@MainActor (CGPoint?) -> Void)?
+  private var pointSampling: (@MainActor (CGPoint) -> Void)?
+  private var fitMargin: CGFloat = 0
+  private var canvasAccessibilityLabel: String?
+  #endif
 
   /// Creates a crop canvas that edits `document`, with custom overlays.
   ///
@@ -153,6 +169,7 @@ public struct ImageEditorCanvas: View {
     self.document = document
     self.previewSourceLoader = nil
     self.displayedFeature = nil
+    self.failureMessage = nil
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInsets = contentInsets
     self.cropInsideOverlay = { AnyView(cropInsideOverlay($0)) }
@@ -193,6 +210,7 @@ public struct ImageEditorCanvas: View {
     self.document = document
     self.previewSourceLoader = nil
     self.displayedFeature = nil
+    self.failureMessage = nil
     self.areAnimationsEnabled = areAnimationsEnabled
     self.contentInsets = contentInsets
   }
@@ -200,20 +218,27 @@ public struct ImageEditorCanvas: View {
   /// Creates a crop canvas with the built-in overlays over a loader a
   /// built-in editor already shares for `document`'s source image.
   ///
-  /// - Parameter displayedFeature: Shown in place of `document.feature` while
-  ///   non-nil. It must differ from the document only in what the editor has
-  ///   not written yet (slider values); canvas changes still apply to the
-  ///   document.
+  /// - Parameters:
+  ///   - displayedFeature: Shown in place of `document.feature` while
+  ///     non-nil: what the editor has not written yet (slider values), or
+  ///     what a built-in editor compares with. On macOS the canvas writes
+  ///     nothing, so any feature of the document's image may be shown. On
+  ///     iOS it must differ only in what the editor has not written while
+  ///     crop editing is on; canvas changes still apply to the document.
+  ///   - failureMessage: Shown in place of the canvas's own message when the
+  ///     image's pixels cannot be decoded: the editor's localized string.
   init(
     document: Binding<ImageEditorDocument>,
     displayedFeature: ImageEditorFeature?,
-    previewSourceLoader: PreviewSourceLoader
+    previewSourceLoader: PreviewSourceLoader,
+    failureMessage: String? = nil
   ) {
     self.cropInsideOverlay = nil
     self.cropOutsideOverlay = nil
     self.document = document
     self.displayedFeature = displayedFeature
     self.previewSourceLoader = previewSourceLoader
+    self.failureMessage = failureMessage
     self.areAnimationsEnabled = true
     self.contentInsets = nil
   }
@@ -267,7 +292,12 @@ public struct ImageEditorCanvas: View {
           feature: displayedFeature ?? document.wrappedValue.feature,
           adjustmentRendering: adjustmentRendering,
           areAnimationsEnabled: areAnimationsEnabled,
-          editingTarget: editingTarget
+          fitMargin: fitMargin,
+          canvasAccessibilityLabel: canvasAccessibilityLabel,
+          editingTarget: editingTarget,
+          onZoomChange: onZoomChange,
+          onPointerChange: onPointerChange,
+          pointSampling: pointSampling
         )
         // `EditingCanvasView` binds its source once, at creation, as on iOS.
         .id(previewSource.source)
@@ -275,12 +305,9 @@ public struct ImageEditorCanvas: View {
         #endif
       case .failed:
         // Nothing to edit; the host's own controls stay the way out.
-        ContentUnavailableView(
-          "The image could not be loaded",
-          systemImage: "exclamationmark.triangle"
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .transition(.opacity.animation(.smooth))
+        failureView
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .transition(.opacity.animation(.smooth))
       case .idle, .loading:
         ProgressView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -289,6 +316,19 @@ public struct ImageEditorCanvas: View {
     }
     .task {
       await previewSourceLoader.load()
+    }
+  }
+
+  /// The built-in editor's failure message, or the canvas's own.
+  @ViewBuilder
+  private var failureView: some View {
+    if let failureMessage {
+      ContentUnavailableView(failureMessage, systemImage: "exclamationmark.triangle")
+    } else {
+      ContentUnavailableView(
+        "The image could not be loaded",
+        systemImage: "exclamationmark.triangle"
+      )
     }
   }
 
@@ -409,4 +449,49 @@ public struct ImageEditorCanvas: View {
     self.brush = brush
     return self
   }
+
+  #if os(macOS)
+  /// Reports the zoom after input, a command, a motion, a resize or new
+  /// content. A report made outside a SwiftUI update arrives at once (a
+  /// command that zooms at once, such as a zoom to a fraction, reports before
+  /// it returns; an animated zoom reports from the frames of its motion); one
+  /// made while SwiftUI updates or lays out the canvas arrives on the next
+  /// main-actor turn, the latest only. Equal zooms are not reported again.
+  consuming func onZoomChange(_ action: @escaping @MainActor (Zoom) -> Void) -> Self {
+    self.onZoomChange = action
+    return self
+  }
+
+  /// Reports the crop-output pixel under the pointer (full resolution,
+  /// top-left origin, whole pixels), or nil off the image; also when zoom or
+  /// pan moves the image under a resting pointer. Delivered like
+  /// `onZoomChange(_:)`.
+  consuming func onPointerChange(_ action: @escaping @MainActor (CGPoint?) -> Void) -> Self {
+    self.onPointerChange = action
+    return self
+  }
+
+  /// While non-nil, a click on the image calls `action` with the crop-output
+  /// point under it (full resolution, top-left origin) instead of panning,
+  /// and the cursor over the canvas is a crosshair.
+  consuming func pointSampling(_ action: (@MainActor (CGPoint) -> Void)?) -> Self {
+    self.pointSampling = action
+    return self
+  }
+
+  /// Leaves `margin` points clear around the output at the fit, on every
+  /// side. Zoomed in, the output still reaches the canvas's edges. The
+  /// default is 0.
+  consuming func fitMargin(_ margin: CGFloat) -> Self {
+    self.fitMargin = margin
+    return self
+  }
+
+  /// Names the canvas for VoiceOver, which reads its zoom as its value. The
+  /// canvas is unnamed by default.
+  consuming func canvasAccessibilityLabel(_ label: String) -> Self {
+    self.canvasAccessibilityLabel = label
+    return self
+  }
+  #endif
 }

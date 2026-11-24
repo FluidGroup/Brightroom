@@ -21,6 +21,10 @@ struct EditingCanvasCropOutputGeometry: Equatable {
   /// Maps Tool gesture geometry back into the persisted pre-crop domain.
   let outputToSourceTransform: CGAffineTransform
 
+  /// The crop that produces the displayed output: the guide's selection,
+  /// without export's pixel snapping.
+  let cropFeature: CropFeature
+
   /// The zero-origin bounds of the displayed crop-output image.
   var outputBounds: CGRect {
     CGRect(origin: .zero, size: outputSize)
@@ -63,6 +67,7 @@ struct EditingCanvasCropOutputGeometry: Equatable {
     self.outputSize = outputSize
     self.inputToOutputTransform = inputToOutputTransform
     self.outputToSourceTransform = inputToOutputTransform.inverted()
+    self.cropFeature = feature
   }
 
   func sourceRecord(fromOutputRecord record: EditingCanvasStrokeRecord) -> EditingCanvasStrokeRecord {

@@ -19,16 +19,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if os(iOS)
-
 import CoreImage
 import Metal
-import UIKit
 
 import BrightroomEngine
 import BrightroomParametric
 
-/// Renders a single filter-preview swatch for ImageEditor's Filters strip.
+/// Renders a single filter-preview swatch for ImageEditor's filter strips.
 ///
 /// A swatch is the preview thumbnail — the uncropped, already-oriented ~180px
 /// `PreviewSource.thumbnail` decoded at load — center-cropped to a square and run
@@ -55,28 +52,55 @@ enum FilterSwatch {
     return CIContext(options: options)
   }()
 
+  /// What a swatch is rendered from: a view renders its swatch again only
+  /// when this changes.
+  struct RenderKey: Equatable {
+    var baseImage: ObjectIdentifier?
+    var presetID: String?
+    var scale: CGFloat
+    var rendering: AdjustmentRendering.Identity
+  }
+
   /// Renders a single square swatch — a `nil` preset yields the unfiltered base.
   ///
   /// `@concurrent` runs the body on the concurrent executor, so a chip's
   /// MainActor `.task` offloads the Core Image work off the main thread just by
-  /// awaiting it — no queue hop, no box. `CIImage`, `FilterFeature` and `UIImage`
-  /// are all `Sendable`, so the values cross the isolation boundary directly.
+  /// awaiting it — no queue hop, no box. `CIImage`, `FilterFeature`,
+  /// `AdjustmentRendering` and `CGImage` are all `Sendable`, so the values cross
+  /// the isolation boundary directly.
   ///
   /// - Parameters:
   ///   - pointSize: the swatch's on-screen point size (a square edge).
   ///   - scale: the display scale; the swatch is rendered at `pointSize * scale`
   ///     pixels, never larger than the source thumbnail.
+  ///   - fullResolutionSize: the oriented pixel size of the image the thumbnail
+  ///     is decoded from. When given, absolute radii, which are pixels of that
+  ///     image, scale down to the swatch as the canvas scales them to its
+  ///     preview; when nil, they are swatch pixels.
+  ///   - adjustmentRendering: the calculations the preset's adjustments use.
   @concurrent
   static func render(
     base: CIImage,
     preset: FilterFeature?,
     pointSize: CGFloat,
-    scale: CGFloat
-  ) async -> UIImage? {
+    scale: CGFloat,
+    fullResolutionSize: CGSize? = nil,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) async -> CGImage? {
     guard let prepared = normalizedSquare(base: base, pointSize: pointSize, scale: scale) else {
       return nil
     }
-    return makeImage(from: prepared, preset: preset, scale: scale)
+    let evaluationContext = FeatureEvaluationContext(
+      chainEntryExtent: prepared.chainEntryExtent,
+      renderScale: fullResolutionSize.map {
+        EditingCanvasRenderImageFactory.renderScale(
+          evaluated: prepared.chainEntryExtent.size,
+          fullResolution: $0
+        )
+      } ?? 1,
+      adjustmentRendering: adjustmentRendering
+    )
+    return makeImage(from: prepared, preset: preset, evaluationContext: evaluationContext)
   }
 
   // MARK: -
@@ -139,15 +163,12 @@ enum FilterSwatch {
   private static func makeImage(
     from prepared: Prepared,
     preset: FilterFeature?,
-    scale: CGFloat
-  ) -> UIImage? {
+    evaluationContext: FeatureEvaluationContext
+  ) -> CGImage? {
     let source: CIImage
     if let preset {
       do {
-        source = try preset.apply(
-          to: prepared.image,
-          context: .init(chainEntryExtent: prepared.chainEntryExtent)
-        )
+        source = try preset.apply(to: prepared.image, context: evaluationContext)
       } catch {
         source = prepared.image
       }
@@ -155,19 +176,11 @@ enum FilterSwatch {
       source = prepared.image
     }
 
-    guard
-      let cgImage = context.createCGImage(
-        source,
-        from: prepared.outputRect,
-        format: .RGBA8,
-        colorSpace: EditingCanvasImageProcessing.drawableColorSpace
-      )
-    else {
-      return nil
-    }
-
-    return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
+    return context.createCGImage(
+      source,
+      from: prepared.outputRect,
+      format: .RGBA8,
+      colorSpace: EditingCanvasImageProcessing.drawableColorSpace
+    )
   }
 }
-
-#endif

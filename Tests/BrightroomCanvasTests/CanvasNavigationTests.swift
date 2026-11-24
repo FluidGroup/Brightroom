@@ -295,6 +295,212 @@ struct CanvasNavigationTests {
     #expect(isClose(model.position.scale, 0.6))
   }
 
+  // MARK: - Zoom to a scale
+
+  @Test("Zooming to a scale clamps it to the limits")
+  func zoomToScaleClamps() {
+    var model = makeModel()
+
+    model.handle(.zoom(scale: 100, anchor: nil, animated: false), at: 0)
+    #expect(isClose(model.position.scale, 1.6))
+
+    model.handle(.zoom(scale: 0.01, anchor: nil, animated: false), at: 1)
+    #expect(model.isFitted)
+    #expect(isClose(model.position.center, CGPoint(x: 2000, y: 1500)))
+  }
+
+  @Test("Zooming to a scale keeps the content under the anchor in place")
+  func zoomToScaleKeepsAnchor() {
+    var model = makeModel()
+    let anchor = CGPoint(x: 200, y: 300)
+    let content = contentPoint(of: model, at: anchor)
+
+    model.handle(.zoom(scale: 0.4, anchor: anchor, animated: false), at: 0)
+
+    #expect(isClose(model.position.scale, 0.4))
+    #expect(isClose(contentPoint(of: model, at: anchor), content))
+    #expect(isClose(model.position.center, CGPoint(x: 1500, y: 1250)))
+  }
+
+  @Test("Zooming to a scale without an anchor keeps the centre")
+  func zoomToScaleKeepsCentre() {
+    var model = makeZoomedModel()
+    model.handle(.scroll(translation: CGSize(width: -200, height: 40), source: .wheel), at: 0)
+    let centre = model.position.center
+    #expect(isClose(centre, CGPoint(x: 2500, y: 1400)))
+
+    model.handle(.zoom(scale: 0.8, anchor: nil, animated: false), at: 1)
+
+    #expect(isClose(model.position.scale, 0.8))
+    #expect(isClose(model.position.center, centre))
+  }
+
+  @Test("Zooming to a scale without animation arrives at once")
+  func zoomToScaleAtOnce() {
+    var model = makeModel()
+
+    model.handle(.zoom(scale: 0.8, anchor: nil, animated: false), at: 0)
+
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.8))
+    #expect(isClose(model.targetScale, 0.8))
+  }
+
+  @Test("An animated zoom to a scale settles there, and steps taken meanwhile compound")
+  func zoomToScaleAnimates() {
+    var model = makeModel()
+    #expect(isClose(model.targetScale, 0.2))
+
+    model.handle(.zoom(scale: 0.4, anchor: nil, animated: true), at: 0)
+    #expect(model.isMoving)
+    #expect(model.isFitted)
+    #expect(isClose(model.targetScale, 0.4))
+
+    model.advance(to: 0.05)
+    #expect(model.position.scale > 0.2)
+    #expect(model.position.scale < 0.4)
+    #expect(isClose(model.targetScale, 0.4))
+
+    // A second step on the way doubles where the first was heading.
+    model.handle(.zoom(scale: model.targetScale * 2, anchor: nil, animated: true), at: 0.05)
+    #expect(isClose(model.targetScale, 0.8))
+
+    model.advance(to: 2)
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.8))
+    #expect(isClose(model.targetScale, 0.8))
+    #expect(isClose(model.position.center, CGPoint(x: 2000, y: 1500)))
+  }
+
+  @Test("Without animation an animated zoom to a scale completes at once")
+  func zoomToScaleWithoutAnimation() {
+    var model = makeModel()
+    model.animates = false
+
+    model.handle(.zoom(scale: 0.8, anchor: nil, animated: true), at: 0)
+
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.8))
+  }
+
+  @Test("Zooming to a scale takes over a zoom toggle from where it is")
+  func zoomToScaleInterruptsToggle() {
+    var model = makeModel()
+    model.handle(.toggleZoom(anchor: Self.canvasCenter), at: 0)
+    model.advance(to: 0.05)
+    let midway = model.position
+    #expect(model.isMoving)
+    #expect(isClose(model.targetScale, 0.6))
+
+    // Animated, the zoom goes on from what is shown, without a jump.
+    model.handle(.zoom(scale: 1.2, anchor: nil, animated: true), at: 0.05)
+    #expect(model.position == midway)
+    #expect(isClose(model.targetScale, 1.2))
+    model.advance(to: 2)
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 1.2))
+
+    // Not animated, it is there at once.
+    model.handle(.toggleZoom(anchor: Self.canvasCenter), at: 3)
+    model.advance(to: 3.05)
+    #expect(model.isMoving)
+    model.handle(.zoom(scale: 0.4, anchor: nil, animated: false), at: 3.05)
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.4))
+  }
+
+  /// How fast the zoom's logarithm and the centre change over the tenth of
+  /// a millisecond after `time`, measured on a copy of `model`, which has
+  /// been moved to `time`.
+  private func velocity(
+    of model: CanvasNavigation,
+    at time: TimeInterval
+  ) -> (logScale: CGFloat, center: CGPoint) {
+    let interval = 1e-4
+    var later = model
+    later.advance(to: time + interval)
+    return (
+      logScale: (log(later.position.scale) - log(model.position.scale)) / interval,
+      center: CGPoint(
+        x: (later.position.center.x - model.position.center.x) / interval,
+        y: (later.position.center.y - model.position.center.y) / interval
+      )
+    )
+  }
+
+  @Test("A zoom to a new scale on the way keeps the speed of the zoom it takes over")
+  func zoomRetargetKeepsZoomVelocity() {
+    var model = makeModel()
+    model.handle(.zoom(scale: 0.4, anchor: nil, animated: true), at: 0)
+    // A tenth of a second in, the zoom is near its fastest: ln 2 b² t e^(-bt)
+    // with b = 2π / 0.4 is 3.56 a second.
+    var before = model
+    before.advance(to: 0.1 - 1e-4)
+    let speed = velocity(of: before, at: 0.1 - 1e-4).logScale
+    #expect(speed > 3.4)
+
+    // A second step on the way, as a held Command-plus repeats it.
+    model.advance(to: 0.1)
+    let retargeted = model.position
+    model.handle(.zoom(scale: model.targetScale * 2, anchor: nil, animated: true), at: 0.1)
+    #expect(model.position == retargeted)
+    #expect(abs(velocity(of: model, at: 0.1).logScale - speed) < 0.05 * speed)
+
+    model.advance(to: 2)
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.8))
+    #expect(isClose(model.position.center, CGPoint(x: 2000, y: 1500)))
+  }
+
+  @Test("A zoom on the way keeps the speed at which the centre moves")
+  func zoomRetargetKeepsCenterVelocity() {
+    var model = makeZoomedModel()
+    model.handle(.scroll(translation: CGSize(width: -5000, height: -5000), source: .wheel), at: 0)
+    #expect(isClose(model.position.center, CGPoint(x: 3000, y: 2000)))
+
+    // Zooming to the fit takes the centre from the corner to the middle.
+    model.handle(.zoom(scale: 0.2, anchor: nil, animated: true), at: 1)
+    var before = model
+    before.advance(to: 1.05 - 1e-4)
+    let speed = velocity(of: before, at: 1.05 - 1e-4).center
+    #expect(speed.x < -1000)
+    #expect(speed.y < -500)
+
+    // Zooming in on the way keeps the centre that is shown, which goes on
+    // at the speed it had and comes back to rest there.
+    model.advance(to: 1.05)
+    let retargeted = model.position
+    model.handle(.zoom(scale: 0.4, anchor: nil, animated: true), at: 1.05)
+    #expect(model.position == retargeted)
+    let after = velocity(of: model, at: 1.05).center
+    #expect(abs(after.x - speed.x) < 0.05 * abs(speed.x))
+    #expect(abs(after.y - speed.y) < 0.05 * abs(speed.y))
+
+    model.advance(to: 3)
+    #expect(model.isMoving == false)
+    #expect(isClose(model.position.scale, 0.4))
+    #expect(isClose(model.position.center, retargeted.center))
+  }
+
+  @Test("A zoom to a scale that is not finite and positive, or without limits, is ignored")
+  func zoomToInvalidScaleIsIgnored() {
+    var model = makeZoomedModel()
+    let before = model.position
+
+    for scale in [CGFloat.nan, .infinity, 0, -1] {
+      model.handle(.zoom(scale: scale, anchor: nil, animated: false), at: 1)
+      #expect(model.position == before)
+    }
+    model.handle(.zoom(scale: 0.8, anchor: CGPoint(x: CGFloat.nan, y: 0), animated: true), at: 1)
+    #expect(model.position == before)
+    #expect(model.isMoving == false)
+
+    // A canvas without a size has no limits to zoom within.
+    var empty = CanvasNavigation(contentSize: Self.content, canvasSize: .zero)
+    empty.handle(.zoom(scale: 1, anchor: nil, animated: false), at: 0)
+    #expect(empty.position.scale == 0)
+  }
+
   // MARK: - Scroll
 
   @Test("A gesture moves the content with the fingers")
@@ -502,6 +708,46 @@ struct CanvasNavigationTests {
     #expect(model.isFitted)
     #expect(isClose(model.position.scale, 0.6))
     #expect(isClose(model.position.center, CGPoint(x: 2000, y: 1500)))
+  }
+
+  @Test("A fit margin leaves room around the fitted content; zoomed in, the content reaches the edges")
+  func fitMarginInsetsTheFit() throws {
+    var model = makeModel()
+    model.setFitMargin(12)
+
+    // The content fits the 776 points inside the margins at 0.194: 776 x 582
+    // points, 12 from the sides and 109 from the top and the bottom.
+    #expect(model.isFitted)
+    #expect(isClose(model.fitScale, 0.194))
+    #expect(isClose(model.scaleRange.upperBound, 0.194 * 8))
+    #expect(model.canScroll == false)
+    let fitted = try #require(model.viewport(contentScaleFactor: 2)).contentToCanvasTransform
+    #expect(isClose(fitted.a, 0.194))
+    #expect(isClose(fitted.tx, 12))
+    #expect(isClose(fitted.ty, 109))
+
+    // Zoomed in, the limits are the canvas's edges: the content's corner
+    // reaches the canvas's corner.
+    model.handle(.zoomStep(factor: 4, anchor: Self.canvasCenter), at: 0)
+    model.handle(.scroll(translation: CGSize(width: 5000, height: 5000), source: .wheel), at: 0)
+    let zoomed = try #require(model.viewport(contentScaleFactor: 2)).contentToCanvasTransform
+    #expect(isClose(zoomed.tx, 0))
+    #expect(isClose(zoomed.ty, 0))
+
+    // A resize and a change of the margin keep a fit fitted.
+    model.handle(.zoomStep(factor: 0.01, anchor: Self.canvasCenter), at: 1)
+    #expect(model.isFitted)
+    model.setCanvasSize(CGSize(width: 1000, height: 500))
+    #expect(model.isFitted)
+    #expect(isClose(model.position.scale, 476.0 / 3000.0))
+    model.setFitMargin(0)
+    #expect(model.isFitted)
+    #expect(isClose(model.position.scale, 500.0 / 3000.0))
+
+    // A canvas with no room inside its margins has no fit.
+    model.setFitMargin(250)
+    #expect(model.fitScale == 0)
+    #expect(model.viewport(contentScaleFactor: 2) == nil)
   }
 
   @Test("New content starts fitted")

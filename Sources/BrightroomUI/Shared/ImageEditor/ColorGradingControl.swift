@@ -66,47 +66,21 @@ struct ColorGradingControl: View {
   /// The wheel is a two-axis shortcut; the adjacent sliders provide the same
   /// values through VoiceOver, keyboard adjustment, and precise single-axis edits.
   private var wheel: some View {
-    GeometryReader { geometry in
-      let radius = min(geometry.size.width, geometry.size.height) / 2
-      let correction = grading[selection]
-      let angle = correction.hue / 180 * .pi
-      let distance = correction.saturation / 100 * radius
-      ZStack {
-        Circle()
-          .fill(AngularGradient(
-            colors: (0...12).map { Color(hue: Double($0) / 12, saturation: 1, brightness: 1) },
-            center: .center
-          ))
-        Circle()
-          .fill(RadialGradient(colors: [.white, .white.opacity(0)],
-            center: .center, startRadius: 0, endRadius: radius))
-        Circle().stroke(.white.opacity(0.25), lineWidth: 1)
-        Circle()
-          .fill(Color(hue: correction.hue / 360, saturation: correction.saturation / 100, brightness: 1))
-          .overlay(Circle().stroke(.black, lineWidth: 3))
-          .overlay(Circle().stroke(.white, lineWidth: 1))
-          .frame(width: 12, height: 12)
-          .offset(x: cos(angle) * distance, y: sin(angle) * distance)
+    ColorGradingWheel(
+      correction: grading[selection],
+      rangeName: selection.rawValue.capitalized,
+      onChange: { correction in
+        var next = grading
+        next[selection] = correction
+        onChange(next)
+      },
+      onEnd: { correction in
+        var next = grading
+        next[selection] = correction
+        onEnd(next)
       }
-      .contentShape(Circle())
-      .gesture(DragGesture(minimumDistance: 0)
-        .onChanged { onChange(wheelValue(at: $0.location, radius: radius)) }
-        .onEnded { onEnd(wheelValue(at: $0.location, radius: radius)) })
-    }
+    )
     .accessibilityHidden(true)
-  }
-
-  private func wheelValue(at point: CGPoint, radius: CGFloat) -> ColorGradingFeature {
-    var next = grading
-    let x = point.x - radius
-    let y = point.y - radius
-    let distance = hypot(x, y)
-    // At the origin hue has no geometric meaning: preserve the authored hue.
-    if distance > 0.5 {
-      next[selection].hue = (atan2(y, x) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
-    }
-    next[selection].saturation = min(distance / max(radius, 1) * 100, 100)
-    return next
   }
 
   private func correctionSlider(

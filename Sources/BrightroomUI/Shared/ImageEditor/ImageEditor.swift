@@ -97,6 +97,8 @@ public struct ImageEditor: View {
     public var freeformAspectRatio: String = "FREEFORM"
     public var squareAspectRatio: String = "SQUARE"
     public var originalFilter: String = "ORIGINAL"
+    /// Shown in place of the image when its pixels cannot be decoded.
+    public var imageLoadFailed: String = "The image could not be loaded"
 
     public init() {}
   }
@@ -147,7 +149,8 @@ public struct ImageEditor: View {
   ///     crop, `ImageEditorDocument(source:initialCrop:)`. A document of
   ///     another source image restarts the editor.
   ///   - options: The editor options.
-  ///   - localizedStrings: The button titles.
+  ///   - localizedStrings: The button titles, and the message shown when the
+  ///     image cannot be loaded.
   ///   - onDone: Called after the binding received the last change.
   ///   - onCancel: Called when the user cancels, after the binding received
   ///     the document as it was when the editor opened (history included),

@@ -190,6 +190,45 @@ struct ImageEditorSessionTests {
     #expect(written == nil)
   }
 
+  @Test func `A preview equal to the document's feature leaves no live value`() throws {
+    let document = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: document)
+
+    session.previewFeature(over: document) { $0.effects.exposure = ExposureFeature(ev: 1) }
+    #expect(session.liveFeature == Fixtures.exposure(1))
+
+    // A preview applies over the displayed feature, the live value included.
+    session.previewFeature(over: document) { $0.effects.saturation = SaturationFeature(value: 0.5) }
+    #expect(session.liveFeature?.effects.exposure == ExposureFeature(ev: 1))
+    #expect(session.liveFeature?.effects.saturation == SaturationFeature(value: 0.5))
+
+    session.previewFeature(over: document) {
+      $0.effects.exposure = ExposureFeature(ev: 0)
+      $0.effects.saturation = nil
+    }
+    #expect(session.liveFeature == nil)
+    #expect(session.displayedFeature(of: document) == document.feature)
+    let written = session.document(after: document)
+    #expect(written == nil)
+  }
+
+  /// The previews apply a control's change: an authored hue at zero
+  /// saturation and a grain shape at zero amount stay, and a neutral grading
+  /// or grain removes its member.
+  @Test func `Grading and grain previews keep authored values and remove neutral ones`() throws {
+    let document = try Fixtures.makeDocument()
+    var session = ImageEditorSession(documentAtStart: document)
+
+    session.previewColorGrading(ColorGradingFeature(global: .init(hue: 52)), over: document)
+    session.previewGrain(GrainFeature.CameraRaw(amount: 0, size: 42), over: document)
+    #expect(session.liveFeature?.effects.colorGrading == ColorGradingFeature(global: .init(hue: 52)))
+    #expect(session.liveFeature?.effects.grain == GrainFeature.CameraRaw(amount: 0, size: 42))
+
+    session.previewColorGrading(ColorGradingFeature(), over: document)
+    session.previewGrain(GrainFeature.CameraRaw(amount: 0), over: document)
+    #expect(session.liveFeature == nil)
+  }
+
   @Test func `Leaving a tool writes a live value as part of the visit`() throws {
     let document = try Fixtures.makeDocument()
     var session = ImageEditorSession(documentAtStart: document)

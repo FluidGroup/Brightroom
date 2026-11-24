@@ -152,9 +152,10 @@ extension ImageEditor {
     /// Writes a slider value into the feature.
     ///
     /// An existing effect is updated in place, so its parameters the slider
-    /// does not control (such as `WhiteBalanceFeature.tint`) are kept. A neutral
-    /// value removes the effect, including those parameters, so untouched
-    /// parameters stay absent.
+    /// does not control (such as `WhiteBalanceFeature.tint` for Warmth) are
+    /// kept. A neutral value removes the effect, including those parameters,
+    /// so untouched parameters stay absent, except white balance, removed only
+    /// when temperature and tint are both neutral.
     func apply(sliderValue: Double, to feature: inout ImageEditorFeature) {
       guard let sliderRange else { return }
       let clamped = min(
@@ -196,12 +197,13 @@ extension ImageEditor {
           update: { $0.value = $1 }
         )
       case .warmth:
-        Self.upsert(
-          value,
-          into: &feature.effects.whiteBalance,
-          make: { WhiteBalanceFeature(temperature: $0) },
-          update: { $0.temperature = $1 }
-        )
+        var balance = feature.effects.whiteBalance ?? WhiteBalanceFeature(temperature: 0)
+        balance.temperature = value ?? 0
+        if balance.temperature == 0, balance.tint == 0 {
+          feature.effects.whiteBalance = nil
+        } else {
+          feature.effects.whiteBalance = balance
+        }
       case .highlights:
         Self.upsert(
           value,

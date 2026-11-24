@@ -1,7 +1,8 @@
 #if os(macOS)
 import AppKit
-import BrightroomEngine
+@testable import BrightroomEngine
 import BrightroomParametric
+import CoreImage
 import Metal
 import SwiftUI
 import Testing
@@ -10,8 +11,10 @@ import Testing
 
 /// `ImageEditorCanvas` on macOS, hosted the way an app hosts it: the AppKit
 /// canvas is mounted, builds its render images, and shows the output fitted
-/// after layout. Presented pixels are not checked here; the shared drawing
-/// path is (`CanvasOutputRenderTests`).
+/// after layout; it registers for commands in the environment's registry, and
+/// its reports reach the host outside SwiftUI updates. An editor's failure
+/// message replaces the canvas's own. Presented pixels are not checked here;
+/// the shared drawing path is (`CanvasOutputRenderTests`).
 @MainActor
 @Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct AppKitCanvasHostingTests {
@@ -28,39 +31,59 @@ struct AppKitCanvasHostingTests {
     }
   }
 
+  /// Shows the canvas, or not, under a registry of the test's.
+  private struct RegistryHost: View {
+    @State var document: ImageEditorDocument
+    let registry: ImageEditorCanvasRegistry
+    let showsCanvas: Bool
+
+    var body: some View {
+      ZStack {
+        if showsCanvas {
+          ImageEditorCanvas(document: $document)
+            .editingTarget(nil)
+        }
+      }
+      .environment(\.imageEditorCanvasRegistry, registry)
+    }
+  }
+
+  /// The zooms a hosted canvas delivered, and whether one arrived while the
+  /// test updated the hosting view.
+  @MainActor
+  private final class ZoomRecorder {
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    var isUpdating = false
+    private(set) var hasDeliveredDuringUpdate = false
+
+    func record(_ zoom: ImageEditorCanvas.Zoom) {
+      zooms.append(zoom)
+      if isUpdating {
+        hasDeliveredDuringUpdate = true
+      }
+    }
+  }
+
+  /// Shows the document it is given, so the test changes what the canvas
+  /// shows by replacing the root view. The canvas writes nothing on macOS.
+  private struct ZoomReportingHost: View {
+    let document: ImageEditorDocument
+    let recorder: ZoomRecorder
+
+    var body: some View {
+      ImageEditorCanvas(document: .constant(document))
+        .editingTarget(nil)
+        .onZoomChange { recorder.record($0) }
+    }
+  }
+
   @Test
   func `The canvas mounts the AppKit view and shows the output fitted`() async throws {
-    _ = NSApplication.shared
-    let document = ImageEditorDocument(source: SourceImage(cgImage: try Self.makeImage()))
-    let hostingView = NSHostingView(rootView: Host(document: document))
-    let window = NSWindow(
-      contentRect: CGRect(x: 0, y: 0, width: 300, height: 300),
-      styleMask: [.titled],
-      backing: .buffered,
-      defer: false
-    )
-    window.isReleasedWhenClosed = false
-    window.contentView = hostingView
-    window.orderFrontRegardless()
-    defer {
-      window.orderOut(nil)
-      window.contentView = nil
-      window.close()
-    }
-
-    var canvas: EditingCanvasView?
-    for _ in 0..<250 {
-      hostingView.layoutSubtreeIfNeeded()
-      canvas = Self.findCanvas(in: hostingView)
-      if let canvas,
-         canvas.surface.canvasView?.hasRenderImages == true,
-         canvas.surface.displayedViewport != nil {
-        break
-      }
-      try await Task.sleep(for: .milliseconds(20))
-    }
+    let (hostingView, window) = Self.host(Host(document: try Self.makeDocument()))
+    defer { Self.close(window) }
 
     // A placeholder in place of the AppKit canvas fails here.
+    let canvas = try await Self.drawnCanvas(in: hostingView)
     let mounted = try #require(canvas, "ImageEditorCanvas did not mount an EditingCanvasView")
     let canvasView = try #require(mounted.surface.canvasView, "The canvas has no Metal view")
     #expect(canvasView.hasRenderImages)
@@ -108,6 +131,251 @@ struct AppKitCanvasHostingTests {
     #expect(metalLayer.contentsAreFlipped() == false)
   }
 
+  @Test
+  func `The canvas registers in the environment's registry and leaves it when dismantled`() async throws {
+    let document = try Self.makeDocument()
+    let registry = ImageEditorCanvasRegistry()
+    let (hostingView, window) = Self.host(
+      RegistryHost(document: document, registry: registry, showsCanvas: true)
+    )
+    defer { Self.close(window) }
+
+    let canvas = try await Self.drawnCanvas(in: hostingView)
+    let mounted = try #require(canvas)
+    #expect(registry.canvasView === mounted)
+
+    // The test holds the canvas, so only leaving the registry removes it.
+    hostingView.rootView = RegistryHost(document: document, registry: registry, showsCanvas: false)
+    for _ in 0..<250 where registry.canvasView != nil {
+      hostingView.layoutSubtreeIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(registry.canvasView == nil)
+    #expect(mounted.displayLink.isScheduled == false)
+  }
+
+  @Test
+  func `A zoom reported while SwiftUI updates the canvas arrives on the next turn`() async throws {
+    let recorder = ZoomRecorder()
+    var document = try Self.makeDocument()
+    let (hostingView, window) = Self.host(
+      ZoomReportingHost(document: document, recorder: recorder)
+    )
+    defer { Self.close(window) }
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let canvas = try #require(drawn)
+
+    // The layout that drew the first frame reported the fit.
+    for _ in 0..<250 where recorder.zooms.isEmpty {
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    let fitted = try #require(recorder.zooms.last)
+    #expect(fitted.isFitted)
+
+    // A square crop changes the output size, so the update that shows it
+    // fits the new output at once. The zoom that reports waits for the next
+    // turn.
+    document.feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 200, height: 200))
+    recorder.isUpdating = true
+    hostingView.rootView = ZoomReportingHost(document: document, recorder: recorder)
+    hostingView.layoutSubtreeIfNeeded()
+    recorder.isUpdating = false
+    try #require(
+      canvas.outputGeometry?.outputSize == CGSize(width: 200, height: 200),
+      "The update did not reach the canvas"
+    )
+    #expect(recorder.hasDeliveredDuringUpdate == false)
+
+    for _ in 0..<250 where recorder.zooms.last == fitted {
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    let squareFit = try #require(recorder.zooms.last)
+    #expect(squareFit.isFitted)
+    #expect(squareFit.fitScale > fitted.fitScale)
+  }
+
+  @Test
+  func `Reports made while SwiftUI inputs apply arrive on the next turn, and an equal one not again`() async throws {
+    let canvas = Self.makeCanvas()
+    defer { canvas.invalidate() }
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    var pointers: [CGPoint?] = []
+    coordinator.bindReportHandlers(
+      to: canvas,
+      onZoomChange: { zooms.append($0) },
+      onPointerChange: { pointers.append($0) }
+    )
+    let fitted = ImageEditorCanvas.Zoom(
+      scale: 1,
+      fitScale: 1,
+      maximumScale: 8,
+      backingScaleFactor: 2
+    )
+    let zoomed = ImageEditorCanvas.Zoom(
+      scale: 2,
+      fitScale: 1,
+      maximumScale: 8,
+      backingScaleFactor: 2
+    )
+
+    // Only the latest of each waits, even when the latest is no pixel.
+    coordinator.applySwiftUIInputs {
+      coordinator.deliverZoom(fitted)
+      coordinator.deliverZoom(zoomed)
+      coordinator.deliverPointer(CGPoint(x: 3, y: 4))
+      coordinator.deliverPointer(nil)
+    }
+    #expect(zooms.isEmpty)
+    #expect(pointers.isEmpty)
+    for _ in 0..<250 where zooms.isEmpty || pointers.isEmpty {
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(zooms == [zoomed])
+    #expect(pointers == [nil])
+
+    // Outside an update a report arrives at once, and an equal one is dropped.
+    coordinator.deliverZoom(zoomed)
+    coordinator.deliverZoom(fitted)
+    coordinator.deliverPointer(nil)
+    coordinator.deliverPointer(CGPoint(x: 5, y: 6))
+    #expect(zooms == [zoomed, fitted])
+    #expect(pointers == [nil, CGPoint(x: 5, y: 6)])
+
+    // The canvas's own reports go through the coordinator.
+    canvas.onZoomChange?(zoomed)
+    #expect(zooms == [zoomed, fitted, zoomed])
+  }
+
+  @Test
+  func `A zoom reported while the canvas lays out arrives on the next turn, and a command's at once`() async throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer {
+      canvas.invalidate()
+      window.close()
+    }
+    let coordinator = EditingCanvasRepresentable.Coordinator()
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    coordinator.bindReportHandlers(
+      to: canvas,
+      onZoomChange: { zooms.append($0) },
+      onPointerChange: { _ in }
+    )
+
+    // Layout can run inside a SwiftUI update, so what the canvas reports
+    // while it lays out waits for the next turn, and only the latest.
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    canvas.frame = CGRect(x: 0, y: 0, width: 200, height: 300)
+    canvas.layout()
+    #expect(zooms.isEmpty)
+    for _ in 0..<250 where zooms.isEmpty {
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    // The 400 x 200 output fits the 200 points of width at 0.5.
+    #expect(zooms.count == 1)
+    #expect(zooms.first?.isFitted == true)
+    #expect(zooms.first?.fitScale == 0.5)
+
+    // A command reports before it returns.
+    canvas.areAnimationsEnabled = false
+    canvas.zoomIn()
+    #expect(zooms.count == 2)
+    #expect(zooms.last?.scale == 1)
+  }
+
+  @Test
+  func `An editor's failure message replaces the canvas's own when the image cannot be loaded`() async throws {
+    let document = try Self.makeDocument()
+    // A preparation that fails, as it does for pixels that cannot be decoded.
+    let loader = PreviewSourceLoader(source: document.source) { _ in nil }
+    await loader.load()
+    try #require(loader.phase == .failed)
+    let message = "Das Bild konnte nicht geladen werden"
+
+    // SwiftUI draws text without AppKit views, so the canvas is rendered
+    // offscreen and compared with the failure view it should show.
+    let shown = try Self.pixels(
+      ImageEditorCanvas(
+        document: .constant(document),
+        displayedFeature: nil,
+        previewSourceLoader: loader,
+        failureMessage: message
+      )
+    )
+    let own = try Self.pixels(
+      ImageEditorCanvas(document: .constant(document), displayedFeature: nil, previewSourceLoader: loader)
+    )
+    let expectedShown = try Self.pixels(Self.failureView(message))
+    let expectedOwn = try Self.pixels(Self.failureView("The image could not be loaded"))
+
+    #expect(shown == expectedShown)
+    #expect(own == expectedOwn)
+    #expect(shown != own)
+  }
+
+  // MARK: - Helpers
+
+  private static func makeDocument() throws -> ImageEditorDocument {
+    ImageEditorDocument(source: SourceImage(cgImage: try makeImage()))
+  }
+
+  /// Hosts `rootView` in a window on screen, as an app does.
+  private static func host<Content: View>(
+    _ rootView: Content
+  ) -> (NSHostingView<Content>, NSWindow) {
+    _ = NSApplication.shared
+    let hostingView = NSHostingView(rootView: rootView)
+    let window = NSWindow(
+      contentRect: CGRect(x: 0, y: 0, width: 300, height: 300),
+      styleMask: [.titled],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    window.contentView = hostingView
+    window.orderFrontRegardless()
+    return (hostingView, window)
+  }
+
+  private static func close(_ window: NSWindow) {
+    window.orderOut(nil)
+    window.contentView = nil
+    window.close()
+  }
+
+  /// What the canvas shows when the image cannot be loaded, with `message`.
+  private static func failureView(_ message: String) -> some View {
+    ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  /// The pixels SwiftUI renders offscreen for `view` in a 300-point square.
+  private static func pixels(_ view: some View) throws -> Data {
+    let renderer = ImageRenderer(content: view)
+    renderer.proposedSize = ProposedViewSize(width: 300, height: 300)
+    let image = try #require(renderer.cgImage)
+    let data = try #require(image.dataProvider?.data)
+    return data as Data
+  }
+
+  /// Lays out `hostingView` until its canvas has built its render images and
+  /// drawn a frame, for five seconds at most; then whatever canvas is
+  /// mounted, if any.
+  private static func drawnCanvas(in hostingView: NSView) async throws -> EditingCanvasView? {
+    for _ in 0..<250 {
+      hostingView.layoutSubtreeIfNeeded()
+      if let canvas = findCanvas(in: hostingView),
+         canvas.surface.canvasView?.hasRenderImages == true,
+         canvas.surface.displayedViewport != nil {
+        return canvas
+      }
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    return findCanvas(in: hostingView)
+  }
+
   private static func findCanvas(in view: NSView) -> EditingCanvasView? {
     if let canvas = view as? EditingCanvasView {
       return canvas
@@ -118,6 +386,32 @@ struct AppKitCanvasHostingTests {
       }
     }
     return nil
+  }
+
+  /// An AppKit canvas of its own, outside SwiftUI.
+  private static func makeCanvas() -> EditingCanvasView {
+    let image = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.8))
+      .cropped(to: CGRect(origin: .zero, size: imageSize))
+    return EditingCanvasView(
+      source: EditingCanvasSource(editingSourceImage: image, imageSize: imageSize),
+      feature: ImageEditorFeature(imageSize: imageSize)
+    )
+  }
+
+  /// A window, not shown, whose content view holds `view` at the frame the
+  /// test gives it.
+  private static func makeWindow(containing view: NSView) -> NSWindow {
+    _ = NSApplication.shared
+    let window = NSWindow(
+      contentRect: CGRect(x: 0, y: 0, width: 400, height: 400),
+      styleMask: [.titled],
+      backing: .buffered,
+      defer: false
+    )
+    window.isReleasedWhenClosed = false
+    window.contentView = NSView(frame: CGRect(x: 0, y: 0, width: 400, height: 400))
+    window.contentView?.addSubview(view)
+    return window
   }
 
   private static func makeImage() throws -> CGImage {
