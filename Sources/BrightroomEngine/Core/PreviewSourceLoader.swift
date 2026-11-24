@@ -83,7 +83,7 @@ public final class PreviewSourceLoader {
     case idle
     /// The image is being decoded and its editing copy uploaded.
     case loading
-    /// The preview is ready.
+    /// The preview source is ready.
     case loaded(PreviewSource)
     /// Preparation failed, for example because the image's pixels cannot be
     /// decoded although its header was readable, or because the file behind
@@ -101,7 +101,7 @@ public final class PreviewSourceLoader {
     currentPhase
   }
 
-  /// The prepared preview; nil until `phase` is `.loaded`.
+  /// The prepared preview source; nil until `phase` is `.loaded`.
   public var previewSource: PreviewSource? {
     guard case .loaded(let previewSource) = phase else {
       return nil
@@ -145,7 +145,7 @@ public final class PreviewSourceLoader {
 
   // MARK: - Loading
 
-  /// Prepares the preview, and returns once `phase` is `.loaded` or
+  /// Prepares the preview source, and returns once `phase` is `.loaded` or
   /// `.failed`.
   ///
   /// The first call starts one preparation off the main actor at once,

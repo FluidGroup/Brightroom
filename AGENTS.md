@@ -483,7 +483,9 @@ struct HistogramView: View {
   a slider in progress or the original to compare with. It changes only how
   the members the editing target does not edit are drawn, never the
   document: while the target is `.crop`, the canvas draws the document's
-  crop, and while it is `.localBlur`, the document's blur
+  crop, and while it is `.localBlur`, the document's blur. On macOS too,
+  where the default target is `.crop`: pass `.editingTarget(nil)` to draw
+  the displayed feature whole
 - The macOS canvas and the components write nothing, and nothing in
   BrightroomUI registers with an `UndoManager`: the host writes each
   completed operation to the binding once (see "State Management"), and

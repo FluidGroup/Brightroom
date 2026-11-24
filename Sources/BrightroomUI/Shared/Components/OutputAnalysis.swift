@@ -39,8 +39,11 @@ public struct OutputAnalysis: Sendable {
   /// Counts of each channel's 8-bit display-encoded Display P3 values, 256 bins per channel.
   /// Transparent pixels are left out.
   public struct Histogram: Equatable, Sendable {
+    /// The count of each red value, indexed by the value.
     public var red: [UInt32]
+    /// The count of each green value, indexed by the value.
     public var green: [UInt32]
+    /// The count of each blue value, indexed by the value.
     public var blue: [UInt32]
     /// The pixels counted: every pixel that is not transparent.
     public var pixelCount: Int
@@ -49,6 +52,7 @@ public struct OutputAnalysis: Sendable {
     /// The largest share of counted pixels at 255 in any channel.
     public var highlightClipping: Double
 
+    /// Creates a histogram, for example to test a view that draws one.
     public init(
       red: [UInt32],
       green: [UInt32],
@@ -79,10 +83,14 @@ public struct OutputAnalysis: Sendable {
 
   /// An 8-bit display-encoded Display P3 colour.
   public struct Color: Equatable, Sendable {
+    /// The red component, from 0 to 255.
     public var red: UInt8
+    /// The green component, from 0 to 255.
     public var green: UInt8
+    /// The blue component, from 0 to 255.
     public var blue: UInt8
 
+    /// Creates a colour, for example to test a view that shows one.
     public init(red: UInt8, green: UInt8, blue: UInt8) {
       self.red = red
       self.green = green
@@ -108,6 +116,7 @@ public struct OutputAnalysis: Sendable {
     return CIContext(options: options)
   }()
 
+  /// The histogram of what the canvas shows: the crop output's copy, transparent pixels left out.
   public let histogram: Histogram
 
   /// The full-resolution size of the crop output the bitmap covers: the canvas's content size, and

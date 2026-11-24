@@ -882,7 +882,7 @@ precondition failure), and `history.removeAll()` drops them.
 
 ### EditingStack Is Removed
 
-`EditingStack` is gone. BrightroomUI's editors prepare their preview
+`EditingStack` is gone. BrightroomUI's editors prepare their preview source
 themselves. To show the image in views of your own, a `PreviewSourceLoader`
 (BrightroomEngine) prepares it once into a `PreviewSource`, the downsampled
 editing copy and a thumbnail, and holds no edit and no history. In SwiftUI,
@@ -893,7 +893,7 @@ can share with the canvas
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(source:)`, or `await ImageEditorDocument(source:initialCrop:)` for a policy-decided crop |
-| `start()`, `isLoading`, `loadedState` | The editors prepare their own preview. For views of your own: `PreviewSourceLoader(source:)`, `await load()`, and `phase` (`.idle`, `.loading`, `.loaded(_:)`, `.failed`), or `PreviewSourceReader` in SwiftUI. |
+| `start()`, `isLoading`, `loadedState` | The editors prepare their own preview source. For views of your own: `PreviewSourceLoader(source:)`, `await load()`, and `phase` (`.idle`, `.loading`, `.loaded(_:)`, `.failed`), or `PreviewSourceReader` in SwiftUI. |
 | `Loaded.makeOriginalCIImage()` | `SourceImage.makeCIImage()` |
 | `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `PreviewSource.thumbnail` and `image`, from a loader's `previewSource` (`CIImage`s; the editing copy is GPU-resident when a Metal device is available), or `SourceImage.makeCIImage(maxPixelSize:)` |
 | `Loaded.currentEdit`, `EditingStack.Edit`, `featureTree`, `updateFeature(id:mutate:)`, `Edit.makeEditingDocument(orientedImageSize:)` | `document.feature`, read and written by member name |
@@ -953,7 +953,7 @@ over an `EditingStack`.
 | `button_done_title`, `button_cancel_title`, `button_reset_title` | `done`, `cancel`, `reset` |
 | `button_aspectratio_original`, `button_aspectratio_freeform`, `button_aspectratio_square` | `originalAspectRatio`, `freeformAspectRatio`, `squareAspectRatio` |
 | `button_filter_original` | `originalFilter` |
-| (new) | `imageLoadFailed`, shown in place of the image when its pixels cannot be decoded |
+| (new) | `imageLoadFailed`, shown in place of the image when its pixels cannot be decoded. The editor shows it as given; 6.0 and 6.1 showed the canvas's own message, which SwiftUI looked up in your app's strings as a key, so set `imageLoadFailed` to keep a translation. |
 | `Options.filterPresets` (default `PhotosCropDefaultFilterPresets.make()`) | `ImageEditor.Options.filters`, empty by default |
 
 The aspect ratio option is one choice, so it is a policy, and the freeform
@@ -1045,7 +1045,8 @@ How the editor writes to the binding:
   `tint`, which the editor has no control for: at 0 it removes
   `whiteBalance` only when the tint is 0 too, and otherwise keeps the white
   balance at temperature 0 with its tint. 5.1.1 removed the whole
-  `TemperatureFeature` at 0, its tint included.
+  `TemperatureFeature` at 0, its tint included, and 6.0 and 6.1 removed the
+  whole `whiteBalance`.
 - Cancel writes back the document the editor opened with, history
   included, then calls `onCancel`. Everything written since the editor
   opened is discarded, your own writes to the binding (an undo, a redo)
@@ -1464,7 +1465,8 @@ BrightroomUI has no built-in editor, this is how you build one.
   changes only how the members the editing target does not edit are drawn:
   while the target is `.crop`, the canvas draws the document's crop, and
   while it is `.localBlur`, the document's blur. Canvas changes still apply
-  to the document.
+  to the document. This holds on macOS too, where the default target is
+  `.crop`: pass `.editingTarget(nil)` to draw the displayed feature whole.
 - **macOS.** The canvas is a viewer with zoom and pan; `.editingTarget(nil)`
   asks for one. `onZoomChange(_:)` reports an `ImageEditorCanvas.Zoom`
   (`scale`, `fitScale`, `maximumScale`, `displayScale`, `fraction`,
@@ -1930,7 +1932,12 @@ the source and scales an absolute radius by the same factor, so a host's
 `.absolute(_:)` radius previews at the size it exports. The filter swatches
 (the editor's, and `FilterSwatch.render(_:over:pointSize:displayScale:)`)
 scale it to the swatch the same way, so an absolute radius takes the same
-share of the picture in a swatch as on the canvas. In
+share of the picture in a swatch as on the canvas. 6.0 and 6.1 evaluated a
+swatch as if its pixels were the full-resolution source's, so an absolute
+radius was applied in swatch pixels. Presets whose effects depend on the
+render scale therefore look different in a swatch than in 6.1, and as they
+look on the canvas: absolute radii, grain whatever its radius, and effects of
+your own that read `FeatureEvaluationContext.renderScale`. In
 5.1.1 both radii were plain `Double`s on different scales: a sharpen radius of
 100 and an unsharp-mask radius of 1 were each a twentieth of the diagonal. A
 5.1.1 sharpen radius keeps its look as `.proportional(v)`; multiply an

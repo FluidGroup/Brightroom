@@ -29,8 +29,11 @@ import SwiftUI
 /// ImageEditorCanvasReader { canvas in
 ///   VStack {
 ///     ImageEditorCanvas(document: $document)
-///     Button("Rotate") { canvas.rotateCounterclockwise() }  // iOS
-///     Button("Zoom In") { canvas.zoomIn() }  // macOS
+///     #if os(iOS)
+///     Button("Rotate") { canvas.rotateCounterclockwise() }
+///     #elseif os(macOS)
+///     Button("Zoom In") { canvas.zoomIn() }
+///     #endif
 ///   }
 /// }
 /// ```

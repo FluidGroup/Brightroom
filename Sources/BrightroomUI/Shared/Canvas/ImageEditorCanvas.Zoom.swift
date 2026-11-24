@@ -43,6 +43,7 @@ extension ImageEditorCanvas {
     /// point.
     public var displayScale: CGFloat
 
+    /// Creates a zoom, for example to test a view that shows one.
     public init(scale: CGFloat, fitScale: CGFloat, maximumScale: CGFloat, displayScale: CGFloat) {
       self.scale = scale
       self.fitScale = fitScale

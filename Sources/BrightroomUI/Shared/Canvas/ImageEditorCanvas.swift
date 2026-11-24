@@ -27,17 +27,17 @@ import BrightroomParametric
 /// a binding.
 ///
 /// The canvas prepares the document's source image for display itself, or
-/// shows the preview of a `PreviewSourceLoader` that the host shares with
-/// its other views (see `PreviewSourceReader`), so the image is decoded once.
-/// `displayedFeature(_:)` draws a feature the host has not written yet in
-/// place of the document's.
+/// uses the preview source of a `PreviewSourceLoader` that the host shares
+/// with its other views (see `PreviewSourceReader`), so the image is decoded
+/// once. `displayedFeature(_:)` draws a feature the host has not written yet
+/// in place of the document's.
 ///
 /// On iOS the canvas edits the part of the feature `editingTarget(_:)`
 /// picks: the crop, with a crop guide and the scroll surface, or the local
 /// blur, with a brush.
 ///
-/// On macOS the canvas views only, for now: it shows the document's output
-/// (effects, local blur, crop and vignette) for every editing target, and the
+/// On macOS the canvas views only, for now: whatever the editing target, it
+/// shows the output (effects, local blur, crop and vignette), and the
 /// trackpad or the mouse zooms and pans it; dragging with the mouse pans once
 /// zoomed in. Zoomed in, a click gives it the keyboard (with Full Keyboard
 /// Access, so does Tab), and the arrow keys pan it by a tenth of its size, or
@@ -402,6 +402,11 @@ public struct ImageEditorCanvas: View {
   /// document's local blur, so the crop guide and the brush work on what the
   /// document holds. Canvas changes apply to the document, never to
   /// `feature`. Pass a feature of the document's source image.
+  ///
+  /// The same holds on macOS, where the canvas edits nothing yet: under the
+  /// default `.crop` target it draws the document's crop. Pass
+  /// `.editingTarget(nil)` to draw `feature` whole, such as the original with
+  /// its own crop.
   public consuming func displayedFeature(_ feature: ImageEditorFeature?) -> Self {
     self.displayedFeature = feature
     return self
