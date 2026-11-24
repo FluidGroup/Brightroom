@@ -24,14 +24,15 @@ import SwiftUI
 
 import BrightroomEngine
 
-/// Gives its content one `PreviewSourceLoader` for a source image, kept for
-/// the lifetime of this view's identity.
+/// Gives its content one `PreviewSourceLoader` for its source image, kept
+/// while the reader shows that image.
 ///
-/// Wrap the views of one open image in a reader, and give the reader an
-/// identity per source image with `.id(source)`: the loader is created once
-/// per identity and released with it, so the image is decoded once while it
-/// is open, and its GPU-resident editing copy lives only that long. A reader
-/// without that identity keeps the loader of the first source it was given.
+/// Wrap the views of one open image in a reader: the image is decoded once
+/// while it is open, and its GPU-resident editing copy lives only that long.
+/// When `source` changes, the reader creates a loader for the new image and
+/// gives its content a new identity, so the views inside, and their state,
+/// start afresh over the new loader, and no view keeps the previous image's
+/// pixels.
 ///
 /// The content shares the loader: pass it to
 /// `ImageEditorCanvas(document:previewSourceLoader:)`, and pass its
@@ -47,14 +48,10 @@ import BrightroomEngine
 ///     // A histogram, filter swatches or a gray point: pass previewSource.
 ///   }
 /// }
-/// .id(document.source)
 /// ```
 public struct PreviewSourceReader<Content: View>: View {
 
-  // `State(initialValue:)` is evaluated on every init but kept only for a
-  // new identity. A loader costs nothing until `load()`, so the discarded
-  // ones are cheap.
-  @State private var loader: PreviewSourceLoader
+  private let source: SourceImage
 
   private let content: (PreviewSourceLoader) -> Content
 
@@ -63,11 +60,37 @@ public struct PreviewSourceReader<Content: View>: View {
     source: SourceImage,
     @ViewBuilder content: @escaping (PreviewSourceLoader) -> Content
   ) {
-    self._loader = State(initialValue: PreviewSourceLoader(source: source))
+    self.source = source
     self.content = content
   }
 
   public var body: some View {
-    content(loader)
+    // A new identity per source image: a new loader, and new content over it.
+    SourceScope(source: source, content: content)
+      .id(source)
+  }
+}
+
+extension PreviewSourceReader {
+
+  /// The reader's content for one source image, which keeps that image's
+  /// loader for the lifetime of its identity.
+  private struct SourceScope: View {
+
+    // `State(initialValue:)` is evaluated on every init but kept only for a
+    // new identity. A loader costs nothing until `load()`, so the discarded
+    // ones are cheap.
+    @State private var loader: PreviewSourceLoader
+
+    private let content: (PreviewSourceLoader) -> Content
+
+    init(source: SourceImage, content: @escaping (PreviewSourceLoader) -> Content) {
+      self._loader = State(initialValue: PreviewSourceLoader(source: source))
+      self.content = content
+    }
+
+    var body: some View {
+      content(loader)
+    }
   }
 }

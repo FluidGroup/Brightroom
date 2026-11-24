@@ -16,7 +16,8 @@ import BrightroomUI
 /// `PreviewSourceReader` and an `ImageEditorCanvasReader`, in a window that
 /// never shows on a screen. The reader's proxy zooms the canvas, and the
 /// canvas reports its zoom and the pixel under the pointer, samples points,
-/// keeps a fit margin, and takes a name for VoiceOver.
+/// keeps a fit margin, and takes a name for VoiceOver. A preview source
+/// reader gives its content a new loader for another image.
 ///
 /// The window's content is 300 points square, so the 400 × 200 image fits at
 /// 0.75: 300 × 150 points, 75 points below the top.
@@ -36,8 +37,7 @@ struct CanvasPublicAPITests {
   }
 
   /// The canvas as the documentation shows it: one loader for the image,
-  /// shared through a `PreviewSourceReader` given an identity per image, and
-  /// a reader for the commands.
+  /// shared through a `PreviewSourceReader`, and a reader for the commands.
   private struct Host: View {
     let document: ImageEditorDocument
     let recorder: Recorder
@@ -64,7 +64,6 @@ struct CanvasPublicAPITests {
           .onAppear { recorder.proxy = canvas }
         }
       }
-      .id(document.source)
     }
 
     /// Records the sampled points while the host samples them.
@@ -265,6 +264,53 @@ struct CanvasPublicAPITests {
     let zoomed = try #require(recorder.zooms.last)
     #expect(zoomed.percent == 2 * fitted.percent)
     #expect(element.accessibilityValue() as? String == zoomed.percent.formatted(.percent))
+  }
+
+  // MARK: - Preview source reader
+
+  /// The loaders a reader's content loaded, in order.
+  @MainActor
+  private final class Loads {
+    var loaders: [PreviewSourceLoader] = []
+  }
+
+  /// A reader with no identity of its own whose content loads the loader it
+  /// receives, as a view shown without a canvas does.
+  private struct ReaderHost: View {
+    let source: SourceImage
+    let loads: Loads
+
+    var body: some View {
+      PreviewSourceReader(source: source) { loader in
+        Color.clear
+          .task {
+            await loader.load()
+            loads.loaders.append(loader)
+          }
+      }
+    }
+  }
+
+  @Test
+  func `For another source image, a reader gives its content a new loader and a new identity`() async throws {
+    let first = try Self.makeDocument().source
+    let second = try Self.makeDocument().source
+    let loads = Loads()
+    let (hostingView, window) = try Self.host(ReaderHost(source: first, loads: loads))
+    defer { Self.close(window) }
+    try await Self.wait(in: hostingView, "The reader's content did not load its loader") {
+      loads.loaders.count == 1
+    }
+    #expect(loads.loaders[0].previewSource?.source == first)
+
+    // The content's task runs again, so the content has a new identity.
+    hostingView.rootView = ReaderHost(source: second, loads: loads)
+    try await Self.wait(in: hostingView, "The reader's content did not load a loader of the new image") {
+      loads.loaders.count == 2
+    }
+    #expect(loads.loaders[1] !== loads.loaders[0])
+    #expect(loads.loaders[1].source == second)
+    #expect(loads.loaders[1].previewSource?.source == second)
   }
 
   // MARK: - Helpers

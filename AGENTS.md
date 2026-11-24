@@ -128,11 +128,11 @@ one word per concept in names and docs.
 - **Preview source** (`PreviewSource`): the downsampled editing copy and
   thumbnail of a source image that an editor shows, never stored in a
   document. A `PreviewSourceLoader` prepares it once per open image and holds
-  no edit and no history. `PreviewSourceReader` keeps one loader for the
-  lifetime of its identity, so give it one per image (`.id(source)`); the
-  canvas (through its `previewSourceLoader:` parameter) and the components
-  share that loader, and the image is decoded once. All three are public:
-  hosts build editors from them.
+  no edit and no history. `PreviewSourceReader` keeps one loader per source
+  image, and gives its content a new one when its source changes; the canvas
+  takes that loader (its `previewSourceLoader:` parameter) and the
+  components take its loaded `previewSource`, so the image is decoded once.
+  All three are public: hosts build editors from them.
 
 ### Editing Engine Vision
 
@@ -278,9 +278,11 @@ The project uses swift-state-graph for observable state. When modifying state-re
   canvas's shared render path, and on macOS the AppKit canvas, its hosting
   and its reports) are in `Tests/BrightroomCanvasTests/`.
   `CanvasPublicAPITests` drives the reader's zoom commands, the zoom and
-  pointer reports and point sampling as a host does;
-  `ImageEditorCanvasInputTests` checks with internal access that a shared
-  loader decodes once and how the displayed feature is drawn
+  pointer reports, point sampling and a `PreviewSourceReader` whose source
+  changes as a host does; `ImageEditorCanvasInputTests` checks with
+  internal access that a shared loader decodes once, that a loader which
+  replaces another is started and drawn, and how the displayed feature is
+  drawn
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 - Test files marked "Public API only" play a host app: evaluate through
@@ -383,31 +385,41 @@ import SwiftUI
 struct EditorView: View {
   // 1. The host owns the document, and writes and commits its changes
   @Binding var document: ImageEditorDocument
+
+  var body: some View {
+    // 2. One loader per image: the canvas and the other views share its
+    //    decode. For another image the reader gives its content a new loader
+    //    and a new identity, so the content's state starts afresh
+    PreviewSourceReader(source: document.source) { loader in
+      EditorContent(document: $document, loader: loader)
+    }
+  }
+}
+
+struct EditorContent: View {
+  @Binding var document: ImageEditorDocument
+  let loader: PreviewSourceLoader
   @State private var zoom: ImageEditorCanvas.Zoom?
 
   var body: some View {
-    // 2. One loader per image: the canvas and the other views share its decode
-    PreviewSourceReader(source: document.source) { loader in
-      // 3. The proxy sends zoom commands to the canvas inside the reader
-      ImageEditorCanvasReader { canvas in
-        VStack {
-          ImageEditorCanvas(document: $document, previewSourceLoader: loader)
-            .editingTarget(nil)
-            .onZoomChange { zoom = $0 }
-          HStack {
-            Button("Zoom to Fit") { canvas.zoomToFit() }
-              .disabled(zoom?.isFitted ?? true)
-            Button("Zoom In") { canvas.zoomIn() }
-              .disabled(zoom?.isAtMaximum ?? true)
-          }
-          // 4. The components take the loaded preview source
-          if let previewSource = loader.previewSource {
-            HistogramView(feature: document.feature, previewSource: previewSource)
-          }
+    // 3. The proxy sends zoom commands to the canvas inside the reader
+    ImageEditorCanvasReader { canvas in
+      VStack {
+        ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+          .editingTarget(nil)
+          .onZoomChange { zoom = $0 }
+        HStack {
+          Button("Zoom to Fit") { canvas.zoomToFit() }
+            .disabled(zoom?.isFitted ?? true)
+          Button("Zoom In") { canvas.zoomIn() }
+            .disabled(zoom?.isAtMaximum ?? true)
+        }
+        // 4. The components take the loaded preview source
+        if let previewSource = loader.previewSource {
+          HistogramView(feature: document.feature, previewSource: previewSource)
         }
       }
     }
-    .id(document.source)
   }
 }
 
@@ -426,11 +438,13 @@ struct HistogramView: View {
 }
 ```
 
-- `.id(document.source)` gives the reader one identity, and so one
-  `PreviewSourceLoader`, per image. The canvas starts the loader; a view
-  shown without a canvas starts it with `.task { await loader.load() }`.
-  `loader.previewSource` is nil until it is loaded; `loader.phase` also
-  tells loading from failure
+- The reader keeps one `PreviewSourceLoader` per source image. The canvas
+  starts the loader it is given, also one that replaces another, such as a
+  retry after a failed load; a view shown without a canvas starts it with
+  `.task { await loader.load() }`. `loader.previewSource` is nil until it is
+  loaded; `loader.phase` also tells loading from failure. To show your own
+  loading and failure views in place of the canvas's, start the loader
+  yourself and show the canvas once `loader.phase` is `.loaded`
 - `OutputAnalysis.analyze(_:over:)` (a histogram, and the color at the
   point `onPointerChange(_:)` reports), `GrayPoint.solve(at:in:over:)` (the
   white balance that makes the area around a point `pointSampling(_:)`
@@ -444,9 +458,11 @@ struct HistogramView: View {
 - The macOS canvas is a viewer: `.editingTarget(nil)` asks for one and
   keeps meaning a viewer when crop editing comes to macOS. It reports its
   zoom (`onZoomChange(_:)`, an `ImageEditorCanvas.Zoom`) and the crop-output
-  pixel under the pointer (`onPointerChange(_:)`). `fitMargin(_:)` keeps a
-  margin around the output at the fit, and `canvasAccessibilityLabel(_:)`
-  names it for VoiceOver, which reads its zoom as its value
+  pixel under the pointer (`onPointerChange(_:)`), and reports nothing while
+  no image is shown, so `EditorContent` keeps the zoom inside the reader.
+  `fitMargin(_:)` keeps a margin around the output at the fit, and
+  `canvasAccessibilityLabel(_:)` names it for VoiceOver, which reads its
+  zoom as its value
 - The proxy's zoom commands are `zoomIn()`, `zoomOut()`, `zoomToFit()` and
   `zoom(toFraction:)`. A zoom that happens at once, such as
   `zoom(toFraction:)`, is reported before the command returns; an animated
@@ -470,11 +486,12 @@ struct HistogramView: View {
 2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`)
    when it edits. Take the image's pixels from the host's
    `PreviewSourceReader` rather than preparing them again: a view takes its
-   `PreviewSourceLoader`, and a computation takes the loaded
-   `PreviewSource` and documents that the feature it takes is authored over
-   `previewSource.source`. Only a view shown on its own creates the reader,
-   keyed by the document's `SourceImage` (`.id(source)`), and starts it with
-   `.task { await loader.load() }`
+   `PreviewSourceLoader` and starts it with
+   `.task(id: ObjectIdentifier(loader)) { await loader.load() }`, so that a
+   loader that replaces it is started too, and a computation takes the
+   loaded `PreviewSource` and documents that the feature it takes is
+   authored over `previewSource.source`. Only a view shown on its own creates
+   the reader, over the document's `SourceImage`
 3. Write each completed change to the binding's latest document once; leave
    `commit()` to the editor that owns the undo granularity
 4. Do not store edits in `PreviewSourceLoader`; it only prepares the

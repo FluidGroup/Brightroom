@@ -13,9 +13,10 @@ import SwiftUI
 
 /// What `ImageEditorCanvas` does with two of a host's inputs, where public
 /// API cannot see it: a shared `PreviewSourceLoader` is the canvas's only
-/// preparation of the image, and a loader of another image is ignored; a
-/// displayed feature is what the canvas draws, with the member the editing
-/// target edits taken from the document (`drawnFeature`).
+/// preparation of the image, a loader of another image is ignored, and a
+/// loader that replaces another is started and drawn; a displayed feature is
+/// what the canvas draws, with the member the editing target edits taken
+/// from the document (`drawnFeature`).
 ///
 /// The rule runs on both platforms; on macOS the canvas is hosted in a
 /// window that never shows on a screen, and the AppKit canvas tells which
@@ -159,6 +160,68 @@ struct ImageEditorCanvasInputTests {
     #expect(canvas.source.imageSize == Self.imageSize)
     #expect(loader.phase == .idle)
     #expect(await counter.value == 0)
+  }
+
+  // MARK: - A loader that replaces another
+
+  /// The canvas over a loader the host owns, with no identity of its own, so
+  /// the test replaces the document and the loader together in place.
+  private struct OwningHost: View {
+    let document: ImageEditorDocument
+    let loader: PreviewSourceLoader
+
+    var body: some View {
+      ImageEditorCanvas(document: .constant(document), previewSourceLoader: loader)
+        .editingTarget(nil)
+    }
+  }
+
+  @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+  func `The canvas starts a loader of another image that replaces its loader in place, and shows that image`() async throws {
+    let first = try Self.makeDocument(size: Self.imageSize)
+    let second = try Self.makeDocument(size: CGSize(width: 200, height: 400))
+    let firstLoader = PreviewSourceLoader(source: first.source)
+    let (hostingView, window) = Self.host(OwningHost(document: first, loader: firstLoader))
+    defer { Self.close(window) }
+    _ = try await Self.drawnCanvas(showing: firstLoader, in: hostingView)
+
+    let secondLoader = PreviewSourceLoader(source: second.source)
+    hostingView.rootView = OwningHost(document: second, loader: secondLoader)
+    let canvas = try await Self.drawnCanvas(showing: secondLoader, in: hostingView)
+    #expect(canvas.source.imageSize == second.source.pixelSize)
+  }
+
+  @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+  func `A failed load is retried with a new loader of the same image, which the canvas starts and shows`() async throws {
+    let document = try Self.makeDocument(size: Self.imageSize)
+    let failing = PreviewSourceLoader(source: document.source) { _ in nil }
+    let (hostingView, window) = Self.host(OwningHost(document: document, loader: failing))
+    defer { Self.close(window) }
+    try await Self.wait(in: hostingView, "The views did not start the failing loader") {
+      failing.phase == .failed
+    }
+
+    let retry = PreviewSourceLoader(source: document.source)
+    hostingView.rootView = OwningHost(document: document, loader: retry)
+    let canvas = try await Self.drawnCanvas(showing: retry, in: hostingView)
+    #expect(canvas.source.imageSize == Self.imageSize)
+  }
+
+  @Test(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
+  func `A loaded loader of the same image that replaces the canvas's loader is the one the canvas draws`() async throws {
+    let document = try Self.makeDocument(size: Self.imageSize)
+    let first = PreviewSourceLoader(source: document.source)
+    let (hostingView, window) = Self.host(OwningHost(document: document, loader: first))
+    defer { Self.close(window) }
+    _ = try await Self.drawnCanvas(showing: first, in: hostingView)
+
+    // Loaded before the canvas receives it, so the canvas shows no progress
+    // view in between.
+    let second = PreviewSourceLoader(source: document.source)
+    await second.load()
+    hostingView.rootView = OwningHost(document: document, loader: second)
+    let canvas = try await Self.drawnCanvas(showing: second, in: hostingView)
+    #expect(canvas.source.editingSourceImage !== first.previewSource?.image)
   }
 
   // MARK: - A displayed feature
@@ -313,6 +376,40 @@ struct ImageEditorCanvasInputTests {
       try await Task.sleep(for: .milliseconds(20))
     }
     return findCanvas(in: hostingView)
+  }
+
+  /// Lays out `hostingView` until a mounted canvas has built its render
+  /// images over `loader`'s preview source and drawn a frame, for five
+  /// seconds at most. A canvas being removed may still be mounted beside it.
+  private static func drawnCanvas(
+    showing loader: PreviewSourceLoader,
+    in hostingView: NSView,
+    sourceLocation: SourceLocation = #_sourceLocation
+  ) async throws -> EditingCanvasView {
+    var drawn: EditingCanvasView?
+    try await wait(
+      in: hostingView,
+      "No canvas drew the loader's preview source",
+      sourceLocation: sourceLocation
+    ) {
+      guard let image = loader.previewSource?.image else {
+        return false
+      }
+      drawn = canvases(in: hostingView).first { canvas in
+        canvas.source.editingSourceImage === image
+          && canvas.surface.canvasView?.hasRenderImages == true
+          && canvas.surface.displayedViewport != nil
+      }
+      return drawn != nil
+    }
+    return try #require(drawn, sourceLocation: sourceLocation)
+  }
+
+  private static func canvases(in view: NSView) -> [EditingCanvasView] {
+    if let canvas = view as? EditingCanvasView {
+      return [canvas]
+    }
+    return view.subviews.flatMap { canvases(in: $0) }
   }
 
   private static func findCanvas(in view: NSView) -> EditingCanvasView? {

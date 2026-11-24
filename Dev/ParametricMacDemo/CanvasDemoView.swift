@@ -82,7 +82,6 @@ struct CanvasDemoView: View {
       PreviewSourceReader(source: document.source) { loader in
         CanvasViewer(document: $document, previewSourceLoader: loader)
       }
-      .id(document.source)
     }
     .fileImporter(isPresented: $isImporting, allowedContentTypes: [.image]) { result in
       open(result)
@@ -198,8 +197,8 @@ struct CanvasDemoView: View {
 }
 
 /// The canvas of one image, with zoom controls in the window's toolbar and a
-/// histogram of what it shows. The reader's identity replaces it, zoom and
-/// pointer included, when the image changes.
+/// histogram of what it shows. The reader replaces it, zoom and pointer
+/// included, when the image changes.
 private struct CanvasViewer: View {
 
   @Binding private var document: ImageEditorDocument

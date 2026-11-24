@@ -1449,12 +1449,17 @@ BrightroomUI has no built-in editor, this is how you build one.
   image once, off the main actor, however many views call it, and `phase`
   (`.idle`, `.loading`, `.loaded(_:)`, `.failed`) and `previewSource`
   publish the result on the main actor. `PreviewSourceReader(source:content:)`
-  (BrightroomUI) keeps one loader for the lifetime of its identity, so give
-  it one identity per image with `.id(document.source)`.
+  (BrightroomUI) keeps one loader per source image: when its source changes,
+  it gives its content a new loader and a new identity, so state kept inside
+  the content starts afresh for the new image.
 - **The canvas.** Both `ImageEditorCanvas` initializers take
   `previewSourceLoader:` after `document:`. The canvas shows that loader's
   preview source when it is of the document's image, and prepares its own
-  otherwise. `displayedFeature(_:)` shows a feature you have not written,
+  otherwise. It starts the loader it is given, also one that replaces
+  another, such as a new loader that retries a failed load. To show your own
+  loading and failure views in place of the canvas's, start the loader
+  yourself and show the canvas once `phase` is `.loaded`.
+  `displayedFeature(_:)` shows a feature you have not written,
   such as a slider value in progress or the original to compare with. It
   changes only how the members the editing target does not edit are drawn:
   while the target is `.crop`, the canvas draws the document's crop, and
@@ -1503,29 +1508,39 @@ import SwiftUI
 
 struct EditorView: View {
   @Binding var document: ImageEditorDocument
-  @State private var zoom: ImageEditorCanvas.Zoom?
 
   var body: some View {
     // One loader per image: the canvas and the other views share its decode.
+    // For another image, the content gets a new loader and fresh state.
     PreviewSourceReader(source: document.source) { loader in
-      ImageEditorCanvasReader { canvas in
-        VStack {
-          ImageEditorCanvas(document: $document, previewSourceLoader: loader)
-            .editingTarget(nil)
-            .onZoomChange { zoom = $0 }
-          HStack {
-            Button("Zoom to Fit") { canvas.zoomToFit() }
-              .disabled(zoom?.isFitted ?? true)
-            Button("Zoom In") { canvas.zoomIn() }
-              .disabled(zoom?.isAtMaximum ?? true)
-          }
-          if let previewSource = loader.previewSource {
-            HistogramView(feature: document.feature, previewSource: previewSource)
-          }
+      EditorContent(document: $document, loader: loader)
+    }
+  }
+}
+
+struct EditorContent: View {
+  @Binding var document: ImageEditorDocument
+  let loader: PreviewSourceLoader
+  // Kept per image: the canvas reports nothing while no image is shown.
+  @State private var zoom: ImageEditorCanvas.Zoom?
+
+  var body: some View {
+    ImageEditorCanvasReader { canvas in
+      VStack {
+        ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+          .editingTarget(nil)
+          .onZoomChange { zoom = $0 }
+        HStack {
+          Button("Zoom to Fit") { canvas.zoomToFit() }
+            .disabled(zoom?.isFitted ?? true)
+          Button("Zoom In") { canvas.zoomIn() }
+            .disabled(zoom?.isAtMaximum ?? true)
+        }
+        if let previewSource = loader.previewSource {
+          HistogramView(feature: document.feature, previewSource: previewSource)
         }
       }
     }
-    .id(document.source)
   }
 }
 

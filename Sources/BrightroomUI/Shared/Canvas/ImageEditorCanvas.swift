@@ -158,10 +158,14 @@ public struct ImageEditorCanvas: View {
   ///   - document: The edited document.
   ///   - previewSourceLoader: The loader of the document's source image that
   ///     the host shares with its other views, so the image is decoded once
-  ///     (see `PreviewSourceReader`); the canvas starts it when it appears.
-  ///     Pass it from the start: a canvas that receives one later rebuilds
-  ///     on it. With nil, or a loader of another image, which is ignored,
-  ///     the canvas prepares the document's image itself.
+  ///     (see `PreviewSourceReader`). The canvas starts the loader it is
+  ///     given. Another loader, even of the same image (to retry a failed
+  ///     load, say), rebuilds the canvas on it, and so does a loader passed
+  ///     after the canvas prepared the image itself: pass it from the start.
+  ///     With nil, or a loader of another image, which is ignored, the canvas
+  ///     prepares the document's image itself. To show your own loading and
+  ///     failure views in place of the canvas's, start the loader yourself
+  ///     and show the canvas once its `phase` is `.loaded`.
   ///   - areAnimationsEnabled: Applied on every update.
   ///   - contentInsets: **Fixed at creation.** The canvas reads the insets,
   ///     and the layout direction that resolves their leading and trailing
@@ -211,10 +215,14 @@ public struct ImageEditorCanvas: View {
   ///   - document: The edited document.
   ///   - previewSourceLoader: The loader of the document's source image that
   ///     the host shares with its other views, so the image is decoded once
-  ///     (see `PreviewSourceReader`); the canvas starts it when it appears.
-  ///     Pass it from the start: a canvas that receives one later rebuilds
-  ///     on it. With nil, or a loader of another image, which is ignored,
-  ///     the canvas prepares the document's image itself.
+  ///     (see `PreviewSourceReader`). The canvas starts the loader it is
+  ///     given. Another loader, even of the same image (to retry a failed
+  ///     load, say), rebuilds the canvas on it, and so does a loader passed
+  ///     after the canvas prepared the image itself: pass it from the start.
+  ///     With nil, or a loader of another image, which is ignored, the canvas
+  ///     prepares the document's image itself. To show your own loading and
+  ///     failure views in place of the canvas's, start the loader yourself
+  ///     and show the canvas once its `phase` is `.loaded`.
   ///   - areAnimationsEnabled: Applied on every update. On macOS it decides
   ///     whether the zoom and pan motions that start animate. When it is
   ///     false, or when the system's Reduce Motion setting is on, the way
@@ -288,14 +296,17 @@ public struct ImageEditorCanvas: View {
   public var body: some View {
     let source = document.wrappedValue.source
     if let previewSourceLoader, previewSourceLoader.source == source {
+      // A new identity per loader: a loader that replaces another, even of the
+      // same image, is started, and the canvas binds to its pixels.
       canvas(previewSourceLoader: previewSourceLoader)
+        .id(ObjectIdentifier(previewSourceLoader))
     } else {
-      // A new identity per source image: the owned loader, and the canvas bound
-      // to it, are rebuilt when the host switches to a document of another image.
+      // The reader creates a loader per source image, so the owned loader, and
+      // the canvas bound to it, are rebuilt when the host switches to a
+      // document of another image.
       PreviewSourceReader(source: source) { loader in
         canvas(previewSourceLoader: loader)
       }
-      .id(source)
     }
   }
 
@@ -522,7 +533,11 @@ public struct ImageEditorCanvas: View {
   /// it returns; an animated zoom reports from the frames of its motion); one
   /// made while SwiftUI updates or lays out the canvas arrives on the next
   /// main-actor turn, the latest only. Equal zooms are not reported again.
-  /// The latest `action` is used; it is re-bound on every update.
+  /// Nothing is reported while no image is shown: while the image loads, or
+  /// when it cannot be loaded. A zoom kept from an earlier image therefore
+  /// stays as it was; keep it in state that starts afresh for each image,
+  /// such as a view inside the `PreviewSourceReader`. The latest `action` is
+  /// used; it is re-bound on every update.
   @available(iOS, unavailable, message: "The iOS canvas does not report its zoom yet.")
   public consuming func onZoomChange(_ action: @escaping @MainActor (Zoom) -> Void) -> Self {
     #if os(macOS)

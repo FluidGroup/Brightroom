@@ -131,7 +131,7 @@ Customize the aspect ratio policy and filters through `ImageEditor.Options`, and
 
 For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you. Put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvasReader.swift) to send it commands from your own controls: rotate, reset, or apply the crop on iOS, and zoom on macOS.
 
-The canvas and your other views can share one decode of the image. `PreviewSourceReader` keeps one `PreviewSourceLoader` per image: pass the loader to the canvas, and its loaded `PreviewSource` to the components that read the image.
+The canvas and your other views can share one decode of the image. `PreviewSourceReader` keeps one `PreviewSourceLoader` per image, and gives its content a new one when the image changes: pass the loader to the canvas, and its loaded `PreviewSource` to the components that read the image.
 
 ```swift
 PreviewSourceReader(source: document.source) { loader in
@@ -141,7 +141,6 @@ PreviewSourceReader(source: document.source) { loader in
     // Histogram, filter swatches, gray point: pass previewSource.
   }
 }
-.id(document.source)
 ```
 
 - `OutputAnalysis.analyze(_:over:)` measures what the canvas shows, for a histogram and the color under the pointer.

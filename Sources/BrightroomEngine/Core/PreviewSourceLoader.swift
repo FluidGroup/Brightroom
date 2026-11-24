@@ -56,9 +56,8 @@ public struct PreviewSource: Equatable, Sendable {
 /// shows the image, so the image is decoded once: pass it to
 /// `ImageEditorCanvas(document:previewSourceLoader:)`, and pass its
 /// `previewSource` to the views that read the canvas's pixels. In SwiftUI,
-/// `PreviewSourceReader` (BrightroomUI) creates the loader and keeps it for
-/// the lifetime of its identity, so give the reader an identity per source
-/// image:
+/// `PreviewSourceReader` (BrightroomUI) creates the loader and keeps it while
+/// it shows that source image:
 ///
 /// ```swift
 /// PreviewSourceReader(source: document.source) { loader in
@@ -67,7 +66,6 @@ public struct PreviewSource: Equatable, Sendable {
 ///     // A histogram, filter swatches or a gray point: pass previewSource.
 ///   }
 /// }
-/// .id(document.source)
 /// ```
 ///
 /// The loader holds no edit and no history: `EditingDocument` does, and it
