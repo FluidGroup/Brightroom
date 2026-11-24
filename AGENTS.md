@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Brightroom is a composable image editor library for iOS and macOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components (on macOS, BrightroomUI has the canvas as a viewer; the built-in editor is iOS only).
+Brightroom is a composable image editor library for iOS and macOS, powered by Metal for high-performance image processing. It provides both low-level image editing capabilities and high-level UI components (on macOS, BrightroomUI has the canvas as a viewer, with zoom commands and reports, and the components a host builds its own editor from; the built-in editor is iOS only, as are crop and brush editing for now).
 
 ## Build Commands
 
@@ -69,28 +69,40 @@ open Dev/Brightroom.xcodeproj
      asset), with its oriented `pixelSize`
    - `Sources/BrightroomEngine/Core/` - `EditingDocument<Content>` (the source
      image, the root feature, and its commit-style `History`;
-     `render(options:)`), and the package `PreviewSourceLoader`. The document
-     holds the edit and its history; the loader only prepares preview pixels
-     for BrightroomUI's editors: `await load()` decodes the image once, off
-     the main actor, into a `PreviewSource` (a thumbnail and the GPU-resident
-     editing source) and publishes its `phase` (`.idle`, `.loading`,
+     `render(options:)`), and `PreviewSourceLoader`. The document holds the
+     edit and its history; the loader only prepares the preview source an
+     editor's views share: `await load()` decodes the image once, off the
+     main actor, into a `PreviewSource` (a thumbnail and the GPU-resident,
+     downsampled editing copy) and publishes its `phase` (`.idle`, `.loading`,
      `.loaded`, `.failed`) on the main actor
    - `Sources/BrightroomEngine/Engine/` - internal image decoding
      (`ImageDecoding`) and the preview's GPU upload (`PreviewTextureUpload`)
    - Uses swift-state-graph for observable state (`PreviewSourceLoader.phase`)
 
 3. **BrightroomUI** - SwiftUI image editing components (UIKit internally on
-   iOS, AppKit on macOS). On macOS, `ImageEditorCanvas` shows the document's
-   evaluated output with zoom and pan; the built-in editor and crop and brush
-   editing are iOS only for now
+   iOS, AppKit on macOS). On macOS, `ImageEditorCanvas` is a viewer: it shows
+   the document's evaluated output with zoom and pan, takes zoom commands
+   through `ImageEditorCanvasReader`, reports its zoom and the pixel under
+   the pointer, and writes nothing. A host builds its own editor around it
+   with the preview source and the components ("Building an editor on
+   macOS" below). The built-in `ImageEditor` is iOS only, as are crop and
+   brush editing for now
    - One SwiftPM target, with three source directories under `Sources/BrightroomUI/`:
      - `Shared/`: public SwiftUI entry points and their availability,
        `ImageEditorFeature` and `ImageEditorDocument`, canvas geometry,
-       navigation and rendering, and platform-neutral components
+       navigation and rendering, and platform-neutral components.
+       `Shared/Components/` holds `PreviewSourceReader` and the public
+       components: `OutputAnalysis` (a histogram and the color under the
+       pointer, measured on what the canvas shows), `GrayPoint` (the white
+       balance that makes an area neutral), `FilterSwatch` (a preset over the
+       thumbnail) and `ColorGradingWheel` (hue and saturation for one tonal
+       range). The iOS editor uses the swatches and the wheel too
      - `iOS/`: the UIKit canvas and its SwiftUI bridge, crop and brush
        interactions, and the built-in editor screen and controls
-     - `macOS/`: the AppKit canvas and its SwiftUI bridge, including mouse
-       and trackpad input
+     - `macOS/`: the AppKit canvas and its SwiftUI bridge, including mouse,
+       trackpad and keyboard input, the zoom commands and the zoom and
+       pointer reports. `macOS/Components/` holds the color grading wheel's
+       keyboard and focus ring
    - `ImageEditor` and `ImageEditorCanvas` edit an `ImageEditorDocument`
      through a binding
 
@@ -113,9 +125,14 @@ one word per concept in names and docs.
   `ImageEditorCanvas.editingTarget(_:)`, while the canvas shows the evaluated
   result (the viewing point).
 - **Chain-entry extent**: the extent proportional radii resolve against.
-- **PreviewSourceLoader** (package): per-image preview preparation owned by an
-  editor view (`PreviewSourceReader`). It holds no edit and no history. Apps
-  never create one.
+- **Preview source** (`PreviewSource`): the downsampled editing copy and
+  thumbnail of a source image that an editor shows, never stored in a
+  document. A `PreviewSourceLoader` prepares it once per open image and holds
+  no edit and no history. `PreviewSourceReader` keeps one loader for the
+  lifetime of its identity, so give it one per image (`.id(source)`); the
+  canvas (through its `previewSourceLoader:` parameter) and the components
+  share that loader, and the image is decoded once. All three are public:
+  hosts build editors from them.
 
 ### Editing Engine Vision
 
@@ -135,6 +152,14 @@ The project uses swift-state-graph for observable state. When modifying state-re
   binding once, never per gesture tick and never during a view update
 - A document compares by value; writes that leave the feature equal are
   dropped, so they add no history checkpoint
+- Controls never keep a value across time: they end their operations at the
+  mouse-up, the key-up (or when Command goes down, as AppKit then delivers
+  no key-up) or each VoiceOver step, and a deferred end (a drag that SwiftUI
+  cancels or that the control moving or disappearing cuts short, or a key
+  step that focus or the window left) carries no value: the host ends the
+  operation with the last value the control previewed, unless it ended it
+  already. `ColorGradingWheel` follows this rule (`onChange`, `onEnd`, and
+  `onDeferredEnd` for a deferred end)
 
 ## Development Guidelines
 
@@ -156,12 +181,16 @@ The project uses swift-state-graph for observable state. When modifying state-re
    member, `if`, or leaving a node out). An exact neutral bypass (returning
    the input image itself) belongs inside `apply(to:context:)`.
 5. To surface it in ImageEditor, add an optional member to
-   `ImageEditorFeature.Effects` (its `body` order is the evaluation order) and
-   an `ImageEditor.Adjustment` case. An effect the output frame decides (one
-   that reads its input extent, like the vignette) is instead a top-level
-   optional member of `ImageEditorFeature` after `crop`, which the canvas
-   draws with its post-crop pass (`docs/vision-of-editing.md`, "Decided
-   Semantics"). A host's own effect gets no member: it goes in
+   `ImageEditorFeature.Effects` (its `body` order is the evaluation order),
+   and the same parameter, in that order, to the initializer that takes every
+   member; add an `ImageEditor.Adjustment` case to give it a control in iOS's
+   Adjust mode. A member evaluated before `whiteBalance` also joins
+   `GrayPoint.effectsBeforeWhiteBalance(_:)`, which a test checks against the
+   body. An effect the output frame decides (one that reads its input
+   extent, like the vignette) is instead a top-level optional member of
+   `ImageEditorFeature` after `crop`, which the canvas draws with its
+   post-crop pass (`docs/vision-of-editing.md`, "Decided Semantics"). A
+   host's own effect gets no member: it goes in
    `ImageEditorFeature.Effects.custom`, evaluated after the built-in
    members, which the editor never edits and Reset keeps.
 6. Test it against an explicit Core Image recipe in
@@ -187,8 +216,10 @@ The project uses swift-state-graph for observable state. When modifying state-re
   a lazy `CIImage` recipe and `render` produces pixels.
 - Code that only Brightroom's own modules or tests call is `package`, not
   `public` (`FeatureEvaluationContext.init`, `ExportRenderer.Device`,
-  `BrightroomMetalLibrary`, `PreviewSourceLoader`). Public API is what a
-  host needs.
+  `BrightroomMetalLibrary`, `CropGeometry`). Public API is what a host
+  needs. Hosts build their own UI from Brightroom, so when a host's use of
+  a type is clear, make the type public rather than wrap it, as
+  `PreviewSourceLoader` and the components are.
 - Do not give new types module or history prefixes (`Parametric`,
   `PhotosCrop`, `PixelEditor`) or leading underscores.
 - "Display" is reserved for the viewport; image-space conversions say what
@@ -234,8 +265,20 @@ The project uses swift-state-graph for observable state. When modifying state-re
 - Parametric tests are in `Tests/BrightroomParametricTests/`
 - Document tests (`EditingDocument`, its history, `SourceImage`, and the
   ImageEditor document flows) are in `Tests/BrightroomEngineDocumentTests/`
-- Canvas tests (`CanvasNavigation`, the canvas's shared render path, and on
-  macOS the AppKit canvas) are in `Tests/BrightroomCanvasTests/`
+- `Tests/BrightroomEngineDocumentTests/` also holds the effects' order and
+  initializers (`ImageEditorEffectsTests`), the iOS editor's adjustment
+  mapping (`ImageEditorAdjustmentMappingTests`), and the component tests:
+  `OutputAnalysisTests`, `GrayPointTests` (which checks
+  `GrayPoint.effectsBeforeWhiteBalance(_:)` against the body),
+  `FilterSwatchTests`, `ColorGradingWheelTests` (macOS only: the pointer,
+  the keys and the deferred ends), and `EditorComponentsPublicAPITests`,
+  which prepares one preview source with a `PreviewSourceLoader` and runs
+  the components over it as a host does
+- Canvas tests (`CanvasNavigation`, the zoom report (`CanvasZoomTests`), the
+  canvas's shared render path, and on macOS the AppKit canvas, its hosting
+  and its reports) are in `Tests/BrightroomCanvasTests/`.
+  `CanvasPublicAPITests` drives the reader's zoom commands, the zoom and
+  pointer reports and point sampling as a host does
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 - Test files marked "Public API only" play a host app: evaluate through
@@ -322,19 +365,120 @@ func makeEditorScreen(fileURL: URL) throws -> EditorScreen {
 }
 ```
 
+### Building an editor on macOS
+BrightroomUI has no built-in editor on macOS. A host builds one from the
+canvas, the preview source and the components:
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import SwiftUI
+
+struct EditorView: View {
+  // 1. The host owns the document, and writes and commits its changes
+  @Binding var document: ImageEditorDocument
+  @State private var zoom: ImageEditorCanvas.Zoom?
+
+  var body: some View {
+    // 2. One loader per image: the canvas and the other views share its decode
+    PreviewSourceReader(source: document.source) { loader in
+      // 3. The proxy sends zoom commands to the canvas inside the reader
+      ImageEditorCanvasReader { canvas in
+        VStack {
+          ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+            .editingTarget(nil)
+            .onZoomChange { zoom = $0 }
+          HStack {
+            Button("Zoom to Fit") { canvas.zoomToFit() }
+              .disabled(zoom?.isFitted ?? true)
+            Button("Zoom In") { canvas.zoomIn() }
+              .disabled(zoom?.isAtMaximum ?? true)
+          }
+          // 4. The components take the loaded preview source
+          if let previewSource = loader.previewSource {
+            HistogramView(feature: document.feature, previewSource: previewSource)
+          }
+        }
+      }
+    }
+    .id(document.source)
+  }
+}
+
+struct HistogramView: View {
+  var feature: ImageEditorFeature
+  var previewSource: PreviewSource
+  @State private var analysis: OutputAnalysis?
+
+  var body: some View {
+    // Draw `analysis?.histogram.levels()`, for example with Swift Charts
+    Color.clear
+      .task(id: feature) {
+        analysis = await OutputAnalysis.analyze(feature, over: previewSource)
+      }
+  }
+}
+```
+
+- `.id(document.source)` gives the reader one identity, and so one
+  `PreviewSourceLoader`, per image. The canvas starts the loader; a view
+  shown without a canvas starts it with `.task { await loader.load() }`.
+  `loader.previewSource` is nil until it is loaded; `loader.phase` also
+  tells loading from failure
+- The components take a feature and the `PreviewSource` it is authored
+  over: `OutputAnalysis.analyze(_:over:)` (a histogram, and the color at the
+  point `onPointerChange(_:)` reports), `GrayPoint.solve(at:in:over:)` (the
+  white balance that makes the area around a point `pointSampling(_:)`
+  reports neutral), `FilterSwatch.render(_:over:pointSize:scale:)` (a
+  preset over the thumbnail) and `ColorGradingWheel` (pass
+  `interaction: .pointer` on the Mac, for the pointer and the arrow keys,
+  and localized `rangeName`, `hueLabel` and `saturationLabel`). The first
+  three run off the main actor: before applying a result, check that the
+  document's `source` is still `previewSource.source`
+- The macOS canvas is a viewer: `.editingTarget(nil)` asks for one and
+  keeps meaning a viewer when crop editing comes to macOS. It reports its
+  zoom (`onZoomChange(_:)`, an `ImageEditorCanvas.Zoom`) and the crop-output
+  pixel under the pointer (`onPointerChange(_:)`). `fitMargin(_:)` keeps a
+  margin around the output at the fit, and `canvasAccessibilityLabel(_:)`
+  names it for VoiceOver, which reads its zoom as its value
+- The proxy's zoom commands are `zoomIn()`, `zoomOut()`, `zoomToFit()` and
+  `zoom(toFraction:)`. A zoom that happens at once, such as
+  `zoom(toFraction:)`, is reported before the command returns; an animated
+  zoom is reported from the frames of its motion. The crop commands stay
+  iOS only for now
+- `displayedFeature(_:)` shows a feature the host has not written, such as
+  a slider in progress or the original to compare with. It changes only how
+  the members the editing target does not edit are drawn, never the
+  document: while the target is `.crop`, the canvas draws the document's
+  crop, and while it is `.localBlur`, the document's blur
+- The macOS canvas and the components write nothing, and nothing in
+  BrightroomUI registers with an `UndoManager`: the host writes each
+  completed operation to the binding once (see "State Management"), and
+  registers each write with the window's `UndoManager` in the binding's
+  setter, or keeps the document in a `FileDocument`
+
 ### Adding Custom UI Component
-1. Create component in `Sources/BrightroomUI/`
-2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`);
-   prepare the image for display through `PreviewSourceReader`, keyed by the
-   document's `SourceImage`, and start it with `.task { await loader.load() }`
+1. Create the component in `Sources/BrightroomUI/`: a component both
+   platforms use goes in `Shared/Components/`, and its UIKit or AppKit parts
+   in `iOS/Components/` or `macOS/Components/`
+2. Accept a `Binding<ImageEditorDocument>` (or another `EditingDocument`)
+   when it edits. Take the image's pixels from the host's
+   `PreviewSourceReader` rather than preparing them again: a view takes its
+   `PreviewSourceLoader`, and a computation takes the loaded
+   `PreviewSource` and documents that the feature it takes is authored over
+   `previewSource.source`. Only a view shown on its own creates the reader,
+   keyed by the document's `SourceImage` (`.id(source)`), and starts it with
+   `.task { await loader.load() }`
 3. Write each completed change to the binding's latest document once; leave
    `commit()` to the editor that owns the undo granularity
-4. Do not store edits in `PreviewSourceLoader`; it only prepares the preview
+4. Do not store edits in `PreviewSourceLoader`; it only prepares the
+   preview source
 
 ## Platform Requirements
 - iOS 17.0+ and macOS 14.0+ (BrightroomParametric, BrightroomEngine,
   BrightroomUI; `SourceImage(image:)` takes a `UIImage` and exists only where
-  UIKit does; on macOS, BrightroomUI has the canvas as a viewer and no
-  built-in editor)
+  UIKit does; on macOS, BrightroomUI has the canvas as a viewer, the preview
+  source and the components, and no built-in editor)
 - Swift 6.3+ (Swift 6 language mode)
 - Supports iPhone, iPad, and Mac

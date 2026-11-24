@@ -80,10 +80,14 @@ import BrightroomParametric
 
  Render the document with `EditingDocument.render(options:)`.
 
- You might use `ImageEditorCanvas` to create a fully customized user interface.
+ For a fully customized user interface, use `ImageEditorCanvas`, which edits
+ the same document. `PreviewSourceReader` shares one decode of the image
+ between the canvas and your other views, such as `FilterSwatch` previews,
+ a `ColorGradingWheel`, or a histogram from `OutputAnalysis`.
 
  The editor is iOS only: its initializer is unavailable on macOS, where
- `ImageEditorCanvas` shows a document's output.
+ `ImageEditorCanvas` shows a document's output with zoom and pan, and a host
+ builds its own editor from the same pieces.
  */
 public struct ImageEditor: View {
 

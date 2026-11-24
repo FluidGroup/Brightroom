@@ -50,11 +50,11 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// crop does not change them. The vignette, which the output frame decides,
   /// is `ImageEditorFeature.vignette`, evaluated after the crop.
   ///
-  /// The editor edits `preset` through its filter presets and the members
-  /// Adjust mode's parameters show. `sharpen`, `unsharpMask`, `fade`,
-  /// `blacks`, `clarity` and `texture` have no control yet (Reset clears
-  /// them). `custom` holds effects the host adds, evaluated last; the editor
-  /// never reads or writes them, and Reset keeps them.
+  /// `ImageEditor` edits `preset` through its Filters strip and the other
+  /// members its Adjust mode lists. It has no control for `blacks`,
+  /// `clarity`, `texture`, `sharpen`, `unsharpMask` or `fade` yet, and its
+  /// Reset clears them. `custom` holds effects the host adds, evaluated
+  /// last; the editor never reads or writes them, and Reset keeps them.
   public struct Effects: ImageEffect, Equatable {
 
     public var preset: FilterFeature?
