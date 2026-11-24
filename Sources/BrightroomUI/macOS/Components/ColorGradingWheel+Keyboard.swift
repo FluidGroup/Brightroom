@@ -14,18 +14,18 @@ extension ColorGradingWheel {
   /// Each press, held or not, previews its steps with `onChange` and ends one
   /// operation with `onEnd` at its key-up, or when Command goes down before
   /// it. A step that focus or the window leaves, or that the window resigning
-  /// key cuts short, ends through `onEndLater` instead. It is AppKit for
+  /// key cuts short, ends through `onDeferredEnd` instead. It is AppKit for
   /// those ends: AppKit reports Command going down and the window resigning
   /// key, which SwiftUI's key presses do not.
   struct Keyboard: NSViewRepresentable {
 
     let correction: ColorGradingFeature.Correction
-    let onChange: (ColorGradingFeature.Correction) -> Void
-    let onEnd: (ColorGradingFeature.Correction) -> Void
+    let onChange: @MainActor (ColorGradingFeature.Correction) -> Void
+    let onEnd: @MainActor (ColorGradingFeature.Correction) -> Void
     /// Ends a key step that focus or the window left on the next main-actor
     /// turn, so that nothing is written inside a view update. It carries no
     /// value.
-    let onEndLater: () -> Void
+    let onDeferredEnd: @MainActor () -> Void
 
     func makeNSView(context: Context) -> Responder {
       let responder = Responder()
@@ -40,7 +40,7 @@ extension ColorGradingWheel {
       responder.isEnabled = context.environment.isEnabled
       responder.onChange = onChange
       responder.onEnd = onEnd
-      responder.onEndLater = onEndLater
+      responder.onDeferredEnd = onDeferredEnd
     }
 
     /// The view that takes focus and the arrow keys. It takes no clicks,
@@ -56,9 +56,9 @@ extension ColorGradingWheel {
 
       var isEnabled = true
 
-      var onChange: ((ColorGradingFeature.Correction) -> Void)?
-      var onEnd: ((ColorGradingFeature.Correction) -> Void)?
-      var onEndLater: (() -> Void)?
+      var onChange: (@MainActor (ColorGradingFeature.Correction) -> Void)?
+      var onEnd: (@MainActor (ColorGradingFeature.Correction) -> Void)?
+      var onDeferredEnd: (@MainActor () -> Void)?
 
       /// The correction of the key step that waits for its key-up; nil while
       /// none does.
@@ -153,7 +153,7 @@ extension ColorGradingWheel {
       override func resignFirstResponder() -> Bool {
         let resigns = super.resignFirstResponder()
         if resigns {
-          endKeyStepLater()
+          endKeyStepDeferred()
         }
         return resigns
       }
@@ -163,7 +163,7 @@ extension ColorGradingWheel {
       override func viewWillMove(toWindow newWindow: NSWindow?) {
         super.viewWillMove(toWindow: newWindow)
         if newWindow !== window {
-          endKeyStepLater()
+          endKeyStepDeferred()
         }
       }
 
@@ -178,18 +178,18 @@ extension ColorGradingWheel {
         onEnd?(steppedCorrection)
       }
 
-      /// Ends the key step in progress through `onEndLater` on the next turn;
-      /// does nothing when none is. Focus can leave, and SwiftUI can remove
-      /// the wheel, inside a view update, where nothing may be written.
-      private func endKeyStepLater() {
+      /// Ends the key step in progress through `onDeferredEnd` on the next
+      /// turn; does nothing when none is. Focus can leave, and SwiftUI can
+      /// remove the wheel, inside a view update, where nothing may be written.
+      private func endKeyStepDeferred() {
         guard steppedCorrection != nil else {
           return
         }
 
         steppedCorrection = nil
-        let onEndLater = onEndLater
+        let onDeferredEnd = onDeferredEnd
         Task { @MainActor in
-          onEndLater?()
+          onDeferredEnd?()
         }
       }
 
@@ -210,7 +210,7 @@ extension ColorGradingWheel {
           queue: .main
         ) { [weak self] _ in
           MainActor.assumeIsolated {
-            self?.endKeyStepLater()
+            self?.endKeyStepDeferred()
           }
         }
       }

@@ -31,7 +31,7 @@ struct ColorGradingWheelTests {
     var isMoved = false
     private(set) var changes: [Correction] = []
     private(set) var ends: [Correction] = []
-    private(set) var laterEnds = 0
+    private(set) var deferredEnds = 0
 
     init(_ correction: Correction) {
       self.correction = correction
@@ -47,8 +47,8 @@ struct ColorGradingWheelTests {
       self.correction = correction
     }
 
-    func endLater() {
-      laterEnds += 1
+    func endDeferred() {
+      deferredEnds += 1
     }
   }
 
@@ -65,7 +65,7 @@ struct ColorGradingWheelTests {
             interaction: interaction,
             onChange: { recorder.change($0) },
             onEnd: { recorder.end($0) },
-            onEndLater: { recorder.endLater() }
+            onDeferredEnd: { recorder.endDeferred() }
           )
           .frame(width: 100, height: 100)
           .disabled(recorder.isEnabled == false)
@@ -253,7 +253,7 @@ struct ColorGradingWheelTests {
     #expect(Self.isClose(mounted.recorder.changes.last, moved))
     #expect(mounted.recorder.ends.count == 1)
     #expect(Self.isClose(mounted.recorder.ends.first, moved))
-    #expect(mounted.recorder.laterEnds == 0)
+    #expect(mounted.recorder.deferredEnds == 0)
   }
 
   @Test func `A press farther than 8 points from the puck puts the puck under it`() async throws {
@@ -317,7 +317,7 @@ struct ColorGradingWheelTests {
     #expect(mounted.recorder.ends == [Correction()], "The reset clears the luminance too.")
   }
 
-  @Test func `A drag that SwiftUI cancels ends once, through onEndLater`() async throws {
+  @Test func `A drag that SwiftUI cancels ends once, through onDeferredEnd`() async throws {
     let mounted = Mounted(Self.tint)
     defer { mounted.close() }
     try await mounted.settle()
@@ -329,15 +329,15 @@ struct ColorGradingWheelTests {
     // Disabling the wheel cancels its drag without `onEnded`.
     mounted.recorder.isEnabled = false
     try await mounted.settle()
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
 
     try mounted.release(at: CGPoint(x: 80, y: 50))
     try await mounted.settle()
     #expect(mounted.recorder.ends.isEmpty)
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
   }
 
-  @Test func `A drag that the wheel leaving cuts short ends once, through onEndLater`() async throws {
+  @Test func `A drag that the wheel leaving cuts short ends once, through onDeferredEnd`() async throws {
     let mounted = Mounted(Self.tint)
     defer { mounted.close() }
     try await mounted.settle()
@@ -348,15 +348,15 @@ struct ColorGradingWheelTests {
 
     mounted.recorder.isShown = false
     try await mounted.settle()
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
 
     try mounted.release(at: CGPoint(x: 80, y: 50))
     try await mounted.settle()
     #expect(mounted.recorder.ends.isEmpty)
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
   }
 
-  @Test func `A drag whose wheel moves ends once through onEndLater, and the rest of its gesture reports nothing`() async throws {
+  @Test func `A drag whose wheel moves ends once through onDeferredEnd, and the rest of its gesture reports nothing`() async throws {
     let mounted = Mounted(Self.tint)
     defer { mounted.close() }
     try await mounted.settle()
@@ -368,7 +368,7 @@ struct ColorGradingWheelTests {
 
     mounted.recorder.isMoved = true
     try await mounted.settle()
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
 
     // The pointer goes on, then comes up.
     try mounted.drag(to: CGPoint(x: 90, y: 50))
@@ -376,7 +376,7 @@ struct ColorGradingWheelTests {
     try await mounted.settle()
     #expect(mounted.recorder.changes == changes)
     #expect(mounted.recorder.ends.isEmpty)
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
 
     // Back in place, the next drag is one of its own.
     mounted.recorder.isMoved = false
@@ -385,7 +385,7 @@ struct ColorGradingWheelTests {
     try mounted.release(at: CGPoint(x: 50, y: 20))
     try await mounted.settle()
     #expect(mounted.recorder.ends.count == 1)
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
   }
 
   @Test func `A press on the puck that the wheel leaving cuts short ends nothing`() async throws {
@@ -398,7 +398,7 @@ struct ColorGradingWheelTests {
     mounted.recorder.isShown = false
     try await mounted.settle()
     #expect(mounted.recorder.changes.isEmpty)
-    #expect(mounted.recorder.laterEnds == 0)
+    #expect(mounted.recorder.deferredEnds == 0)
   }
 
   // MARK: - Keyboard
@@ -444,7 +444,7 @@ struct ColorGradingWheelTests {
       // The next press steps from what the wheel then shows.
       try await mounted.settle()
     }
-    #expect(mounted.recorder.laterEnds == 0)
+    #expect(mounted.recorder.deferredEnds == 0)
   }
 
   @Test func `A held arrow previews each repeat, and its key-up ends once`() async throws {
@@ -495,7 +495,7 @@ struct ColorGradingWheelTests {
     #expect(mounted.recorder.changes.count == 1)
   }
 
-  @Test func `Losing focus, the window resigning key or the wheel leaving ends a key step through onEndLater`() async throws {
+  @Test func `Losing focus, the window resigning key or the wheel leaving ends a key step through onDeferredEnd`() async throws {
     let mounted = Mounted(Correction(hue: 30, saturation: 40))
     defer { mounted.close() }
     try await mounted.settle()
@@ -505,18 +505,18 @@ struct ColorGradingWheelTests {
     responder.step(.right, modifiers: [])
     #expect(mounted.window.makeFirstResponder(nil))
     try await mounted.settle()
-    #expect(mounted.recorder.laterEnds == 1)
+    #expect(mounted.recorder.deferredEnds == 1)
 
     responder.step(.right, modifiers: [])
     NotificationCenter.default.post(name: NSWindow.didResignKeyNotification, object: mounted.window)
     try await mounted.settle()
-    #expect(mounted.recorder.laterEnds == 2)
+    #expect(mounted.recorder.deferredEnds == 2)
 
     responder.step(.right, modifiers: [])
     mounted.recorder.isShown = false
     try await mounted.settle()
     #expect(responder.window == nil)
-    #expect(mounted.recorder.laterEnds == 3)
+    #expect(mounted.recorder.deferredEnds == 3)
     #expect(mounted.recorder.ends.isEmpty)
   }
 

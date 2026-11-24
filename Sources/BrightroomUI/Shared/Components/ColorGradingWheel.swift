@@ -25,25 +25,31 @@ import SwiftUI
 /// A hue and saturation wheel for one tonal range of color grading: the angle
 /// is the hue, and the distance from the center is the saturation.
 ///
-/// A drag reports each value with `onChange` and the last one with `onEnd`.
-/// A drag that SwiftUI cancels, or that the wheel leaving the screen cuts
-/// short, ends through `onEndLater` instead. VoiceOver reads the wheel as two
-/// sliders, hue and saturation, in steps of 5; each step is reported with
-/// `onChange` and then `onEnd`, so it is a completed change of its own.
-struct ColorGradingWheel: View {
+/// The wheel shows the correction it is given, so show each value it reports.
+/// A drag is one operation: it reports each value with `onChange` and the
+/// last one with `onEnd`, and a drag that ends without its release ends
+/// through `onDeferredEnd` instead. VoiceOver reads the wheel as a group named
+/// by `rangeName` holding two sliders, hue and saturation, in steps of 5; each
+/// step is reported with `onChange` and then `onEnd`, so it is a completed
+/// operation of its own.
+public struct ColorGradingWheel: View {
 
-  /// How a press moves the puck, and what else the wheel takes.
-  enum Interaction {
+  /// How a press moves the puck, and what else the wheel takes. macOS hosts
+  /// pass `.pointer`.
+  public enum Interaction: Sendable {
     /// A press puts the puck under it, wherever it lands: a finger hides the
     /// puck.
     case touch
-    /// A press within `grabRadius` of the puck's center drags the puck from
+    /// A press within 8 points of the puck's center drags the puck from
     /// where it is, and a press elsewhere puts the puck under it. A click
     /// that moves nothing reports nothing, and a double-click resets the
-    /// correction with one `onEnd`. A drag whose wheel moves under it, as
-    /// when an inspector hides, ends through `onEndLater`, and the rest of
-    /// its gesture reports nothing. On the Mac the wheel also takes focus as
-    /// a control does, and the arrow keys step it (`Keyboard`).
+    /// whole correction, its luminance too, with one `onEnd`. A drag whose
+    /// wheel moves under it, as when an inspector hides, ends through
+    /// `onDeferredEnd`, and the rest of its gesture reports nothing. On the
+    /// Mac the wheel also takes focus as a control does, through Full
+    /// Keyboard Access: the Left and Right arrows turn the hue by 1 degree
+    /// and Up and Down move the saturation by 1, ten times as far with Shift,
+    /// and each press is one operation, which ends at its key-up.
     case pointer
   }
 
@@ -53,10 +59,12 @@ struct ColorGradingWheel: View {
 
   private let correction: ColorGradingFeature.Correction
   private let rangeName: String
+  private let hueLabel: String
+  private let saturationLabel: String
   private let interaction: Interaction
-  private let onChange: (ColorGradingFeature.Correction) -> Void
-  private let onEnd: (ColorGradingFeature.Correction) -> Void
-  private let onEndLater: () -> Void
+  private let onChange: @MainActor (ColorGradingFeature.Correction) -> Void
+  private let onEnd: @MainActor (ColorGradingFeature.Correction) -> Void
+  private let onDeferredEnd: @MainActor () -> Void
 
   /// Whether a drag is in progress. SwiftUI resets it when a drag ends, and
   /// when it cancels one, which it does without `onEnded`.
@@ -66,27 +74,46 @@ struct ColorGradingWheel: View {
   /// observed.
   @State private var drag = Drag()
 
-  /// `rangeName` begins the VoiceOver labels of the sliders ("Shadows Hue").
-  /// `onEndLater` ends a drag that ended without its end on the next
-  /// main-actor turn, so that nothing is written inside a view update; it
-  /// carries no value.
-  init(
+  /// Creates a wheel that shows `correction`.
+  ///
+  /// - Parameters:
+  ///   - rangeName: The tonal range's name, which VoiceOver reads as the
+  ///     wheel's label, apart from the sliders' labels.
+  ///   - hueLabel: The hue slider's VoiceOver label, read as it is given.
+  ///   - saturationLabel: The saturation slider's VoiceOver label, read as it
+  ///     is given.
+  ///   - interaction: How a press moves the puck; macOS hosts pass
+  ///     `.pointer`.
+  ///   - onChange: Previews a value of the operation in progress.
+  ///   - onEnd: Ends an operation with its last value.
+  ///   - onDeferredEnd: Ends the operation in progress without a value: the
+  ///     host ends it with the last value `onChange` previewed. The wheel
+  ///     calls it on the next main-actor turn, so that nothing is written
+  ///     inside a view update, for a drag that SwiftUI cancels, that the
+  ///     wheel leaving the screen cuts short, or whose wheel moves under it
+  ///     (`.pointer`), and on the Mac for a key step that focus or the window
+  ///     leaves. An operation that previewed nothing ends nothing.
+  public init(
     correction: ColorGradingFeature.Correction,
     rangeName: String,
+    hueLabel: String = "Hue",
+    saturationLabel: String = "Saturation",
     interaction: Interaction = .touch,
-    onChange: @escaping (ColorGradingFeature.Correction) -> Void,
-    onEnd: @escaping (ColorGradingFeature.Correction) -> Void,
-    onEndLater: @escaping () -> Void = {}
+    onChange: @escaping @MainActor (ColorGradingFeature.Correction) -> Void,
+    onEnd: @escaping @MainActor (ColorGradingFeature.Correction) -> Void,
+    onDeferredEnd: @escaping @MainActor () -> Void = {}
   ) {
     self.correction = correction
     self.rangeName = rangeName
+    self.hueLabel = hueLabel
+    self.saturationLabel = saturationLabel
     self.interaction = interaction
     self.onChange = onChange
     self.onEnd = onEnd
-    self.onEndLater = onEndLater
+    self.onDeferredEnd = onDeferredEnd
   }
 
-  var body: some View {
+  public var body: some View {
     GeometryReader { geometry in
       let radius = min(geometry.size.width, geometry.size.height) / 2
       let puckOffset = puckOffset(radius: radius)
@@ -138,16 +165,20 @@ struct ColorGradingWheel: View {
     #if os(macOS)
     .overlay {
       if interaction == .pointer {
-        Keyboard(correction: correction, onChange: onChange, onEnd: onEnd, onEndLater: onEndLater)
+        Keyboard(correction: correction, onChange: onChange, onEnd: onEnd, onDeferredEnd: onDeferredEnd)
           .allowsHitTesting(false)
       }
     }
     #endif
     .accessibilityRepresentation {
+      // The range name and the axis labels stay separate parts: joining them
+      // into one label would put words of one language in one order.
       VStack {
-        slider("Hue", axis: \.hue, range: 0...360)
-        slider("Saturation", axis: \.saturation, range: 0...100)
+        slider(hueLabel, axis: \.hue, range: 0...360)
+        slider(saturationLabel, axis: \.saturation, range: 0...100)
       }
+      .accessibilityElement(children: .contain)
+      .accessibilityLabel(rangeName)
     }
   }
 
@@ -196,7 +227,7 @@ struct ColorGradingWheel: View {
     let phase = drag.phase
     drag.phase = .idle
     if case .moving(_, true) = phase {
-      endLater()
+      endDeferred()
     }
   }
 
@@ -210,17 +241,17 @@ struct ColorGradingWheel: View {
 
     drag.phase = .ended
     if hasChanged {
-      endLater()
+      endDeferred()
     }
   }
 
-  /// Calls `onEndLater` on the next turn: SwiftUI cancels a drag, removes
+  /// Calls `onDeferredEnd` on the next turn: SwiftUI cancels a drag, removes
   /// the wheel and reports its geometry inside a view update, where nothing
   /// may be written.
-  private func endLater() {
-    let onEndLater = onEndLater
+  private func endDeferred() {
+    let onDeferredEnd = onDeferredEnd
     Task { @MainActor in
-      onEndLater()
+      onDeferredEnd()
     }
   }
 
@@ -256,12 +287,11 @@ struct ColorGradingWheel: View {
   }
 
   private func slider(
-    _ axisName: String,
+    _ label: String,
     axis: WritableKeyPath<ColorGradingFeature.Correction, Double>,
     range: ClosedRange<Double>
   ) -> some View {
     let value = correction[keyPath: axis]
-    let label = "\(rangeName) \(axisName)"
     return Slider(
       value: Binding(
         get: { value },

@@ -1,6 +1,7 @@
 import CoreGraphics
 import CoreImage
 import Metal
+import SwiftUI
 import Testing
 
 // Public API only: this file plays the role of a host app that builds its own
@@ -13,7 +14,8 @@ import BrightroomParametric
 import BrightroomUI
 
 /// The editor components over one preview source: a histogram and the colour
-/// under the pointer, a gray point and filter swatches.
+/// under the pointer, a gray point, filter swatches and, on iOS, what VoiceOver
+/// reads of a grading wheel.
 @MainActor
 @Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct EditorComponentsPublicAPITests {
@@ -137,6 +139,49 @@ struct EditorComponentsPublicAPITests {
     #expect(filtered.width == 40)
     #expect(try Self.centre(of: filtered).green > Self.centre(of: original).green)
   }
+
+  // MARK: - Grading wheel
+
+  #if os(iOS)
+  // SwiftUI vends the wheel's elements to a test on iOS; on macOS it vends
+  // none in-process.
+  @Test func `VoiceOver reads a grading wheel's range name and the host's axis labels as given, and a step is an operation`() async throws {
+    @MainActor
+    final class Calls {
+      var changes: [ColorGradingFeature.Correction] = []
+      var ends: [ColorGradingFeature.Correction] = []
+    }
+    let calls = Calls()
+    let mounted = mountEditor(
+      ColorGradingWheel(
+        correction: .init(hue: 30, saturation: 40),
+        rangeName: "Schatten",
+        hueLabel: "Farbton",
+        saturationLabel: "Sättigung",
+        onChange: { calls.changes.append($0) },
+        onEnd: { calls.ends.append($0) }
+      )
+      .frame(width: 100, height: 100)
+    )
+    defer { mounted.window.isHidden = true }
+
+    try await mounted.wait(until: { mounted.element("Farbton") != nil }, "VoiceOver finds no hue slider.")
+    let hue = try #require(mounted.element("Farbton"))
+    let saturation = try #require(mounted.element("Sättigung"))
+    #expect(mounted.element("Schatten") != nil, "The wheel is not named by its range.")
+    #expect(hue.accessibilityTraits.contains(.adjustable))
+    #expect(saturation.accessibilityTraits.contains(.adjustable))
+    #expect(hue.accessibilityValue == "30")
+    #expect(saturation.accessibilityValue == "40")
+    // No label joins the range name with an axis label.
+    let labels = mounted.elements.compactMap(\.accessibilityLabel)
+    #expect(labels.filter { $0.contains("Schatten") }.allSatisfy { $0 == "Schatten" }, "\(labels)")
+
+    hue.accessibilityIncrement()
+    #expect(calls.changes == [.init(hue: 35, saturation: 40)])
+    #expect(calls.ends == [.init(hue: 35, saturation: 40)])
+  }
+  #endif
 
   // MARK: - Fixtures
 
