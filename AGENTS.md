@@ -318,8 +318,11 @@ xcodebuild -scheme Brightroom-Package test -destination 'platform=macOS' \
 ### Demo App
 - **SwiftUI Demo**: `Dev/Sources/SwiftUIDemo/` - SwiftUI examples and UIKit-based checks wrapped with representables
 - **ParametricMacDemo**: `Dev/ParametricMacDemo/` - the parametric engine on
-  macOS, and `ImageEditorCanvas` as a viewer (`-startScreen canvas` opens that
-  screen at launch)
+  macOS, and a canvas screen built from the public API as a host builds an
+  editor: `ImageEditorCanvas` as a viewer over a `PreviewSourceReader`'s
+  loader, zoomed from the window's toolbar through `ImageEditorCanvasReader`,
+  with a histogram and the color under the pointer from `OutputAnalysis`
+  (`-startScreen canvas` opens that screen at launch)
 
 ## Common Tasks
 

@@ -218,7 +218,7 @@ open Dev/Brightroom.xcodeproj
 ```
 
 - **SwiftUIDemo** — the built-in image editor, custom canvas interfaces, image rendering, parametric features, and video processing on iOS.
-- **ParametricMacDemo** — the standalone parametric engine, and the editing canvas as a viewer, on macOS.
+- **ParametricMacDemo** — the standalone parametric engine, and the editing canvas as a viewer with zoom controls, a histogram, and the color under the pointer, on macOS.
 
 Select a scheme and a matching run destination in Xcode. To build the iOS demo from the command line:
 
