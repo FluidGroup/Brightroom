@@ -11,13 +11,13 @@ struct CanvasZoomTests {
   /// From the fit of 0.25 to the maximum of 2 is three doublings.
   private static func zoom(
     scale: CGFloat,
-    backingScaleFactor: CGFloat = 2
+    displayScale: CGFloat = 2
   ) -> ImageEditorCanvas.Zoom {
     ImageEditorCanvas.Zoom(
       scale: scale,
       fitScale: 0.25,
       maximumScale: 2,
-      backingScaleFactor: backingScaleFactor
+      displayScale: displayScale
     )
   }
 
@@ -57,7 +57,7 @@ struct CanvasZoomTests {
       scale: 0,
       fitScale: 0,
       maximumScale: 0,
-      backingScaleFactor: 2
+      displayScale: 2
     )
     #expect(empty.fraction == 0)
     #expect(ImageEditorCanvas.Zoom.scale(atFraction: 0.5, fitScale: 0, maximumScale: 0) == 0)
@@ -66,7 +66,7 @@ struct CanvasZoomTests {
       scale: 1,
       fitScale: 1,
       maximumScale: 1,
-      backingScaleFactor: 2
+      displayScale: 2
     )
     #expect(flat.fraction == 0)
     #expect(ImageEditorCanvas.Zoom.scale(atFraction: 0.5, fitScale: 1, maximumScale: 1) == 1)
@@ -77,11 +77,11 @@ struct CanvasZoomTests {
     // A canvas point per output pixel shows each on two device pixels of a
     // Retina display.
     #expect(Self.zoom(scale: 1).percent == 200)
-    #expect(Self.zoom(scale: 1, backingScaleFactor: 1).percent == 100)
+    #expect(Self.zoom(scale: 1, displayScale: 1).percent == 100)
     #expect(Self.zoom(scale: 0.5).percent == 100)
     // Rounded to a whole percent.
-    #expect(Self.zoom(scale: 0.3725, backingScaleFactor: 1).percent == 37)
-    #expect(Self.zoom(scale: 0.3751, backingScaleFactor: 1).percent == 38)
+    #expect(Self.zoom(scale: 0.3725, displayScale: 1).percent == 37)
+    #expect(Self.zoom(scale: 0.3751, displayScale: 1).percent == 38)
   }
 
   @Test
@@ -92,7 +92,7 @@ struct CanvasZoomTests {
       scale: 3e17,
       fitScale: 3e17,
       maximumScale: 2.4e18,
-      backingScaleFactor: 2
+      displayScale: 2
     )
     #expect(zoom.percent == .max)
   }

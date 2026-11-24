@@ -843,7 +843,7 @@ struct AppKitCanvasViewTests {
     #expect(fitted.isFitted)
     #expect(Self.isClose(fitted.scale, 0.75))
     #expect(Self.isClose(fitted.maximumScale, 6))
-    #expect(fitted.backingScaleFactor == window.backingScaleFactor)
+    #expect(fitted.displayScale == window.backingScaleFactor)
 
     // Frames that change nothing report nothing.
     Self.tickUntilPaused(canvas)
@@ -924,6 +924,30 @@ struct AppKitCanvasViewTests {
     let unmargined = try #require(canvas.surface.displayedViewport).contentToCanvasTransform
     #expect(Self.isClose(unmargined.a, 0.75))
     #expect(Self.isClose(unmargined.tx, 0))
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A fit margin keeps a tall output that far from the top and the bottom, and farther from the sides`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.fitMargin = 12
+    // The left quarter of the image: a 100 x 200 output, taller than wide.
+    var feature = canvas.feature
+    feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 100, height: 200))
+    canvas.setFeature(feature)
+    canvas.drawViewportFrame()
+
+    // It fits the 276 points inside the margins at 1.38: 138 x 276 points,
+    // 12 from the top and the bottom, and 81 from the sides.
+    #expect(canvas.navigation.isFitted)
+    let viewport = try #require(canvas.surface.displayedViewport)
+    let outputSize = try #require(canvas.outputGeometry?.outputSize)
+    let output = CGRect(origin: .zero, size: outputSize).applying(viewport.contentToCanvasTransform)
+    #expect(Self.isClose(output.minY, 12))
+    #expect(Self.isClose(canvas.bounds.maxY - output.maxY, 12))
+    #expect(Self.isClose(output.minX, 81))
+    #expect(Self.isClose(canvas.bounds.maxX - output.maxX, 81))
     canvas.invalidate()
   }
 
@@ -1333,6 +1357,30 @@ struct AppKitCanvasViewTests {
   }
 
   @Test
+  func `With Full Keyboard Access, the zoomed canvas's focus ring mask stays 4 points inside it wherever it sits in its window`() throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    // Away from the corner of a superview that, unlike the canvas, is not
+    // flipped.
+    canvas.frame = CGRect(x: 40, y: 30, width: 300, height: 320)
+    canvas.layout()
+    canvas.areAnimationsEnabled = false
+    canvas.isFullKeyboardAccessEnabled = { true }
+    canvas.zoomIn()
+    #expect(canvas.canBecomeKeyView)
+
+    // AppKit draws the ring outside the mask, so a mask 4 points inside the
+    // canvas on every side keeps the ring inside the canvas and clear of the
+    // views around it. Window coordinates run up.
+    let frame = canvas.convert(canvas.bounds, to: nil)
+    #expect(frame == CGRect(x: 40, y: 30, width: 300, height: 320))
+    #expect(canvas.convert(canvas.focusRingMaskBounds, to: nil) == frame.insetBy(dx: 4, dy: 4))
+    #expect(window.contentLayoutRect.contains(frame))
+    canvas.invalidate()
+  }
+
+  @Test
   func `Without Full Keyboard Access, a click gives the zoomed canvas the keyboard and no focus ring`() throws {
     let (canvas, window) = Self.makeLaidOutCanvas()
     defer { window.close() }
@@ -1369,6 +1417,34 @@ struct AppKitCanvasViewTests {
     let zoomed = try #require(zooms.last)
     #expect(zoomed.percent == 2 * fitted.percent)
     #expect(canvas.accessibilityValue() as? String == zoomed.percent.formatted(.percent))
+    canvas.invalidate()
+  }
+
+  @Test(.enabled(if: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion == false))
+  func `VoiceOver reads the zoom an animated step settles at once its frames have drawn`() async throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    canvas.onZoomChange = { zooms.append($0) }
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    let fitted = try #require(zooms.last)
+    let fittedValue = fitted.percent.formatted(.percent)
+    #expect(canvas.accessibilityValue() as? String == fittedValue)
+
+    // The value is the zoom of the frame on screen, so it waits for the
+    // frames of the motion.
+    canvas.zoomIn()
+    #expect(canvas.accessibilityValue() as? String == fittedValue)
+    for _ in 0..<250 where canvas.navigation.isMoving {
+      canvas.drawViewportFrame()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(canvas.navigation.isMoving == false)
+    let settled = try #require(zooms.last)
+    #expect(settled.percent == 2 * fitted.percent)
+    #expect(canvas.accessibilityValue() as? String == settled.percent.formatted(.percent))
     canvas.invalidate()
   }
 

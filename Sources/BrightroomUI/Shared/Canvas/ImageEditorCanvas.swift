@@ -46,9 +46,16 @@ import BrightroomParametric
 /// VoiceOver reads its zoom, such as "36%", as its value. It writes nothing
 /// to the document. Pass `.editingTarget(nil)` to ask for a viewer: that is
 /// portable, and it keeps meaning a viewer when crop editing comes to macOS.
-/// The crop and brush modifiers, the overlay initializer and
-/// `ImageEditorCanvasReader` are unavailable on macOS. At the fit, where it
-/// has nothing to scroll, it passes scroll events on to the views around it.
+/// At the fit, where it has nothing to scroll, it passes scroll events on to
+/// the views around it.
+///
+/// Only on macOS, the canvas reports its zoom (`onZoomChange(_:)`) and the
+/// pixel under the pointer (`onPointerChange(_:)`), samples points
+/// (`pointSampling(_:)`), keeps a margin at the fit (`fitMargin(_:)`), takes
+/// a name for VoiceOver (`canvasAccessibilityLabel(_:)`), and takes zoom
+/// commands from an `ImageEditorCanvasReader`'s proxy. The crop and brush
+/// modifiers, the overlay initializer and the proxy's crop commands are
+/// unavailable on macOS.
 public struct ImageEditorCanvas: View {
 
   @Environment(\.adjustmentRendering) private var adjustmentRendering
@@ -509,15 +516,18 @@ public struct ImageEditorCanvas: View {
     return self
   }
 
-  #if os(macOS)
   /// Reports the zoom after input, a command, a motion, a resize or new
   /// content. A report made outside a SwiftUI update arrives at once (a
   /// command that zooms at once, such as a zoom to a fraction, reports before
   /// it returns; an animated zoom reports from the frames of its motion); one
   /// made while SwiftUI updates or lays out the canvas arrives on the next
   /// main-actor turn, the latest only. Equal zooms are not reported again.
-  consuming func onZoomChange(_ action: @escaping @MainActor (Zoom) -> Void) -> Self {
+  /// The latest `action` is used; it is re-bound on every update.
+  @available(iOS, unavailable, message: "The iOS canvas does not report its zoom yet.")
+  public consuming func onZoomChange(_ action: @escaping @MainActor (Zoom) -> Void) -> Self {
+    #if os(macOS)
     self.onZoomChange = action
+    #endif
     return self
   }
 
@@ -525,32 +535,47 @@ public struct ImageEditorCanvas: View {
   /// top-left origin, whole pixels), or nil off the image; also when zoom or
   /// pan moves the image under a resting pointer. Delivered like
   /// `onZoomChange(_:)`.
-  consuming func onPointerChange(_ action: @escaping @MainActor (CGPoint?) -> Void) -> Self {
+  @available(iOS, unavailable, message: "The iOS canvas does not report a pointer yet.")
+  public consuming func onPointerChange(_ action: @escaping @MainActor (CGPoint?) -> Void) -> Self {
+    #if os(macOS)
     self.onPointerChange = action
+    #endif
     return self
   }
 
   /// While non-nil, a click on the image calls `action` with the crop-output
   /// point under it (full resolution, top-left origin) instead of panning,
-  /// and the cursor over the canvas is a crosshair.
-  consuming func pointSampling(_ action: (@MainActor (CGPoint) -> Void)?) -> Self {
+  /// and the cursor over the canvas is a crosshair. A click off the image
+  /// samples nothing. The latest value is applied on every update.
+  @available(iOS, unavailable, message: "The iOS canvas does not sample points yet.")
+  public consuming func pointSampling(_ action: (@MainActor (CGPoint) -> Void)?) -> Self {
+    #if os(macOS)
     self.pointSampling = action
+    #endif
     return self
   }
 
   /// Leaves `margin` points clear around the output at the fit, on every
   /// side. Zoomed in, the output still reaches the canvas's edges. The
-  /// default is 0.
-  consuming func fitMargin(_ margin: CGFloat) -> Self {
+  /// default is 0; the value is applied on every update.
+  @available(iOS, unavailable, message: "The iOS canvas has no fit margin yet.")
+  public consuming func fitMargin(_ margin: CGFloat) -> Self {
+    #if os(macOS)
     self.fitMargin = margin
+    #endif
     return self
   }
 
   /// Names the canvas for VoiceOver, which reads its zoom as its value. The
-  /// canvas is unnamed by default.
-  consuming func canvasAccessibilityLabel(_ label: String) -> Self {
+  /// canvas is unnamed by default; the value is applied on every update.
+  ///
+  /// SwiftUI's `accessibilityLabel(_:)` does not reach the AppKit view that
+  /// VoiceOver reads for the canvas, so name the canvas with this instead.
+  @available(iOS, unavailable, message: "Only the macOS canvas takes a label of its own.")
+  public consuming func canvasAccessibilityLabel(_ label: String) -> Self {
+    #if os(macOS)
     self.canvasAccessibilityLabel = label
+    #endif
     return self
   }
-  #endif
 }

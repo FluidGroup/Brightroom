@@ -690,7 +690,7 @@ final class EditingCanvasView: NSView, ViewportDisplayLinkOwner {
     )
     // A canvas that shows nothing has no zoom to report.
     if viewport != nil {
-      reportZoom(backingScaleFactor: window.backingScaleFactor)
+      reportZoom(displayScale: window.backingScaleFactor)
     }
     reportPointer()
     if navigation.canScroll != cursorCanScroll {
@@ -704,12 +704,12 @@ final class EditingCanvasView: NSView, ViewportDisplayLinkOwner {
     return navigation.isMoving || canvasView.hasPendingDisplay
   }
 
-  private func reportZoom(backingScaleFactor: CGFloat) {
+  private func reportZoom(displayScale: CGFloat) {
     let zoom = ImageEditorCanvas.Zoom(
       scale: navigation.position.scale,
       fitScale: navigation.fitScale,
       maximumScale: navigation.scaleRange.upperBound,
-      backingScaleFactor: backingScaleFactor
+      displayScale: displayScale
     )
     guard zoom != lastReportedZoom else { return }
     lastReportedZoom = zoom

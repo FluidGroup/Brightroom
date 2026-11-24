@@ -12,9 +12,11 @@ import Testing
 /// `ImageEditorCanvas` on macOS, hosted the way an app hosts it: the AppKit
 /// canvas is mounted, builds its render images, and shows the output fitted
 /// after layout; it registers for commands in the environment's registry, and
-/// its reports reach the host outside SwiftUI updates. An editor's failure
-/// message replaces the canvas's own. Presented pixels are not checked here;
-/// the shared drawing path is (`CanvasOutputRenderTests`).
+/// an `ImageEditorCanvasReader`'s proxy sends it the zoom commands; its
+/// reports reach the host outside SwiftUI updates, and its name reaches the
+/// AppKit view VoiceOver reads. An editor's failure message replaces the
+/// canvas's own. Presented pixels are not checked here; the shared drawing
+/// path is (`CanvasOutputRenderTests`).
 @MainActor
 @Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct AppKitCanvasHostingTests {
@@ -74,6 +76,72 @@ struct AppKitCanvasHostingTests {
       ImageEditorCanvas(document: .constant(document))
         .editingTarget(nil)
         .onZoomChange { recorder.record($0) }
+    }
+  }
+
+  /// Receives the proxy of an `ImageEditorCanvasReader` from inside a view.
+  @MainActor
+  private final class ProxyBox {
+    var proxy: ImageEditorCanvasProxy?
+  }
+
+  /// A canvas inside a reader, which hands the test its proxy.
+  private struct ReaderHost: View {
+    let document: ImageEditorDocument
+    let box: ProxyBox
+    var loader: PreviewSourceLoader?
+    var areAnimationsEnabled = true
+    var recorder: ZoomRecorder?
+
+    var body: some View {
+      ImageEditorCanvasReader { canvas in
+        ImageEditorCanvas(
+          document: .constant(document),
+          previewSourceLoader: loader,
+          areAnimationsEnabled: areAnimationsEnabled
+        )
+        .editingTarget(nil)
+        .onZoomChange { recorder?.record($0) }
+        .onAppear { box.proxy = canvas }
+      }
+    }
+  }
+
+  /// Two canvases under one reader, the second shown or not.
+  private struct TwoCanvasHost: View {
+    let first: ImageEditorDocument
+    let second: ImageEditorDocument
+    let showsSecond: Bool
+    let box: ProxyBox
+
+    var body: some View {
+      ImageEditorCanvasReader { canvas in
+        VStack(spacing: 0) {
+          ImageEditorCanvas(document: .constant(first), areAnimationsEnabled: false)
+            .editingTarget(nil)
+          if showsSecond {
+            ImageEditorCanvas(document: .constant(second), areAnimationsEnabled: false)
+              .editingTarget(nil)
+          }
+        }
+        .onAppear { box.proxy = canvas }
+      }
+    }
+  }
+
+  /// A canvas named `label` for VoiceOver, or left unnamed. Either way it is
+  /// the same view, so a change of label updates the mounted canvas.
+  private struct LabelHost: View {
+    let document: ImageEditorDocument
+    let label: String?
+
+    var body: some View {
+      let canvas = ImageEditorCanvas(document: .constant(document))
+        .editingTarget(nil)
+      guard let label else {
+        return canvas
+      }
+      return canvas.canvasAccessibilityLabel(label)
     }
   }
 
@@ -210,13 +278,13 @@ struct AppKitCanvasHostingTests {
       scale: 1,
       fitScale: 1,
       maximumScale: 8,
-      backingScaleFactor: 2
+      displayScale: 2
     )
     let zoomed = ImageEditorCanvas.Zoom(
       scale: 2,
       fitScale: 1,
       maximumScale: 8,
-      backingScaleFactor: 2
+      displayScale: 2
     )
 
     // Only the latest of each waits, even when the latest is no pixel.
@@ -315,15 +383,185 @@ struct AppKitCanvasHostingTests {
     #expect(shown != own)
   }
 
-  // MARK: - Helpers
+  // MARK: - Reader and proxy
 
-  private static func makeDocument() throws -> ImageEditorDocument {
-    ImageEditorDocument(source: SourceImage(cgImage: try makeImage()))
+  @Test
+  func `A reader's proxy sends the zoom commands to the canvas inside it`() async throws {
+    let box = ProxyBox()
+    let (hostingView, window) = Self.host(
+      ReaderHost(document: try Self.makeDocument(), box: box, areAnimationsEnabled: false),
+      ordersFront: false
+    )
+    defer { Self.close(window) }
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let canvas = try #require(drawn)
+    let proxy = try #require(box.proxy)
+    let navigation = { canvas.navigation }
+    let fit = navigation().fitScale
+    let centre = navigation().position.center
+
+    // Without animation each command applies at once, about the centre.
+    proxy.zoomIn()
+    #expect(abs(navigation().position.scale - 2 * fit) < 1e-9)
+    proxy.zoomIn()
+    #expect(abs(navigation().position.scale - 4 * fit) < 1e-9)
+    proxy.zoomOut()
+    #expect(abs(navigation().position.scale - 2 * fit) < 1e-9)
+    #expect(abs(navigation().position.center.x - centre.x) < 1e-9)
+    #expect(abs(navigation().position.center.y - centre.y) < 1e-9)
+    proxy.zoomToFit()
+    #expect(navigation().isFitted)
+    proxy.zoom(toFraction: 1)
+    #expect(abs(navigation().position.scale - navigation().scaleRange.upperBound) < 1e-9)
+    proxy.zoom(toFraction: 0)
+    #expect(navigation().isFitted)
+    #expect(navigation().isMoving == false)
   }
 
-  /// Hosts `rootView` in a window on screen, as an app does.
+  @Test(.enabled(if: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion == false))
+  func `An animated zoom command starts a motion whose frames report the zoom`() async throws {
+    let box = ProxyBox()
+    let recorder = ZoomRecorder()
+    let (hostingView, window) = Self.host(
+      ReaderHost(document: try Self.makeDocument(), box: box, recorder: recorder),
+      ordersFront: false
+    )
+    defer { Self.close(window) }
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let canvas = try #require(drawn)
+    for _ in 0..<250 where recorder.zooms.isEmpty {
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    let fitted = try #require(recorder.zooms.last)
+    let proxy = try #require(box.proxy)
+
+    proxy.zoomIn()
+    #expect(recorder.zooms.count == 1, "The command only starts the motion.")
+    #expect(canvas.navigation.isMoving)
+
+    // The frames are ticked by hand, as the display link would tick them.
+    for _ in 0..<250 where canvas.navigation.isMoving {
+      canvas.drawViewportFrame()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(canvas.navigation.isMoving == false)
+    #expect(recorder.zooms.count > 1)
+    #expect(abs((recorder.zooms.last?.scale ?? 0) - 2 * fitted.fitScale) < 1e-9)
+  }
+
+  @Test
+  func `A proxy command does nothing while the canvas prepares its image`() async throws {
+    let document = try Self.makeDocument()
+    let (opening, gate) = AsyncStream<Void>.makeStream()
+    defer { gate.finish() }
+    // The preparation waits until the test finishes the gate.
+    let loader = PreviewSourceLoader(source: document.source) { source in
+      for await _ in opening {}
+      return await PreviewSource.make(from: source)
+    }
+    let box = ProxyBox()
+    let (hostingView, window) = Self.host(
+      ReaderHost(document: document, box: box, loader: loader, areAnimationsEnabled: false),
+      ordersFront: false
+    )
+    defer { Self.close(window) }
+
+    for _ in 0..<250 where box.proxy == nil || loader.phase != .loading {
+      hostingView.layoutSubtreeIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    let proxy = try #require(box.proxy)
+    try #require(loader.phase == .loading)
+    #expect(Self.findCanvas(in: hostingView) == nil)
+    proxy.zoomIn()
+
+    // The command reached no canvas, so the canvas mounts fitted.
+    gate.finish()
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let canvas = try #require(drawn)
+    #expect(canvas.navigation.isFitted)
+    proxy.zoomIn()
+    #expect(abs(canvas.navigation.position.scale - 2 * canvas.navigation.fitScale) < 1e-9)
+  }
+
+  @Test
+  func `Under one reader, commands go to the canvas mounted last that is still mounted`() async throws {
+    let first = try Self.makeDocument()
+    let second = try Self.makeDocument(size: CGSize(width: 200, height: 400))
+    let box = ProxyBox()
+    let (hostingView, window) = Self.host(
+      TwoCanvasHost(first: first, second: second, showsSecond: false, box: box),
+      ordersFront: false
+    )
+    defer { Self.close(window) }
+    func canvas(of document: ImageEditorDocument) -> EditingCanvasView? {
+      Self.findCanvases(in: hostingView).first { $0.source.imageSize == document.source.pixelSize }
+    }
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let firstCanvas = try #require(drawn)
+    let proxy = try #require(box.proxy)
+    proxy.zoomIn()
+    #expect(firstCanvas.navigation.isFitted == false)
+    proxy.zoomToFit()
+
+    // The second canvas mounts after the first, so it takes the commands.
+    hostingView.rootView = TwoCanvasHost(first: first, second: second, showsSecond: true, box: box)
+    for _ in 0..<250 where canvas(of: second)?.surface.displayedViewport == nil {
+      hostingView.layoutSubtreeIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    let secondCanvas = try #require(canvas(of: second))
+    #expect(canvas(of: first) === firstCanvas)
+    proxy.zoomIn()
+    #expect(secondCanvas.navigation.isFitted == false)
+    #expect(firstCanvas.navigation.isFitted)
+    proxy.zoomToFit()
+
+    // Once the second canvas is gone, the first takes them again.
+    hostingView.rootView = TwoCanvasHost(first: first, second: second, showsSecond: false, box: box)
+    for _ in 0..<250 where canvas(of: second) != nil {
+      hostingView.layoutSubtreeIfNeeded()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    try #require(canvas(of: second) == nil)
+    proxy.zoomIn()
+    #expect(firstCanvas.navigation.isFitted == false)
+  }
+
+  // MARK: - VoiceOver
+
+  @Test
+  func `The canvas's name reaches the AppKit view VoiceOver reads, and follows the host`() async throws {
+    let document = try Self.makeDocument()
+    let (hostingView, window) = Self.host(LabelHost(document: document, label: "Photo"), ordersFront: false)
+    defer { Self.close(window) }
+    let drawn = try await Self.drawnCanvas(in: hostingView)
+    let canvas = try #require(drawn)
+    #expect(canvas.accessibilityLabel() == "Photo")
+
+    hostingView.rootView = LabelHost(document: document, label: "Image")
+    hostingView.layoutSubtreeIfNeeded()
+    #expect(Self.findCanvas(in: hostingView) === canvas)
+    #expect(canvas.accessibilityLabel() == "Image")
+
+    hostingView.rootView = LabelHost(document: document, label: nil)
+    hostingView.layoutSubtreeIfNeeded()
+    #expect(Self.findCanvas(in: hostingView) === canvas)
+    #expect(canvas.accessibilityLabel() == nil)
+  }
+
+  // MARK: - Helpers
+
+  private static func makeDocument(size: CGSize = imageSize) throws -> ImageEditorDocument {
+    ImageEditorDocument(source: SourceImage(cgImage: try makeImage(size: size)))
+  }
+
+  /// Hosts `rootView` in a window, as an app does: on screen, or, without
+  /// `ordersFront`, in a window that is never ordered in and so never shows
+  /// on a screen.
   private static func host<Content: View>(
-    _ rootView: Content
+    _ rootView: Content,
+    ordersFront: Bool = true
   ) -> (NSHostingView<Content>, NSWindow) {
     _ = NSApplication.shared
     let hostingView = NSHostingView(rootView: rootView)
@@ -335,7 +573,9 @@ struct AppKitCanvasHostingTests {
     )
     window.isReleasedWhenClosed = false
     window.contentView = hostingView
-    window.orderFrontRegardless()
+    if ordersFront {
+      window.orderFrontRegardless()
+    }
     return (hostingView, window)
   }
 
@@ -388,6 +628,14 @@ struct AppKitCanvasHostingTests {
     return nil
   }
 
+  /// Every canvas mounted in the tree of `view`, depth first.
+  private static func findCanvases(in view: NSView) -> [EditingCanvasView] {
+    if let canvas = view as? EditingCanvasView {
+      return [canvas]
+    }
+    return view.subviews.flatMap { findCanvases(in: $0) }
+  }
+
   /// An AppKit canvas of its own, outside SwiftUI.
   private static func makeCanvas() -> EditingCanvasView {
     let image = CIImage(color: CIColor(red: 0.2, green: 0.5, blue: 0.8))
@@ -414,19 +662,19 @@ struct AppKitCanvasHostingTests {
     return window
   }
 
-  private static func makeImage() throws -> CGImage {
+  private static func makeImage(size: CGSize = imageSize) throws -> CGImage {
     let sRGB = try #require(CGColorSpace(name: CGColorSpace.sRGB))
     let context = try #require(CGContext(
       data: nil,
-      width: Int(imageSize.width),
-      height: Int(imageSize.height),
+      width: Int(size.width),
+      height: Int(size.height),
       bitsPerComponent: 8,
       bytesPerRow: 0,
       space: sRGB,
       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ))
     context.setFillColor(CGColor(srgbRed: 0.2, green: 0.5, blue: 0.8, alpha: 1))
-    context.fill(CGRect(origin: .zero, size: imageSize))
+    context.fill(CGRect(origin: .zero, size: size))
     return try #require(context.makeImage())
   }
 }

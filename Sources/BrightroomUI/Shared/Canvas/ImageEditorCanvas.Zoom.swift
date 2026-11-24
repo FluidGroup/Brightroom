@@ -24,40 +24,57 @@ import Foundation
 
 extension ImageEditorCanvas {
 
-  /// A canvas's zoom, reported on macOS: canvas points per full-resolution
-  /// pixel of the crop output it shows, and its limits.
-  struct Zoom: Equatable, Sendable {
+  /// A canvas's zoom, reported on macOS (`onZoomChange(_:)`): canvas points
+  /// per full-resolution pixel of the crop output it shows, and its limits.
+  public struct Zoom: Equatable, Sendable {
 
-    var scale: CGFloat
-    var fitScale: CGFloat
-    var maximumScale: CGFloat
-    /// The display scale of the canvas's window.
-    var backingScaleFactor: CGFloat
+    /// Canvas points per full-resolution pixel of the crop output. While a
+    /// zoom bounces at a limit, it can lie just beyond the limit.
+    public var scale: CGFloat
+
+    /// The scale at which the whole crop output fits the canvas, inside its
+    /// fit margin (`fitMargin(_:)`): the smallest zoom.
+    public var fitScale: CGFloat
+
+    /// The largest zoom the canvas allows.
+    public var maximumScale: CGFloat
+
+    /// The display scale of the canvas's window: device pixels per canvas
+    /// point.
+    public var displayScale: CGFloat
+
+    public init(scale: CGFloat, fitScale: CGFloat, maximumScale: CGFloat, displayScale: CGFloat) {
+      self.scale = scale
+      self.fitScale = fitScale
+      self.maximumScale = maximumScale
+      self.displayScale = displayScale
+    }
 
     /// Where the zoom is from the fit (0) to the maximum (1), along its
     /// logarithm, so equal steps zoom by equal factors; 0 for a degenerate
-    /// range.
-    var fraction: Double {
+    /// range. A zoom slider shows it, and sets it with
+    /// `ImageEditorCanvasProxy.zoom(toFraction:)`.
+    public var fraction: Double {
       guard fitScale > 0, maximumScale > fitScale else { return 0 }
       let fraction = Double(log(scale / fitScale) / log(maximumScale / fitScale))
       return min(max(fraction, 0), 1)
     }
 
     /// Whether the zoom is the fit, within a millionth of it.
-    var isFitted: Bool {
+    public var isFitted: Bool {
       Self.isClose(scale, to: fitScale)
     }
 
     /// Whether the zoom is the maximum, within a millionth of it.
-    var isAtMaximum: Bool {
+    public var isAtMaximum: Bool {
       Self.isClose(scale, to: maximumScale)
     }
 
     /// Device pixels per output pixel, in percent, rounded: 100 shows each
     /// pixel of the output on one pixel of the display. A zoom beyond any
     /// `Int`, which a degenerate crop can fit at, is `Int.max`.
-    var percent: Int {
-      let percent = (scale * backingScaleFactor * 100).rounded()
+    public var percent: Int {
+      let percent = (scale * displayScale * 100).rounded()
       return Int(exactly: percent) ?? (percent > 0 ? .max : 0)
     }
 
