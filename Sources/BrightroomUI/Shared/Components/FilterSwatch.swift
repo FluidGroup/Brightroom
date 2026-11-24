@@ -25,16 +25,16 @@ import Metal
 import BrightroomEngine
 import BrightroomParametric
 
-/// Renders a single filter-preview swatch for ImageEditor's filter strips.
+/// Renders filter swatches: one preset over the centre square of an image's
+/// thumbnail, for a strip of filters to choose from.
 ///
-/// A swatch is the preview thumbnail — the uncropped, already-oriented ~180px
-/// `PreviewSource.thumbnail` decoded at load — center-cropped to a square and run
-/// through one preset's effects. Swatches preview the filter only, not the user's
-/// manual adjustments or the current crop, matching the Photos/Instagram strip.
-///
-/// Each chip renders its own swatch when the strip appears and holds it in its
-/// SwiftUI `@State`, so the render happens once for that chip's lifetime.
-enum FilterSwatch {
+/// A swatch is the thumbnail of a preview source (`PreviewSource.thumbnail`,
+/// uncropped and oriented, at most 180 pixels on its short side),
+/// centre-cropped to a square and run through one preset's effects. It
+/// previews the filter only, not the document's other adjustments or its
+/// crop, and renders in the canvas's colour contract, so it shows the colours
+/// the canvas shows for the preset.
+public enum FilterSwatch {
 
   /// Wide-gamut, GPU-backed context dedicated to swatch rendering. Mirrors the
   /// editing canvas's working space/precision so a swatch and the live canvas
@@ -61,43 +61,37 @@ enum FilterSwatch {
     var rendering: AdjustmentRendering.Identity
   }
 
-  /// Renders a single square swatch — a `nil` preset yields the unfiltered base.
+  /// Renders `preset` over the centre square of `previewSource`'s thumbnail,
+  /// off the calling actor; a nil preset renders the thumbnail alone. nil when
+  /// the thumbnail is empty or the swatch would be smaller than a pixel.
   ///
-  /// `@concurrent` runs the body on the concurrent executor, so a chip's
-  /// MainActor `.task` offloads the Core Image work off the main thread just by
-  /// awaiting it — no queue hop, no box. `CIImage`, `FilterFeature`,
-  /// `AdjustmentRendering` and `CGImage` are all `Sendable`, so the values cross
-  /// the isolation boundary directly.
-  ///
-  /// - Parameters:
-  ///   - pointSize: the swatch's on-screen point size (a square edge).
-  ///   - scale: the display scale; the swatch is rendered at `pointSize * scale`
-  ///     pixels, never larger than the source thumbnail.
-  ///   - fullResolutionSize: the oriented pixel size of the image the thumbnail
-  ///     is decoded from. When given, absolute radii, which are pixels of that
-  ///     image, scale down to the swatch as the canvas scales them to its
-  ///     preview; when nil, they are swatch pixels.
-  ///   - adjustmentRendering: the calculations the preset's adjustments use.
+  /// The swatch is `pointSize` times `scale` pixels square, never larger than
+  /// the thumbnail's short side, in 8-bit Display P3: show it at `scale`.
+  /// Proportional radii resolve against the whole thumbnail, as the canvas
+  /// resolves them against the whole image. Absolute radii are pixels of
+  /// `previewSource.source` at full resolution, and scale down to the swatch
+  /// as the canvas scales them to its preview. A preset that fails to evaluate
+  /// renders the thumbnail alone. Pass the adjustment rendering the canvas
+  /// renders with (`adjustmentRendering(_:)`).
   @concurrent
-  static func render(
-    base: CIImage,
-    preset: FilterFeature?,
+  public static func render(
+    _ preset: FilterFeature?,
+    over previewSource: PreviewSource,
     pointSize: CGFloat,
     scale: CGFloat,
-    fullResolutionSize: CGSize? = nil,
     adjustmentRendering: AdjustmentRendering = .standard
   ) async -> CGImage? {
-    guard let prepared = normalizedSquare(base: base, pointSize: pointSize, scale: scale) else {
+    guard
+      let prepared = normalizedSquare(base: previewSource.thumbnail, pointSize: pointSize, scale: scale)
+    else {
       return nil
     }
     let evaluationContext = FeatureEvaluationContext(
       chainEntryExtent: prepared.chainEntryExtent,
-      renderScale: fullResolutionSize.map {
-        EditingCanvasRenderImageFactory.renderScale(
-          evaluated: prepared.chainEntryExtent.size,
-          fullResolution: $0
-        )
-      } ?? 1,
+      renderScale: EditingCanvasRenderImageFactory.renderScale(
+        evaluated: prepared.chainEntryExtent.size,
+        fullResolution: previewSource.source.pixelSize
+      ),
       adjustmentRendering: adjustmentRendering
     )
     return makeImage(from: prepared, preset: preset, evaluationContext: evaluationContext)

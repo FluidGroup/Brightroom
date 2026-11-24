@@ -4,10 +4,11 @@ import Foundation
 import Metal
 import Testing
 
+@testable import BrightroomEngine
 import BrightroomParametric
 @testable import BrightroomUI
 
-/// A filter swatch: one preset over the centre square of the preview
+/// A filter swatch: one preset over the centre square of a preview source's
 /// thumbnail, at the size a filter strip shows it.
 ///
 /// The thumbnails are 160 × 120 and the same in every row, so the centre
@@ -32,13 +33,13 @@ struct FilterSwatchTests {
   private static let displayP3 = CGColorSpace(name: CGColorSpace.displayP3)!
 
   @Test func `A swatch is the point size times the scale, at most the thumbnail's shorter side`() async throws {
-    let thumbnail = try Self.thumbnail { _ in Self.color }
+    let previewSource = try Self.previewSource(thumbnail: Self.thumbnail { _ in Self.color })
 
-    let swatch = try #require(await FilterSwatch.render(base: thumbnail, preset: nil, pointSize: 30, scale: 2))
+    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 30, scale: 2))
     #expect(swatch.width == 60)
     #expect(swatch.height == 60)
 
-    let capped = try #require(await FilterSwatch.render(base: thumbnail, preset: nil, pointSize: 60, scale: 3))
+    let capped = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 60, scale: 3))
     #expect(capped.width == 120)
     #expect(capped.height == 120)
   }
@@ -48,8 +49,9 @@ struct FilterSwatchTests {
     let thumbnail = try Self.thumbnail { column in
       (20..<140).contains(column) ? Self.color : [0, 0, 0]
     }
+    let previewSource = try Self.previewSource(thumbnail: thumbnail)
 
-    let swatch = try #require(await FilterSwatch.render(base: thumbnail, preset: nil, pointSize: 120, scale: 1))
+    let swatch = try #require(await FilterSwatch.render(nil, over: previewSource, pointSize: 120, scale: 1))
     let pixels = try Self.rgba(swatch)
     let expected = Self.color + [255]
     let worst = pixels.indices.map { abs(Int(pixels[$0]) - Int(expected[$0 % 4])) }.max() ?? 0
@@ -58,44 +60,80 @@ struct FilterSwatchTests {
     #expect(worst <= 1, "Every pixel should be RGBA \(expected); one channel is off by \(worst)")
   }
 
-  @Test func `Default arguments render a preset at a render scale of 1 with the standard adjustments`() async throws {
-    let thumbnail = try Self.edgeThumbnail()
-
-    let swatch = try #require(await FilterSwatch.render(base: thumbnail, preset: Self.soften, pointSize: 60, scale: 1))
-    let recipe = try Self.recipe(thumbnail: thumbnail, preset: Self.soften, pixels: 60, renderScale: 1)
-    let difference = try Self.difference(swatch, recipe)
-
-    #expect(difference <= 1)
-  }
-
-  @Test func `A full-resolution size scales absolute radii to the swatch`() async throws {
+  @Test func `Absolute radii are pixels of the source image and scale down to the swatch`() async throws {
     let thumbnail = try Self.edgeThumbnail()
     // A 60-pixel swatch evaluates the thumbnail at half size: an 80 × 60
     // chain entry, whose diagonal (100) is a quarter of a 320 × 240
-    // original's (400).
-    let fullResolutionSize = CGSize(width: 320, height: 240)
-
-    let swatch = try #require(
-      await FilterSwatch.render(
-        base: thumbnail,
-        preset: Self.soften,
-        pointSize: 60,
-        scale: 1,
-        fullResolutionSize: fullResolutionSize
-      )
-    )
+    // source's (400).
+    let previewSource = try Self.previewSource(thumbnail: thumbnail, pixelSize: CGSize(width: 320, height: 240))
+    let swatch = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, scale: 1))
     let recipe = try Self.recipe(thumbnail: thumbnail, preset: Self.soften, pixels: 60, renderScale: 0.25)
     let differenceFromRecipe = try Self.difference(swatch, recipe)
     #expect(differenceFromRecipe <= 1)
 
+    // Over an 80 × 60 source, the chain entry is at full resolution.
+    let fullResolution = try Self.previewSource(thumbnail: thumbnail, pixelSize: CGSize(width: 80, height: 60))
     let unscaled = try #require(
-      await FilterSwatch.render(base: thumbnail, preset: Self.soften, pointSize: 60, scale: 1)
+      await FilterSwatch.render(Self.soften, over: fullResolution, pointSize: 60, scale: 1)
     )
+    let unscaledRecipe = try Self.recipe(thumbnail: thumbnail, preset: Self.soften, pixels: 60, renderScale: 1)
+    let differenceFromUnscaledRecipe = try Self.difference(unscaled, unscaledRecipe)
+    #expect(differenceFromUnscaledRecipe <= 1)
     let differenceFromUnscaled = try Self.difference(swatch, unscaled)
     #expect(differenceFromUnscaled > 16)
   }
 
+  @Test func `The preset's adjustments use the rendering passed`() async throws {
+    let thumbnail = try Self.edgeThumbnail()
+    let previewSource = try Self.previewSource(thumbnail: thumbnail, pixelSize: CGSize(width: 320, height: 240))
+
+    let swatch = try #require(
+      await FilterSwatch.render(
+        Self.soften,
+        over: previewSource,
+        pointSize: 60,
+        scale: 1,
+        adjustmentRendering: Self.exposureIgnored
+      )
+    )
+    let recipe = try Self.recipe(
+      thumbnail: thumbnail,
+      preset: Self.soften,
+      pixels: 60,
+      renderScale: 0.25,
+      adjustmentRendering: Self.exposureIgnored
+    )
+    let differenceFromRecipe = try Self.difference(swatch, recipe)
+    #expect(differenceFromRecipe <= 1)
+
+    let standard = try #require(await FilterSwatch.render(Self.soften, over: previewSource, pointSize: 60, scale: 1))
+    let differenceFromStandard = try Self.difference(swatch, standard)
+    #expect(differenceFromStandard > 16)
+  }
+
   // MARK: - Fixtures
+
+  /// A preview source whose thumbnail is `thumbnail`, of a source image of
+  /// `pixelSize` (the thumbnail's own size by default).
+  private static func previewSource(thumbnail: CIImage, pixelSize: CGSize? = nil) throws -> PreviewSource {
+    let size = pixelSize ?? thumbnail.extent.size
+    let source = SourceImage(
+      cgImage: try DocumentTestFixtures.makeCGImage(width: Int(size.width), height: Int(size.height))
+    )
+    return PreviewSource(source: source, thumbnail: thumbnail, image: thumbnail)
+  }
+
+  /// A rendering whose exposure leaves the image as it is.
+  private static let exposureIgnored: AdjustmentRendering = {
+    var setup = AdjustmentRendering.Setup()
+    setup.replace(
+      ExposureFeature.self,
+      with: .init(identity: .init(implementation: "test.exposure-ignored", version: "1", configuration: "")) { _, image, _ in
+        image
+      }
+    )
+    return setup.makeRendering()
+  }()
 
   /// A 160 × 120 Display P3 thumbnail whose columns are `color(column)`.
   private static func thumbnail(color: (Int) -> [UInt8]) throws -> CIImage {
@@ -143,7 +181,8 @@ struct FilterSwatchTests {
     thumbnail: CIImage,
     preset: FilterFeature,
     pixels: CGFloat,
-    renderScale: Double
+    renderScale: Double,
+    adjustmentRendering: AdjustmentRendering = .standard
   ) throws -> CGImage {
     let extent = thumbnail.extent
     let side = min(extent.width, extent.height)
@@ -158,7 +197,8 @@ struct FilterSwatchTests {
       to: input,
       context: FeatureEvaluationContext(
         chainEntryExtent: CGRect(x: 0, y: 0, width: extent.width * scale, height: extent.height * scale),
-        renderScale: renderScale
+        renderScale: renderScale,
+        adjustmentRendering: adjustmentRendering
       )
     )
 

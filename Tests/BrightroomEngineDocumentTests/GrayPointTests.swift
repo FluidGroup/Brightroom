@@ -24,6 +24,10 @@ struct GrayPointTests {
     crop: CropFeature(rect: CGRect(origin: .zero, size: imageSize))
   )
 
+  /// The ranges `solve` stays within by default.
+  private static let temperatureRange: ClosedRange<Double> = -3000...3000
+  private static let tintRange: ClosedRange<Double> = -100...100
+
   /// A context in the canvas's working space, which the gray point solves in.
   private static let context: CIContext = {
     let options: [CIContextOption: Any] = [
@@ -41,7 +45,7 @@ struct GrayPointTests {
 
   @Test func `A gray under a warm magenta cast is made neutral`() throws {
     let cast = try Self.render(SIMD3(repeating: 0.18), through: WhiteBalanceFeature(temperature: 1200, tint: 25))
-    let balance = try #require(GrayPoint.whiteBalance(neutralizing: cast, context: Self.context))
+    let balance = try #require(Self.whiteBalance(neutralizing: cast))
     let balanced = try Self.render(cast, through: balance)
 
     #expect(abs(balanced.x / balanced.y - 1) < 2e-3, "red / green \(balanced.x / balanced.y)")
@@ -49,16 +53,31 @@ struct GrayPointTests {
   }
 
   @Test func `A neutral colour needs no white balance`() {
-    #expect(GrayPoint.whiteBalance(neutralizing: SIMD3(repeating: 0.18), context: Self.context) == nil)
-    #expect(GrayPoint.whiteBalance(neutralizing: SIMD3(repeating: 0.7), context: Self.context) == nil)
+    #expect(Self.whiteBalance(neutralizing: SIMD3(repeating: 0.18)) == nil)
+    #expect(Self.whiteBalance(neutralizing: SIMD3(repeating: 0.7)) == nil)
   }
 
   @Test func `A cast beyond the ranges is balanced as far as they allow`() throws {
     let cast = try Self.render(SIMD3(repeating: 0.18), through: WhiteBalanceFeature(temperature: -2500, tint: -60))
-    let balance = try #require(GrayPoint.whiteBalance(neutralizing: cast, context: Self.context))
+    let balance = try #require(Self.whiteBalance(neutralizing: cast))
 
-    #expect(balance.temperature == GrayPoint.temperatureRange.upperBound)
-    #expect(GrayPoint.tintRange.contains(balance.tint))
+    #expect(balance.temperature == Self.temperatureRange.upperBound)
+    #expect(Self.tintRange.contains(balance.tint))
+  }
+
+  @Test func `Ranges that leave out neutral are kept, even for a neutral colour`() throws {
+    // The colour is balanced at the nearest temperature the range allows, not left without one.
+    let balance = try #require(
+      GrayPoint.whiteBalance(
+        neutralizing: SIMD3(repeating: 0.18),
+        temperatureRange: 200...400,
+        tintRange: Self.tintRange,
+        context: Self.context
+      )
+    )
+
+    #expect(balance.temperature == 200)
+    #expect(Self.tintRange.contains(balance.tint))
   }
 
   // MARK: - Solving a click
@@ -73,14 +92,7 @@ struct GrayPointTests {
     let previewSource = try await Self.previewSource(of: SourceImage(cgImage: Self.quadrantImage()))
 
     // The turn brings the top-right quadrant to the top left of the output.
-    let result = await GrayPoint.solve(
-      .init(
-        previewSource: previewSource,
-        feature: feature,
-        outputPoint: CGPoint(x: 12, y: 16),
-        adjustmentRendering: .standard
-      )
-    )
+    let result = await GrayPoint.solve(at: CGPoint(x: 12, y: 16), in: feature, over: previewSource)
     let balance = try #require(try result.get())
 
     // The top-right quadrant of the preview (bottom-left origin), rendered as the canvas renders
@@ -159,6 +171,44 @@ struct GrayPointTests {
     #expect(await Self.solve(at: CGPoint(x: 40, y: 10), of: rightHalf, over: previewSource) == .failure(.outsideImage))
   }
 
+  @Test func `A solved click stays within the ranges a host passes`() async throws {
+    // The top-left quadrant's warm cast needs more than 300 K.
+    let previewSource = try await Self.previewSource(of: SourceImage(cgImage: Self.quadrantImage()))
+    let point = CGPoint(x: 16, y: 12)
+    let unbounded = try #require(try await GrayPoint.solve(at: point, in: Self.wholeImage, over: previewSource).get())
+    #expect(abs(unbounded.temperature) > 300, "\(unbounded)")
+
+    let result = await GrayPoint.solve(
+      at: point,
+      in: Self.wholeImage,
+      over: previewSource,
+      temperatureRange: -300...300,
+      tintRange: -1...1
+    )
+    let bounded = try #require(try result.get())
+
+    #expect(bounded.temperature == (unbounded.temperature < 0 ? -300 : 300))
+    #expect((-1...1).contains(bounded.tint))
+  }
+
+  @Test func `The effects before white balance are measured with the rendering passed`() async throws {
+    // Four stops lift this dark gray clear of the darkness check; a rendering whose exposure
+    // changes nothing leaves it too dark.
+    let previewSource = try await Self.previewSource(of: SourceImage(cgImage: Self.solidImage((6, 6, 6))))
+    var exposed = Self.wholeImage
+    exposed.effects.exposure = ExposureFeature(ev: 4)
+    let point = CGPoint(x: 32, y: 24)
+
+    #expect(await GrayPoint.solve(at: point, in: exposed, over: previewSource) == .success(nil))
+    let ignored = await GrayPoint.solve(
+      at: point,
+      in: exposed,
+      over: previewSource,
+      adjustmentRendering: Self.exposureIgnored
+    )
+    #expect(ignored == .failure(.tooDark))
+  }
+
   // MARK: - The measured effects
 
   @Test func `The effects before white balance are those its body evaluates first`() throws {
@@ -223,15 +273,30 @@ struct GrayPointTests {
     of feature: ImageEditorFeature,
     over previewSource: PreviewSource
   ) async -> Result<WhiteBalanceFeature?, GrayPoint.Rejection> {
-    await GrayPoint.solve(
-      .init(
-        previewSource: previewSource,
-        feature: feature,
-        outputPoint: point,
-        adjustmentRendering: .standard
-      )
+    await GrayPoint.solve(at: point, in: feature, over: previewSource)
+  }
+
+  /// The white balance that makes `color` neutral within the default ranges.
+  private static func whiteBalance(neutralizing color: SIMD3<Double>) -> WhiteBalanceFeature? {
+    GrayPoint.whiteBalance(
+      neutralizing: color,
+      temperatureRange: temperatureRange,
+      tintRange: tintRange,
+      context: context
     )
   }
+
+  /// A rendering whose exposure leaves the image as it is.
+  private static let exposureIgnored: AdjustmentRendering = {
+    var setup = AdjustmentRendering.Setup()
+    setup.replace(
+      ExposureFeature.self,
+      with: .init(identity: .init(implementation: "test.exposure-ignored", version: "1", configuration: "")) { _, image, _ in
+        image
+      }
+    )
+    return setup.makeRendering()
+  }()
 
   /// `color` (working-space RGB) after `balance`, in the working space.
   private static func render(_ color: SIMD3<Double>, through balance: WhiteBalanceFeature) throws -> SIMD3<Double> {

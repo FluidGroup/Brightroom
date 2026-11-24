@@ -1204,11 +1204,10 @@ private struct FilterChip: View {
         return
       }
       let rendered = await FilterSwatch.render(
-        base: previewSource.thumbnail,
-        preset: preset,
+        preset,
+        over: previewSource,
         pointSize: pointSize,
-        scale: displayScale,
-        fullResolutionSize: previewSource.source.pixelSize
+        scale: displayScale
       )
       guard !Task.isCancelled else { return }
       image = rendered

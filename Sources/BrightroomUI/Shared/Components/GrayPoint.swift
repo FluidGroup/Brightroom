@@ -27,16 +27,16 @@ import Metal
 import BrightroomEngine
 import BrightroomParametric
 
-/// White balance from a gray point: the temperature and tint that make a clicked area of the
-/// picture neutral.
+/// White balance from a gray point: the temperature and tint that make a clicked area of a
+/// feature's output neutral.
 ///
 /// The area is measured as it enters `effects.whiteBalance` (after the preset, exposure and
-/// brightness), over the preview, in the canvas and export working space (extended-linear Display
-/// P3), so the white balance renders it neutral on the canvas and in the export.
-enum GrayPoint {
+/// brightness), over a preview source, in the canvas and export working space (extended-linear
+/// Display P3), so the white balance renders it neutral on the canvas and in the export.
+public enum GrayPoint {
 
   /// Why a click gives no white balance.
-  enum Rejection: Error, Equatable, Sendable {
+  public enum Rejection: Error, Equatable, Sendable {
     /// There is no pixel of the image to sample at the point.
     case outsideImage
     /// The area is too dark to tell its colour, or a channel has no light at all.
@@ -45,22 +45,8 @@ enum GrayPoint {
     case tooBright
   }
 
-  /// A click to solve: a point of the crop output the canvas shows (full resolution, top-left
-  /// origin), over the preview of the feature's image.
-  struct Request: Sendable {
-    var previewSource: PreviewSource
-    var feature: ImageEditorFeature
-    var outputPoint: CGPoint
-    var adjustmentRendering: AdjustmentRendering
-  }
-
-  /// The side of the square averaged around the point, in pixels of the preview.
+  /// The side of the square averaged around the point, in pixels of the preview source.
   static let sampleSize = 7
-
-  /// The temperatures a solved white balance stays within.
-  static let temperatureRange: ClosedRange<Double> = -3000...3000
-  /// The tints a solved white balance stays within.
-  static let tintRange: ClosedRange<Double> = -100...100
 
   /// The canvas and export colour contract: an extended-linear Display P3 working space at half
   /// float.
@@ -77,27 +63,47 @@ enum GrayPoint {
     return CIContext(options: options)
   }()
 
-  /// The white balance that makes the area around the request's point neutral, off the calling
-  /// actor; nil when the area is neutral already, which removes the member.
+  /// The white balance that makes the area around `outputPoint` neutral, solved within the ranges
+  /// off the calling actor; nil when the area is neutral already, so the feature needs no white
+  /// balance.
   ///
-  /// The point is mapped through the crop the canvas shows. The rejection is `.outsideImage`
-  /// when there is nothing to sample there: the point is off the crop output or off the image, or
-  /// the image cannot be evaluated there (it fails, or its colour is not finite).
+  /// The point is mapped through the crop the canvas shows. The result replaces
+  /// `feature.effects.whiteBalance`, which is not measured. The rejection is `.outsideImage` when
+  /// there is nothing to sample at the point: it is off the crop output or off the image, or the
+  /// image cannot be evaluated there (it fails, or its colour is not finite).
+  ///
+  /// - Parameters:
+  ///   - outputPoint: A point of the crop output (full resolution, top-left origin), such as the
+  ///     click a macOS canvas reports through `pointSampling(_:)`.
+  ///   - feature: The feature the canvas shows. It is authored over `previewSource.source`; a
+  ///     feature of another image samples the wrong pixels.
+  ///   - temperatureRange: The temperatures the result stays within, such as the range of the
+  ///     host's Temperature control.
+  ///   - tintRange: The tints the result stays within.
+  ///   - adjustmentRendering: The calculations the adjustments use: the selection the canvas
+  ///     renders with (`adjustmentRendering(_:)`).
   @concurrent
-  static func solve(_ request: Request) async -> Result<WhiteBalanceFeature?, Rejection> {
-    let preview = request.previewSource.image
-    let imageSize = request.previewSource.source.pixelSize
+  public static func solve(
+    at outputPoint: CGPoint,
+    in feature: ImageEditorFeature,
+    over previewSource: PreviewSource,
+    temperatureRange: ClosedRange<Double> = -3000...3000,
+    tintRange: ClosedRange<Double> = -100...100,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) async -> Result<WhiteBalanceFeature?, Rejection> {
+    let preview = previewSource.image
+    let imageSize = previewSource.source.pixelSize
     // The canvas fits the crop to the image, so the point is mapped through the crop it draws.
     guard
       let geometry = EditingCanvasCropOutputGeometry(
-        crop: CropGuideState(cropFeature: request.feature.crop, imageSize: imageSize)
+        crop: CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
       ),
-      geometry.outputBounds.contains(request.outputPoint)
+      geometry.outputBounds.contains(outputPoint)
     else {
       return .failure(.outsideImage)
     }
     // Top-left origin, full resolution.
-    let sourcePoint = request.outputPoint.applying(geometry.outputToSourceTransform)
+    let sourcePoint = outputPoint.applying(geometry.outputToSourceTransform)
     guard CGRect(origin: .zero, size: imageSize).contains(sourcePoint) else {
       return .failure(.outsideImage)
     }
@@ -108,11 +114,11 @@ enum GrayPoint {
     let color: SIMD3<Double>
     do {
       color = try sample(
-        effectsBeforeWhiteBalance(request.feature.effects),
+        effectsBeforeWhiteBalance(feature.effects),
         over: preview,
         imageSize: imageSize,
         at: previewPoint,
-        adjustmentRendering: request.adjustmentRendering
+        adjustmentRendering: adjustmentRendering
       )
     } catch {
       EditorLog.error(.editingCanvas, "Gray point failed: \(error)")
@@ -122,7 +128,14 @@ enum GrayPoint {
     if let rejection = rejection(of: color) {
       return .failure(rejection)
     }
-    return .success(whiteBalance(neutralizing: color, context: context))
+    return .success(
+      whiteBalance(
+        neutralizing: color,
+        temperatureRange: temperatureRange,
+        tintRange: tintRange,
+        context: context
+      )
+    )
   }
 
   /// The members `Effects.body` evaluates before `whiteBalance`: the preset, exposure and
@@ -142,9 +155,14 @@ enum GrayPoint {
   /// within 0.5 of neutral.
   ///
   /// Gauss–Newton on the red and blue ratios to green, with a Jacobian from finite differences
-  /// (50 K, 1 tint unit). A colour no white balance within the ranges makes neutral is balanced as
-  /// far as the ranges allow.
-  static func whiteBalance(neutralizing color: SIMD3<Double>, context: CIContext) -> WhiteBalanceFeature? {
+  /// (50 K, 1 tint unit), from neutral or the nearest value the ranges allow. A colour no white
+  /// balance within the ranges makes neutral is balanced as far as the ranges allow.
+  static func whiteBalance(
+    neutralizing color: SIMD3<Double>,
+    temperatureRange: ClosedRange<Double>,
+    tintRange: ClosedRange<Double>,
+    context: CIContext
+  ) -> WhiteBalanceFeature? {
     func residual(temperature: Double, tint: Double) -> SIMD2<Double> {
       let balanced = render(
         color,
@@ -153,9 +171,12 @@ enum GrayPoint {
       )
       return SIMD2(balanced.x / balanced.y - 1, balanced.z / balanced.y - 1)
     }
+    func clamped(_ value: Double, to range: ClosedRange<Double>) -> Double {
+      min(max(value, range.lowerBound), range.upperBound)
+    }
 
-    var temperature = 0.0
-    var tint = 0.0
+    var temperature = clamped(0, to: temperatureRange)
+    var tint = clamped(0, to: tintRange)
     for _ in 0..<12 {
       let r = residual(temperature: temperature, tint: tint)
       guard
@@ -173,8 +194,8 @@ enum GrayPoint {
       }
       let temperatureStep = (byTint.y * r.x - byTint.x * r.y) / determinant
       let tintStep = (byTemperature.x * r.y - byTemperature.y * r.x) / determinant
-      temperature = min(max(temperature - temperatureStep, temperatureRange.lowerBound), temperatureRange.upperBound)
-      tint = min(max(tint - tintStep, tintRange.lowerBound), tintRange.upperBound)
+      temperature = clamped(temperature - temperatureStep, to: temperatureRange)
+      tint = clamped(tint - tintStep, to: tintRange)
     }
 
     guard abs(temperature) >= 0.5 || abs(tint) >= 0.5 else {

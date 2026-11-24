@@ -27,37 +27,47 @@ import Metal
 import BrightroomEngine
 import BrightroomParametric
 
-/// A small rendering of the output an editor shows (what the canvas draws), for its histogram and
-/// the colour under the pointer.
+/// A small rendering of what a canvas shows for a feature, for a histogram and the colour under the
+/// pointer.
 ///
-/// `make(_:)` evaluates the feature through the export path (effects, the brush blur the canvas
-/// composites, the crop the canvas shows, vignette) over a copy of the preview, sized so that the
-/// crop output is at most `maximumPixelSize` pixels long and never finer than the preview.
-struct OutputAnalysis: Sendable {
-
-  /// The feature to analyse, over the preview of its image.
-  struct Request: Equatable, Sendable {
-    var previewSource: PreviewSource
-    var feature: ImageEditorFeature
-    var adjustmentRendering: AdjustmentRendering
-  }
+/// `analyze(_:over:adjustmentRendering:)` evaluates the feature through the export path (its
+/// effects, the brush blur the canvas composites, the crop the canvas shows and the vignette) over a
+/// copy of a preview source, and bins it. Points are in the crop output at full resolution, with a
+/// top-left origin: the space in which a macOS canvas reports the pointer.
+public struct OutputAnalysis: Sendable {
 
   /// Counts of each channel's 8-bit display-encoded Display P3 values, 256 bins per channel.
   /// Transparent pixels are left out.
-  struct Histogram: Equatable, Sendable {
-    var red: [UInt32]
-    var green: [UInt32]
-    var blue: [UInt32]
+  public struct Histogram: Equatable, Sendable {
+    public var red: [UInt32]
+    public var green: [UInt32]
+    public var blue: [UInt32]
     /// The pixels counted: every pixel that is not transparent.
-    var pixelCount: Int
+    public var pixelCount: Int
     /// The largest share of counted pixels at 0 in any channel.
-    var shadowClipping: Double
+    public var shadowClipping: Double
     /// The largest share of counted pixels at 255 in any channel.
-    var highlightClipping: Double
+    public var highlightClipping: Double
+
+    public init(
+      red: [UInt32],
+      green: [UInt32],
+      blue: [UInt32],
+      pixelCount: Int,
+      shadowClipping: Double,
+      highlightClipping: Double
+    ) {
+      self.red = red
+      self.green = green
+      self.blue = blue
+      self.pixelCount = pixelCount
+      self.shadowClipping = shadowClipping
+      self.highlightClipping = highlightClipping
+    }
 
     /// Each bin divided by the largest bin among 1...254 of all channels, clamped to 1, so that
     /// clipped pixels do not flatten the rest.
-    func levels() -> (red: [Double], green: [Double], blue: [Double]) {
+    public func levels() -> (red: [Double], green: [Double], blue: [Double]) {
       let peak = [red, green, blue].map { $0.dropFirst().dropLast().max() ?? 0 }.max() ?? 0
       let divisor = Double(max(peak, 1))
       func levels(_ bins: [UInt32]) -> [Double] {
@@ -68,10 +78,16 @@ struct OutputAnalysis: Sendable {
   }
 
   /// An 8-bit display-encoded Display P3 colour.
-  struct Color: Equatable, Sendable {
-    var red: UInt8
-    var green: UInt8
-    var blue: UInt8
+  public struct Color: Equatable, Sendable {
+    public var red: UInt8
+    public var green: UInt8
+    public var blue: UInt8
+
+    public init(red: UInt8, green: UInt8, blue: UInt8) {
+      self.red = red
+      self.green = green
+      self.blue = blue
+    }
   }
 
   /// The long side of the crop output's copy, at most; never more than the preview's resolution.
@@ -92,11 +108,11 @@ struct OutputAnalysis: Sendable {
     return CIContext(options: options)
   }()
 
-  let histogram: Histogram
+  public let histogram: Histogram
 
   /// The full-resolution size of the crop output the bitmap covers: the canvas's content size, and
   /// the space of the points `color(atOutputPoint:)` reads.
-  let outputSize: CGSize
+  public let outputSize: CGSize
 
   let pixelWidth: Int
   let pixelHeight: Int
@@ -105,9 +121,9 @@ struct OutputAnalysis: Sendable {
   /// of the picture. A transparent pixel is black.
   let pixels: [UInt8]
 
-  /// The colour at a point of the crop output (full resolution, top-left origin); nil outside the
-  /// output or where it is transparent.
-  func color(atOutputPoint point: CGPoint) -> Color? {
+  /// The colour at a point of the crop output (full resolution, top-left origin), such as the
+  /// pointer a macOS canvas reports; nil outside the output or where it is transparent.
+  public func color(atOutputPoint point: CGPoint) -> Color? {
     guard
       point.x >= 0,
       point.y >= 0,
@@ -125,17 +141,31 @@ struct OutputAnalysis: Sendable {
     return Color(red: pixels[offset], green: pixels[offset + 1], blue: pixels[offset + 2])
   }
 
-  /// Renders the request's output and bins it, off the calling actor; nil for a degenerate crop or
-  /// a failed evaluation.
+  /// Renders `feature` as a canvas shows it over a copy of `previewSource`, and bins it, off the
+  /// calling actor; nil for a degenerate crop or a failed evaluation.
+  ///
+  /// The copy is at most 1024 pixels on the crop output's long side and never finer than the
+  /// preview source, so a tight crop keeps its detail. The crop is fitted to the image as the
+  /// canvas fits it, so the analysis covers what the canvas shows.
+  ///
+  /// - Parameters:
+  ///   - feature: The feature the canvas shows. It is authored over `previewSource.source`; a
+  ///     feature of another image is analysed over the wrong pixels.
+  ///   - adjustmentRendering: The calculations the adjustments use: the selection the canvas
+  ///     renders with (`adjustmentRendering(_:)`).
   @concurrent
-  static func make(_ request: Request) async -> OutputAnalysis? {
-    let preview = request.previewSource.image
-    let imageSize = request.previewSource.source.pixelSize
+  public static func analyze(
+    _ feature: ImageEditorFeature,
+    over previewSource: PreviewSource,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) async -> OutputAnalysis? {
+    let preview = previewSource.image
+    let imageSize = previewSource.source.pixelSize
     // The canvas fits the crop to the image, so the bitmap is rendered with the canvas's crop:
     // it then covers what the canvas shows, in the coordinates the canvas reports pointers in.
     guard
       let geometry = EditingCanvasCropOutputGeometry(
-        crop: CropGuideState(cropFeature: request.feature.crop, imageSize: imageSize)
+        crop: CropGuideState(cropFeature: feature.crop, imageSize: imageSize)
       )
     else {
       return nil
@@ -153,7 +183,7 @@ struct OutputAnalysis: Sendable {
 
     let output: CIImage
     do {
-      output = try request.feature
+      output = try feature
         .analysisFeature(cropping: geometry.cropFeature, scaledBy: scale)
         .apply(
           to: source,
@@ -163,7 +193,7 @@ struct OutputAnalysis: Sendable {
               evaluated: source.extent.size,
               fullResolution: imageSize
             ),
-            adjustmentRendering: request.adjustmentRendering
+            adjustmentRendering: adjustmentRendering
           )
         )
     } catch {

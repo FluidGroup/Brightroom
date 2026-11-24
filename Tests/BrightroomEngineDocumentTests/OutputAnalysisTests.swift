@@ -141,6 +141,17 @@ struct OutputAnalysisTests {
     }
   }
 
+  @Test func `The adjustments render with the rendering passed`() async throws {
+    let previewSource = try await Self.previewSource(of: SourceImage(cgImage: Self.solidImage((90, 90, 90))))
+    var exposed = Self.wholeImage
+    exposed.effects.exposure = ExposureFeature(ev: 1)
+    let plain = try await Self.analysis(of: Self.wholeImage, over: previewSource)
+
+    let ignored = try await Self.analysis(of: exposed, over: previewSource, adjustmentRendering: Self.exposureIgnored)
+    #expect(ignored.pixels == plain.pixels)
+    #expect(try await Self.analysis(of: exposed, over: previewSource).pixels != plain.pixels)
+  }
+
   // MARK: - Readouts
 
   @Test func `Quadrant colours read back at their output points, with row 0 at the top`() async throws {
@@ -392,14 +403,25 @@ struct OutputAnalysisTests {
 
   private static func analysis(
     of feature: ImageEditorFeature,
-    over previewSource: PreviewSource
+    over previewSource: PreviewSource,
+    adjustmentRendering: AdjustmentRendering = .standard
   ) async throws -> OutputAnalysis {
     try #require(
-      await OutputAnalysis.make(
-        .init(previewSource: previewSource, feature: feature, adjustmentRendering: .standard)
-      )
+      await OutputAnalysis.analyze(feature, over: previewSource, adjustmentRendering: adjustmentRendering)
     )
   }
+
+  /// A rendering whose exposure leaves the image as it is.
+  private static let exposureIgnored: AdjustmentRendering = {
+    var setup = AdjustmentRendering.Setup()
+    setup.replace(
+      ExposureFeature.self,
+      with: .init(identity: .init(implementation: "test.exposure-ignored", version: "1", configuration: "")) { _, image, _ in
+        image
+      }
+    )
+    return setup.makeRendering()
+  }()
 
   /// Expects each point to read its quadrant's colour, within one 8-bit step per channel for the
   /// rounding of Core Image's half-float working space.
