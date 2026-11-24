@@ -278,7 +278,9 @@ The project uses swift-state-graph for observable state. When modifying state-re
   canvas's shared render path, and on macOS the AppKit canvas, its hosting
   and its reports) are in `Tests/BrightroomCanvasTests/`.
   `CanvasPublicAPITests` drives the reader's zoom commands, the zoom and
-  pointer reports and point sampling as a host does
+  pointer reports and point sampling as a host does;
+  `ImageEditorCanvasInputTests` checks with internal access that a shared
+  loader decodes once and how the displayed feature is drawn
 - Focus on testing image processing logic, not UI
 - Use provided test images in Resources for consistency
 - Test files marked "Public API only" play a host app: evaluate through
@@ -426,16 +428,16 @@ struct HistogramView: View {
   shown without a canvas starts it with `.task { await loader.load() }`.
   `loader.previewSource` is nil until it is loaded; `loader.phase` also
   tells loading from failure
-- The components take a feature and the `PreviewSource` it is authored
-  over: `OutputAnalysis.analyze(_:over:)` (a histogram, and the color at the
+- `OutputAnalysis.analyze(_:over:)` (a histogram, and the color at the
   point `onPointerChange(_:)` reports), `GrayPoint.solve(at:in:over:)` (the
   white balance that makes the area around a point `pointSampling(_:)`
-  reports neutral), `FilterSwatch.render(_:over:pointSize:scale:)` (a
-  preset over the thumbnail) and `ColorGradingWheel` (pass
+  reports neutral) and `FilterSwatch.render(_:over:pointSize:scale:)` (a
+  preset over the thumbnail) take a feature and the `PreviewSource` it is
+  authored over, and run off the main actor: before applying a result,
+  check that the document's `source` is still `previewSource.source`.
+  `ColorGradingWheel` takes one range's correction: pass
   `interaction: .pointer` on the Mac, for the pointer and the arrow keys,
-  and localized `rangeName`, `hueLabel` and `saturationLabel`). The first
-  three run off the main actor: before applying a result, check that the
-  document's `source` is still `previewSource.source`
+  and localized `rangeName`, `hueLabel` and `saturationLabel`
 - The macOS canvas is a viewer: `.editingTarget(nil)` asks for one and
   keeps meaning a viewer when crop editing comes to macOS. It reports its
   zoom (`onZoomChange(_:)`, an `ImageEditorCanvas.Zoom`) and the crop-output

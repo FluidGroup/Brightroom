@@ -1463,19 +1463,23 @@ BrightroomUI has no built-in editor, this is how you build one.
 - **macOS.** The canvas is a viewer with zoom and pan; `.editingTarget(nil)`
   asks for one. `onZoomChange(_:)` reports an `ImageEditorCanvas.Zoom`
   (`scale`, `fitScale`, `maximumScale`, `displayScale`, `fraction`,
-  `isFitted`, `isAtMaximum`, `percent`), `onPointerChange(_:)` reports the
-  crop-output pixel under the pointer, `pointSampling(_:)` turns a click
-  into a crop-output point, `fitMargin(_:)` keeps a margin around the output
-  at the fit, and `canvasAccessibilityLabel(_:)` names the canvas for
-  VoiceOver. These modifiers are unavailable on iOS. `ImageEditorCanvasReader`
+  `isFitted`, `isAtMaximum`, `percent`, and an initializer for your tests),
+  `onPointerChange(_:)` reports the crop-output pixel under the pointer,
+  `pointSampling(_:)` turns a click into a crop-output point,
+  `fitMargin(_:)` keeps a margin around the output at the fit, and
+  `canvasAccessibilityLabel(_:)` names the canvas for VoiceOver. These
+  modifiers are unavailable on iOS. `ImageEditorCanvasReader`
   and `ImageEditorCanvasProxy` are available on macOS with the zoom
   commands `zoomIn()`, `zoomOut()`, `zoomToFit()`, and `zoom(toFraction:)`,
   which iOS does not have; the crop commands stay iOS only.
-- **Components.** They work on iOS and macOS. Each takes a feature and the
-  loaded `PreviewSource` the feature is authored over:
+- **Components.** They work on iOS and macOS. The first three take a
+  feature and the loaded `PreviewSource` the feature is authored over;
+  `ColorGradingWheel` takes the correction of one range:
   - `OutputAnalysis.analyze(_:over:adjustmentRendering:)` renders what the
-    canvas shows into a `Histogram`, and the colors `color(atOutputPoint:)`
-    reads;
+    canvas shows into a `Histogram` (`levels()` scales its bins for
+    drawing) and the colors `color(atOutputPoint:)` reads at a point of the
+    crop output (`outputSize`). `Histogram` and `Color` have initializers,
+    so your tests can build them;
   - `GrayPoint.solve(at:in:over:temperatureRange:tintRange:adjustmentRendering:)`
     returns the `WhiteBalanceFeature` that makes the area around a
     crop-output point neutral, or a `GrayPoint.Rejection`;

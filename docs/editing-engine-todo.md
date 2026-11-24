@@ -6,8 +6,9 @@ file tracks concrete engineering items that are not yet done.
 
 Status context (as of Brightroom 6):
 
-- `PreviewSourceLoader` (package) holds no edit; it only prepares the preview
-  (`await load()`, one decode per image, published as `phase`).
+- `PreviewSourceLoader` holds no edit; it only prepares the preview source
+  (`await load()`, one decode per image, published as `phase`), which the
+  canvas and a host's own views share through `PreviewSourceReader`.
   ImageEditor and `ImageEditorCanvas` edit an `ImageEditorDocument` owned by
   the host: its `SourceImage`, its `ImageEditorFeature` (a statically composed
   `Feature`), and its undo history. Crop is a parametric `CropFeature`.

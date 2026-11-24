@@ -131,7 +131,7 @@ Customize the aspect ratio policy and filters through `ImageEditor.Options`, and
 
 For a custom layout and controls, start with [`ImageEditorCanvas`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvas.swift), which edits the same document through a binding and leaves committing undo steps to you. Put it in an [`ImageEditorCanvasReader`](Sources/BrightroomUI/Shared/Canvas/ImageEditorCanvasReader.swift) to send it commands from your own controls: rotate, reset, or apply the crop on iOS, and zoom on macOS.
 
-The canvas and your other views can share one decode of the image. `PreviewSourceReader` keeps one `PreviewSourceLoader` per image: pass the loader to the canvas, and its loaded `PreviewSource` to the components.
+The canvas and your other views can share one decode of the image. `PreviewSourceReader` keeps one `PreviewSourceLoader` per image: pass the loader to the canvas, and its loaded `PreviewSource` to the components that read the image.
 
 ```swift
 PreviewSourceReader(source: document.source) { loader in
@@ -147,7 +147,7 @@ PreviewSourceReader(source: document.source) { loader in
 - `OutputAnalysis.analyze(_:over:)` measures what the canvas shows, for a histogram and the color under the pointer.
 - `GrayPoint.solve(at:in:over:)` finds the white balance that makes an area of the picture neutral.
 - `FilterSwatch.render(_:over:pointSize:scale:)` renders a filter preset over the image's thumbnail, for a filter picker.
-- `ColorGradingWheel` sets the hue and saturation of one tonal range of color grading.
+- `ColorGradingWheel` sets the hue and saturation of one tonal range of color grading. It takes that range's correction, not the image.
 
 On macOS, BrightroomUI has no built-in editor yet, so this is how you build one. There the canvas is a viewer: it shows the document's output with zoom and pan, takes zoom commands through `ImageEditorCanvasReader`, and reports its zoom (`onZoomChange(_:)`) and the pixel under the pointer (`onPointerChange(_:)`). Crop and brush editing are iOS only for now.
 
