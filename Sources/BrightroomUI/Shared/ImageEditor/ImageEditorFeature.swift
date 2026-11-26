@@ -62,6 +62,7 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var whiteBalance: WhiteBalanceFeature?
     public var highlights: HighlightsFeature?
     public var shadows: ShadowsFeature?
+    public var vibrance: VibranceFeature?
     public var saturation: SaturationFeature?
     public var contrast: ContrastFeature?
     /// Tonal color grading, evaluated after contrast and before spatial effects.
@@ -166,6 +167,33 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.grain = grain
     }
 
+    public init(
+      preset: FilterFeature? = nil,
+      exposure: ExposureFeature? = nil,
+      brightness: BrightnessFeature? = nil,
+      whiteBalance: WhiteBalanceFeature? = nil,
+      highlights: HighlightsFeature? = nil,
+      shadows: ShadowsFeature? = nil,
+      vibrance: VibranceFeature?,
+      saturation: SaturationFeature? = nil,
+      contrast: ContrastFeature? = nil,
+      colorGrading: ColorGradingFeature? = nil,
+      sharpen: SharpenFeature? = nil,
+      unsharpMask: UnsharpMaskFeature? = nil,
+      gaussianBlur: GaussianBlurFeature? = nil,
+      fade: FadeFeature? = nil,
+      grain: GrainFeature.CameraRaw? = nil,
+      custom: [AnyImageEffect] = []
+    ) {
+      self.init(
+        preset: preset, exposure: exposure, brightness: brightness, whiteBalance: whiteBalance,
+        highlights: highlights, shadows: shadows, saturation: saturation, contrast: contrast,
+        colorGrading: colorGrading, sharpen: sharpen, unsharpMask: unsharpMask,
+        gaussianBlur: gaussianBlur, fade: fade, grain: grain, custom: custom
+      )
+      self.vibrance = vibrance
+    }
+
     public var body: some ImageEffect {
       preset
       exposure
@@ -173,6 +201,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       whiteBalance
       highlights
       shadows
+      vibrance
       saturation
       contrast
       colorGrading

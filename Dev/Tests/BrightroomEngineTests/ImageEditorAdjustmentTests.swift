@@ -23,6 +23,21 @@ struct ImageEditorAdjustmentTests {
     #expect(ImageEditorFeature.Effects(grain: nil) == .init())
   }
 
+  @Test func `vibrance slider round trips independently of saturation`() {
+    let adjustment = ImageEditor.Adjustment.vibrance
+    let saturation = SaturationFeature(value: 0.2)
+    var feature = ImageEditorFeature(imageSize: imageSize)
+    feature.effects = .init(vibrance: VibranceFeature(amount: -35), saturation: saturation)
+    #expect(adjustment.sliderValue(in: feature) == -35)
+    #expect(adjustment.sliderRange == -100...100)
+
+    adjustment.apply(sliderValue: 80, to: &feature)
+    #expect(feature.effects.vibrance?.amount == 80)
+    adjustment.apply(sliderValue: 0, to: &feature)
+    #expect(feature.effects.vibrance == nil)
+    #expect(feature.effects.saturation == saturation)
+  }
+
   @Test func `grain has dedicated controls and does not use the single value slider`() {
     #expect(ImageEditor.Adjustment.allCases.contains(.grain))
     #expect(ImageEditor.Adjustment.grain.sliderRange == nil)
