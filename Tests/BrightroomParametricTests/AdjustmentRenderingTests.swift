@@ -305,6 +305,7 @@ extension AdjustmentRenderingTests {
     var setup = AdjustmentRendering.Setup()
     setup.replace(ExposureFeature.self, with: failing())
     setup.replace(SaturationFeature.self, with: failing())
+    setup.replace(VibranceFeature.self, with: failing())
     setup.replace(HighlightsFeature.self, with: failing())
     setup.replace(ShadowsFeature.self, with: failing())
     setup.replace(HighlightsShadowsFeature.self, with: failing())
@@ -323,6 +324,7 @@ extension AdjustmentRenderingTests {
     let active: [AnyImageEffect] = [
       AnyImageEffect(ExposureFeature(ev: 1)),
       AnyImageEffect(SaturationFeature(value: 0.2)),
+      AnyImageEffect(VibranceFeature(amount: 20)),
       AnyImageEffect(HighlightsFeature(value: 0.2)),
       AnyImageEffect(ShadowsFeature(value: 0.2)),
       AnyImageEffect(HighlightsShadowsFeature(highlights: -30, shadows: 40)),
@@ -339,6 +341,7 @@ extension AdjustmentRenderingTests {
     let neutral: [AnyImageEffect] = [
       AnyImageEffect(ExposureFeature(ev: 0)),
       AnyImageEffect(SaturationFeature(value: 0)),
+      AnyImageEffect(VibranceFeature()),
       AnyImageEffect(HighlightsFeature(value: 0)),
       AnyImageEffect(ShadowsFeature(value: 0)),
       AnyImageEffect(HighlightsShadowsFeature(highlights: 0, shadows: 0)),

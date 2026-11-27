@@ -55,6 +55,13 @@ public struct AdjustmentRendering: Sendable, Equatable {
     }
 
     public mutating func replace(
+      _ feature: VibranceFeature.Type,
+      with implementation: Implementation<VibranceFeature>
+    ) {
+      implementations.vibrance = implementation
+    }
+
+    public mutating func replace(
       _ feature: HighlightsFeature.Type,
       with implementation: Implementation<HighlightsFeature>
     ) {
@@ -148,6 +155,7 @@ public struct AdjustmentRendering: Sendable, Equatable {
 
     var exposure: Implementation<ExposureFeature>?
     var saturation: Implementation<SaturationFeature>?
+    var vibrance: Implementation<VibranceFeature>?
     var highlights: Implementation<HighlightsFeature>?
     var shadows: Implementation<ShadowsFeature>?
     var highlightsShadows: Implementation<HighlightsShadowsFeature>?
@@ -165,6 +173,7 @@ public struct AdjustmentRendering: Sendable, Equatable {
       let entries: [(String, Identity?)] = [
         ("ExposureFeature", exposure?.identity),
         ("SaturationFeature", saturation?.identity),
+        ("VibranceFeature", vibrance?.identity),
         ("HighlightsFeature", highlights?.identity),
         ("ShadowsFeature", shadows?.identity),
         ("HighlightsShadowsFeature", highlightsShadows?.identity),
@@ -219,6 +228,14 @@ public struct AdjustmentRendering: Sendable, Equatable {
     context: FeatureEvaluationContext
   ) throws -> CIImage? {
     try implementations.saturation?.operation(feature, image, context)
+  }
+
+  package func apply(
+    _ feature: VibranceFeature,
+    to image: CIImage,
+    context: FeatureEvaluationContext
+  ) throws -> CIImage? {
+    try implementations.vibrance?.operation(feature, image, context)
   }
 
   package func apply(

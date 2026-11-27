@@ -35,6 +35,7 @@ extension ImageEditor {
     case brightness
     case contrast
     case saturation
+    case vibrance
     case colorGrading
     case warmth
     case highlights
@@ -51,6 +52,7 @@ extension ImageEditor {
       case .brightness: return "Brightness"
       case .contrast: return "Contrast"
       case .saturation: return "Saturation"
+      case .vibrance: return "Vibrance"
       case .colorGrading: return "Color Grading"
       case .warmth: return "Warmth"
       case .highlights: return "Highlights"
@@ -67,6 +69,7 @@ extension ImageEditor {
       case .brightness: return "sun.max"
       case .contrast: return "circle.lefthalf.filled"
       case .saturation: return "drop"
+      case .vibrance: return "paintpalette"
       case .colorGrading: return "circle.lefthalf.filled.righthalf.striped.horizontal"
       case .warmth: return "thermometer.medium"
       case .highlights: return "circle.tophalf.filled"
@@ -86,7 +89,7 @@ extension ImageEditor {
       switch self {
       case .highlights, .gaussianBlur, .vignette:
         return true
-      case .exposure, .brightness, .contrast, .saturation, .warmth, .shadows, .colorGrading, .grain:
+      case .exposure, .brightness, .contrast, .saturation, .vibrance, .warmth, .shadows, .colorGrading, .grain:
         return false
       }
     }
@@ -107,6 +110,7 @@ extension ImageEditor {
       case .brightness: return 0.2
       case .contrast: return 0.18
       case .saturation: return 1
+      case .vibrance: return 100
       case .warmth: return 3000
       case .highlights: return 1
       case .shadows: return 1
@@ -130,6 +134,8 @@ extension ImageEditor {
         filterValue = effects.contrast?.value ?? 0
       case .saturation:
         filterValue = effects.saturation?.value ?? 0
+      case .vibrance:
+        filterValue = effects.vibrance?.amount ?? 0
       case .warmth:
         filterValue = effects.whiteBalance?.temperature ?? 0
       case .highlights:
@@ -194,6 +200,13 @@ extension ImageEditor {
           into: &feature.effects.saturation,
           make: { SaturationFeature(value: $0) },
           update: { $0.value = $1 }
+        )
+      case .vibrance:
+        Self.upsert(
+          value,
+          into: &feature.effects.vibrance,
+          make: { VibranceFeature(amount: $0) },
+          update: { $0.amount = $1 }
         )
       case .warmth:
         Self.upsert(
