@@ -19,25 +19,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-#if os(iOS)
-
 import CoreImage
 import Metal
-import UIKit
 
 import BrightroomEngine
 import BrightroomParametric
 
-/// Renders a single filter-preview swatch for ImageEditor's Filters strip.
+/// Renders filter swatches: one preset over the centre square of an image's
+/// thumbnail, for a strip of filters to choose from.
 ///
-/// A swatch is the preview thumbnail — the uncropped, already-oriented ~180px
-/// `PreviewSource.thumbnail` decoded at load — center-cropped to a square and run
-/// through one preset's effects. Swatches preview the filter only, not the user's
-/// manual adjustments or the current crop, matching the Photos/Instagram strip.
-///
-/// Each chip renders its own swatch when the strip appears and holds it in its
-/// SwiftUI `@State`, so the render happens once for that chip's lifetime.
-enum FilterSwatch {
+/// A swatch is the thumbnail of a preview source (`PreviewSource.thumbnail`,
+/// uncropped and oriented, at most 180 pixels on its short side),
+/// centre-cropped to a square and run through one preset's effects. It
+/// previews the filter only, not the document's other adjustments or its
+/// crop, and renders in the canvas's colour contract, so it shows the colours
+/// the canvas shows for the preset.
+public enum FilterSwatch {
 
   /// Wide-gamut, GPU-backed context dedicated to swatch rendering. Mirrors the
   /// editing canvas's working space/precision so a swatch and the live canvas
@@ -55,28 +52,60 @@ enum FilterSwatch {
     return CIContext(options: options)
   }()
 
-  /// Renders a single square swatch — a `nil` preset yields the unfiltered base.
+  /// What a swatch is rendered from: a view renders its swatch again only
+  /// when this changes.
+  struct RenderKey: Equatable {
+    var baseImage: ObjectIdentifier?
+    var presetID: String?
+    var displayScale: CGFloat
+    var rendering: AdjustmentRendering.Identity
+  }
+
+  /// Renders `preset` over the centre square of `previewSource`'s thumbnail,
+  /// off the calling actor; a nil preset renders the thumbnail alone. nil when
+  /// the thumbnail is empty or the swatch would be smaller than a pixel.
   ///
-  /// `@concurrent` runs the body on the concurrent executor, so a chip's
-  /// MainActor `.task` offloads the Core Image work off the main thread just by
-  /// awaiting it — no queue hop, no box. `CIImage`, `FilterFeature` and `UIImage`
-  /// are all `Sendable`, so the values cross the isolation boundary directly.
+  /// When the calling task is already cancelled, such as a `.task(id:)` that
+  /// a newer value replaced, it returns nil without rendering. A rendering
+  /// that has started runs to its end, so check `Task.isCancelled` before
+  /// using the result.
   ///
-  /// - Parameters:
-  ///   - pointSize: the swatch's on-screen point size (a square edge).
-  ///   - scale: the display scale; the swatch is rendered at `pointSize * scale`
-  ///     pixels, never larger than the source thumbnail.
+  /// The swatch is `pointSize` times `displayScale` pixels square, never
+  /// larger than the thumbnail's short side, in 8-bit Display P3: show it at
+  /// `displayScale`, the display's pixels per point.
+  /// Proportional radii resolve against the whole thumbnail, as the canvas
+  /// resolves them against the whole image. Absolute radii are pixels of
+  /// `previewSource.source` at full resolution, and scale down to the swatch
+  /// as the canvas scales them to its preview. A preset that fails to evaluate
+  /// renders the thumbnail alone. Pass the adjustment rendering the canvas
+  /// renders with (`adjustmentRendering(_:)`).
   @concurrent
-  static func render(
-    base: CIImage,
-    preset: FilterFeature?,
+  public static func render(
+    _ preset: FilterFeature?,
+    over previewSource: PreviewSource,
     pointSize: CGFloat,
-    scale: CGFloat
-  ) async -> UIImage? {
-    guard let prepared = normalizedSquare(base: base, pointSize: pointSize, scale: scale) else {
+    displayScale: CGFloat,
+    adjustmentRendering: AdjustmentRendering = .standard
+  ) async -> CGImage? {
+    guard
+      let prepared = normalizedSquare(base: previewSource.thumbnail, pointSize: pointSize, displayScale: displayScale)
+    else {
       return nil
     }
-    return makeImage(from: prepared, preset: preset, scale: scale)
+    let evaluationContext = FeatureEvaluationContext(
+      chainEntryExtent: prepared.chainEntryExtent,
+      renderScale: EditingCanvasRenderImageFactory.renderScale(
+        evaluated: prepared.chainEntryExtent.size,
+        fullResolution: previewSource.source.pixelSize
+      ),
+      adjustmentRendering: adjustmentRendering
+    )
+    // The rendering is the expensive part, and once started it runs to its
+    // end, so a cancelled caller gets nothing before it starts.
+    guard !Task.isCancelled else {
+      return nil
+    }
+    return makeImage(from: prepared, preset: preset, evaluationContext: evaluationContext)
   }
 
   // MARK: -
@@ -96,7 +125,7 @@ enum FilterSwatch {
   private static func normalizedSquare(
     base: CIImage,
     pointSize: CGFloat,
-    scale: CGFloat
+    displayScale: CGFloat
   ) -> Prepared? {
     let extent = base.extent
     guard extent.isInfinite == false, extent.isEmpty == false else {
@@ -116,7 +145,7 @@ enum FilterSwatch {
 
     // Downscale to the requested pixel size; never upscale past the source —
     // 8-bit swatches gain nothing from it.
-    let targetPixels = floor(min((pointSize * scale).rounded(), side))
+    let targetPixels = floor(min((pointSize * displayScale).rounded(), side))
     guard targetPixels >= 1 else {
       return nil
     }
@@ -139,15 +168,12 @@ enum FilterSwatch {
   private static func makeImage(
     from prepared: Prepared,
     preset: FilterFeature?,
-    scale: CGFloat
-  ) -> UIImage? {
+    evaluationContext: FeatureEvaluationContext
+  ) -> CGImage? {
     let source: CIImage
     if let preset {
       do {
-        source = try preset.apply(
-          to: prepared.image,
-          context: .init(chainEntryExtent: prepared.chainEntryExtent)
-        )
+        source = try preset.apply(to: prepared.image, context: evaluationContext)
       } catch {
         source = prepared.image
       }
@@ -155,19 +181,11 @@ enum FilterSwatch {
       source = prepared.image
     }
 
-    guard
-      let cgImage = context.createCGImage(
-        source,
-        from: prepared.outputRect,
-        format: .RGBA8,
-        colorSpace: EditingCanvasImageProcessing.drawableColorSpace
-      )
-    else {
-      return nil
-    }
-
-    return UIImage(cgImage: cgImage, scale: scale, orientation: .up)
+    return context.createCGImage(
+      source,
+      from: prepared.outputRect,
+      format: .RGBA8,
+      colorSpace: EditingCanvasImageProcessing.drawableColorSpace
+    )
   }
 }
-
-#endif

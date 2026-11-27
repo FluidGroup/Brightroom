@@ -50,10 +50,11 @@ public struct ImageEditorFeature: Feature, Equatable {
   /// crop does not change them. The vignette, which the output frame decides,
   /// is `ImageEditorFeature.vignette`, evaluated after the crop.
   ///
-  /// The editor edits `preset` through its Filters strip and the other
-  /// optional members through its Adjust sliders. `custom` holds effects the
-  /// host adds, evaluated last; the editor never reads or writes them, and
-  /// Reset keeps them.
+  /// `ImageEditor` edits `preset` through its Filters strip and the other
+  /// members its Adjust mode lists. It has no control for `blacks`,
+  /// `clarity`, `texture`, `sharpen`, `unsharpMask` or `fade` yet, and its
+  /// Reset clears them. `custom` holds effects the host adds, evaluated
+  /// last; the editor never reads or writes them, and Reset keeps them.
   public struct Effects: ImageEffect, Equatable {
 
     public var preset: FilterFeature?
@@ -65,8 +66,18 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var vibrance: VibranceFeature?
     public var saturation: SaturationFeature?
     public var contrast: ContrastFeature?
-    /// Tonal color grading, evaluated after contrast and before spatial effects.
+    /// Lowers or lifts the darkest tones, after the other light adjustments,
+    /// so it sets the black end of the tone they produce.
+    public var blacks: BlacksFeature?
+    /// Tonal color grading, evaluated after the tone adjustments (contrast,
+    /// blacks) and before spatial effects.
     public var colorGrading: ColorGradingFeature?
+    /// Local contrast at a large scale; the radius is a fixed fraction of the
+    /// chain entry (`.proportional(20)`), so a crop does not change it.
+    public var clarity: ClarityFeature?
+    /// Local detail at a medium scale: 12 full-resolution pixels, scaled with
+    /// the render (`renderScale`) in previews.
+    public var texture: TextureFeature?
     public var sharpen: SharpenFeature?
     public var unsharpMask: UnsharpMaskFeature?
     public var gaussianBlur: GaussianBlurFeature?
@@ -194,6 +205,50 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.vibrance = vibrance
     }
 
+    /// Creates global effects with every member, in evaluation order. Omitted
+    /// effects are absent.
+    public init(
+      preset: FilterFeature? = nil,
+      exposure: ExposureFeature? = nil,
+      brightness: BrightnessFeature? = nil,
+      whiteBalance: WhiteBalanceFeature? = nil,
+      highlights: HighlightsFeature? = nil,
+      shadows: ShadowsFeature? = nil,
+      vibrance: VibranceFeature? = nil,
+      saturation: SaturationFeature? = nil,
+      contrast: ContrastFeature? = nil,
+      blacks: BlacksFeature? = nil,
+      colorGrading: ColorGradingFeature? = nil,
+      clarity: ClarityFeature? = nil,
+      texture: TextureFeature? = nil,
+      sharpen: SharpenFeature? = nil,
+      unsharpMask: UnsharpMaskFeature? = nil,
+      gaussianBlur: GaussianBlurFeature? = nil,
+      fade: FadeFeature? = nil,
+      grain: GrainFeature.CameraRaw? = nil,
+      custom: [AnyImageEffect] = []
+    ) {
+      self.preset = preset
+      self.exposure = exposure
+      self.brightness = brightness
+      self.whiteBalance = whiteBalance
+      self.highlights = highlights
+      self.shadows = shadows
+      self.vibrance = vibrance
+      self.saturation = saturation
+      self.contrast = contrast
+      self.blacks = blacks
+      self.colorGrading = colorGrading
+      self.clarity = clarity
+      self.texture = texture
+      self.sharpen = sharpen
+      self.unsharpMask = unsharpMask
+      self.gaussianBlur = gaussianBlur
+      self.fade = fade
+      self.grain = grain
+      self.custom = custom
+    }
+
     public var body: some ImageEffect {
       preset
       exposure
@@ -204,7 +259,10 @@ public struct ImageEditorFeature: Feature, Equatable {
       vibrance
       saturation
       contrast
+      blacks
       colorGrading
+      clarity
+      texture
       sharpen
       unsharpMask
       gaussianBlur

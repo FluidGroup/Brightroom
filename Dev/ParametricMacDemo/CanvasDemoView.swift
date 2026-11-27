@@ -57,11 +57,13 @@ struct DemoRootView: View {
 }
 
 /// An `ImageEditorDocument` shown by `ImageEditorCanvas` as a viewer, with a
-/// few controls bound to the document's feature.
+/// few controls bound to the document's feature, built from the public API
+/// as a host builds its own editor on macOS.
 ///
-/// On macOS the canvas shows the document's evaluated output and zooms and
-/// pans with the trackpad or mouse; the controls change the feature, and the
-/// canvas follows.
+/// The canvas and the histogram share one `PreviewSourceLoader` per image,
+/// so the image is decoded once. The window's toolbar zooms the canvas
+/// through an `ImageEditorCanvasReader`, and the histogram and the color
+/// under the pointer come from an `OutputAnalysis` of what the canvas shows.
 struct CanvasDemoView: View {
 
   @State private var document = ImageEditorDocument(source: CanvasDemoSample.makeSourceImage())
@@ -76,10 +78,10 @@ struct CanvasDemoView: View {
 
       Divider()
 
-      ImageEditorCanvas(document: $document)
-        .editingTarget(nil)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black)
+      // One loader per image: the canvas and the histogram share its decode.
+      PreviewSourceReader(source: document.source) { loader in
+        CanvasViewer(document: $document, previewSourceLoader: loader)
+      }
     }
     .fileImporter(isPresented: $isImporting, allowedContentTypes: [.image]) { result in
       open(result)
@@ -90,7 +92,7 @@ struct CanvasDemoView: View {
     VStack(alignment: .leading, spacing: 16) {
       Text("Canvas")
         .font(.title3.bold())
-      Text("Pinch or scroll with Command to zoom; scroll to pan.")
+      Text("Pinch, scroll with Command, or use the toolbar to zoom; scroll to pan.")
         .font(.caption)
         .foregroundStyle(.secondary)
 
@@ -190,6 +192,158 @@ struct CanvasDemoView: View {
       importError = nil
     } catch {
       importError = String(describing: error)
+    }
+  }
+}
+
+/// The canvas of one image, with zoom controls in the window's toolbar and a
+/// histogram of what it shows. The reader replaces it, zoom and pointer
+/// included, when the image changes.
+private struct CanvasViewer: View {
+
+  @Binding private var document: ImageEditorDocument
+  private let previewSourceLoader: PreviewSourceLoader
+
+  @State private var zoom: ImageEditorCanvas.Zoom?
+  @State private var pointer: CGPoint?
+
+  init(document: Binding<ImageEditorDocument>, previewSourceLoader: PreviewSourceLoader) {
+    self._document = document
+    self.previewSourceLoader = previewSourceLoader
+  }
+
+  var body: some View {
+    ImageEditorCanvasReader { canvas in
+      ImageEditorCanvas(document: $document, previewSourceLoader: previewSourceLoader)
+        .editingTarget(nil)
+        .onZoomChange { zoom = $0 }
+        .onPointerChange { pointer = $0 }
+        .canvasAccessibilityLabel("Photo")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.black)
+        .overlay(alignment: .bottomLeading) {
+          if let previewSource = previewSourceLoader.previewSource {
+            HistogramPanel(feature: document.feature, previewSource: previewSource, pointer: pointer)
+              .padding(12)
+              .allowsHitTesting(false)
+          }
+        }
+        .toolbar {
+          zoomControls(canvas)
+        }
+    }
+  }
+
+  /// Zoom out, a slider from the fit to the largest zoom, zoom in, zoom to
+  /// fit, and the zoom in percent. They wait for the canvas's first report.
+  @ToolbarContentBuilder
+  private func zoomControls(_ canvas: ImageEditorCanvasProxy) -> some ToolbarContent {
+    ToolbarItemGroup {
+      Button("Zoom Out", systemImage: "minus.magnifyingglass") {
+        canvas.zoomOut()
+      }
+      .disabled(zoom?.isFitted ?? true)
+
+      // The reports move the slider, so it follows a pinch too; dragging it
+      // zooms at once.
+      Slider(value: Binding { zoom?.fraction ?? 0 } set: { canvas.zoom(toFraction: $0) }, in: 0...1)
+        .frame(width: 100)
+        .disabled(zoom == nil)
+
+      Button("Zoom In", systemImage: "plus.magnifyingglass") {
+        canvas.zoomIn()
+      }
+      .disabled(zoom?.isAtMaximum ?? true)
+
+      Button("Zoom to Fit", systemImage: "arrow.up.left.and.down.right.magnifyingglass") {
+        canvas.zoomToFit()
+      }
+      .disabled(zoom?.isFitted ?? true)
+
+      // Device pixels per pixel of the image.
+      Text(zoom?.percent.formatted(.percent) ?? "")
+        .monospacedDigit()
+        .frame(width: 48, alignment: .trailing)
+    }
+  }
+}
+
+/// A histogram of what the canvas shows and the color under the pointer,
+/// from one `OutputAnalysis` of the feature over the shared preview source.
+private struct HistogramPanel: View {
+
+  private let feature: ImageEditorFeature
+  private let previewSource: PreviewSource
+  private let pointer: CGPoint?
+
+  @State private var analysis: OutputAnalysis?
+
+  init(feature: ImageEditorFeature, previewSource: PreviewSource, pointer: CGPoint?) {
+    self.feature = feature
+    self.previewSource = previewSource
+    self.pointer = pointer
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Canvas { context, size in
+        guard let levels = analysis?.histogram.levels() else {
+          return
+        }
+
+        // Pure primaries add up to gray where the channels overlap.
+        context.blendMode = .plusLighter
+        let channels = [
+          (levels.red, Color(.sRGB, red: 1, green: 0, blue: 0, opacity: 0.6)),
+          (levels.green, Color(.sRGB, red: 0, green: 1, blue: 0, opacity: 0.6)),
+          (levels.blue, Color(.sRGB, red: 0, green: 0, blue: 1, opacity: 0.6)),
+        ]
+        for (levels, color) in channels {
+          context.fill(Self.area(under: levels, in: CGRect(origin: .zero, size: size)), with: .color(color))
+        }
+      }
+      .frame(height: 72)
+
+      Text(readout)
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(.secondary)
+    }
+    .padding(10)
+    .frame(width: 220)
+    .background(.regularMaterial, in: .rect(cornerRadius: 8))
+    .task(id: feature) {
+      // A newer feature cancels the wait, so a slider drag is analyzed once
+      // it pauses rather than at every step.
+      try? await Task.sleep(for: .milliseconds(100))
+      guard Task.isCancelled == false else {
+        return
+      }
+
+      let analysis = await OutputAnalysis.analyze(feature, over: previewSource)
+      if Task.isCancelled == false {
+        self.analysis = analysis
+      }
+    }
+  }
+
+  /// The 8-bit Display P3 values of the pixel under the pointer.
+  private var readout: String {
+    guard let pointer, let color = analysis?.color(atOutputPoint: pointer) else {
+      return "R ---  G ---  B ---"
+    }
+    return "R \(color.red)  G \(color.green)  B \(color.blue)"
+  }
+
+  /// The area under `levels`, from the left edge of `rect` to its right edge.
+  private static func area(under levels: [Double], in rect: CGRect) -> Path {
+    Path { path in
+      let step = rect.width / CGFloat(levels.count - 1)
+      path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+      for (index, level) in levels.enumerated() {
+        path.addLine(to: CGPoint(x: rect.minX + step * CGFloat(index), y: rect.maxY - rect.height * level))
+      }
+      path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+      path.closeSubpath()
     }
   }
 }

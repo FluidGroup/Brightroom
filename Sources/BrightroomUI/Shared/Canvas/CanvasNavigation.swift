@@ -129,8 +129,15 @@ struct CanvasNavigation: Equatable, Sendable {
     /// A stepped zoom, such as a mouse wheel with a modifier key: it stops at
     /// a zoom limit and needs no end.
     case zoomStep(factor: CGFloat, anchor: CGPoint)
-    /// Switches between the fit and a closer look at `anchor`.
+    /// Switches between the fit and a closer look at `anchor`, with the
+    /// settle spring. It takes over a running motion from what is shown,
+    /// keeping its velocity, and stops momentum.
     case toggleZoom(anchor: CGPoint)
+    /// Zooms to `scale`, clamped to the limits, keeping the content under
+    /// `anchor` in place as far as the limits allow (the canvas centre when
+    /// nil): with the settle spring when `animated` and `animates` allow, as
+    /// `toggleZoom` does, and at once otherwise. Stops momentum.
+    case zoom(scale: CGFloat, anchor: CGPoint?, animated: Bool)
   }
 
   /// The largest zoom, as a multiple of the fit.
@@ -175,6 +182,10 @@ struct CanvasNavigation: Equatable, Sendable {
 
   /// The canvas's size in points.
   private(set) var canvasSize: CGSize
+
+  /// The canvas points the fit leaves clear around the content on every
+  /// side. Zoomed in, the content reaches the canvas's edges.
+  private(set) var fitMargin: CGFloat = 0
 
   /// When false, a motion that would start (the way back from a rubber band,
   /// a bounce, a zoom toggle) completes at once instead, and nothing
@@ -247,17 +258,20 @@ struct CanvasNavigation: Equatable, Sendable {
   init(contentSize: CGSize, canvasSize: CGSize) {
     self.contentSize = contentSize
     self.canvasSize = canvasSize
-    let fitted = Self.fittedPosition(contentSize: contentSize, canvasSize: canvasSize)
+    let fitted = Self.fittedPosition(
+      contentSize: contentSize, canvasSize: canvasSize, margin: fitMargin
+    )
     self.position = fitted
     self.tracked = fitted
   }
 
   // MARK: - Layout
 
-  /// The zoom at which the whole content fits the canvas; 0 while a size is
-  /// not positive or too extreme to compute a zoom with.
+  /// The zoom at which the whole content fits the canvas inside the fit
+  /// margin; 0 while the content or that room has no size, or the sizes are
+  /// too extreme to compute a zoom with.
   var fitScale: CGFloat {
-    Self.fitScale(contentSize: contentSize, canvasSize: canvasSize)
+    Self.fitScale(contentSize: contentSize, canvasSize: canvasSize, margin: fitMargin)
   }
 
   /// The zoom limits: from the fit to `maximumZoomFactor` times the fit.
@@ -270,6 +284,12 @@ struct CanvasNavigation: Equatable, Sendable {
   var isFitted: Bool {
     let fit = fitScale
     return abs(position.scale - fit) <= 1e-6 * max(fit, .leastNonzeroMagnitude)
+  }
+
+  /// The zoom a running zoom motion settles at, else the current zoom, so
+  /// consecutive steps compound.
+  var targetScale: CGFloat {
+    motion.zoom?.rest ?? position.scale
   }
 
   /// Whether a motion is running, so the host keeps drawing frames.
@@ -290,12 +310,16 @@ struct CanvasNavigation: Equatable, Sendable {
     guard size != canvasSize else { return }
     let wasFitted = isFitted
     canvasSize = size
-    motion = Motion()
-    forgetVelocity()
-    position = wasFitted
-      ? Self.fittedPosition(contentSize: contentSize, canvasSize: canvasSize)
-      : restingPosition(near: position)
-    tracked = position
+    followFitChange(wasFitted: wasFitted)
+  }
+
+  /// Leaves `margin` canvas points clear around the content at the fit,
+  /// following the change as a resize does.
+  mutating func setFitMargin(_ margin: CGFloat) {
+    guard margin != fitMargin else { return }
+    let wasFitted = isFitted
+    fitMargin = margin
+    followFitChange(wasFitted: wasFitted)
   }
 
   /// Shows new content, fitted.
@@ -313,7 +337,9 @@ struct CanvasNavigation: Equatable, Sendable {
     isGestureOpen = false
     didPinch = false
     zoomAnchor = nil
-    position = Self.fittedPosition(contentSize: contentSize, canvasSize: canvasSize)
+    position = Self.fittedPosition(
+      contentSize: contentSize, canvasSize: canvasSize, margin: fitMargin
+    )
     tracked = position
   }
 
@@ -428,6 +454,7 @@ struct CanvasNavigation: Equatable, Sendable {
       tracked = position
 
     case let .toggleZoom(anchor):
+      let running = motion
       interrupt()
       ignoresMomentum = PerAxis(true)
       forgetVelocity()
@@ -441,8 +468,34 @@ struct CanvasNavigation: Equatable, Sendable {
           scale: scale,
           center: restingCenter(center(keeping: anchor, atScale: scale), scale: scale)
         ),
+        continuing: running,
         at: now
       )
+
+    case let .zoom(scale, anchor, animated):
+      let running = motion
+      interrupt()
+      ignoresMomentum = PerAxis(true)
+      forgetVelocity()
+      let range = scaleRange
+      let anchor = anchor ?? CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+      guard
+        scale.isFinite, scale > 0, anchor.x.isFinite, anchor.y.isFinite,
+        range.lowerBound > 0
+      else {
+        return
+      }
+      let scale = min(max(scale, range.lowerBound), range.upperBound)
+      let target = Position(
+        scale: scale,
+        center: restingCenter(center(keeping: anchor, atScale: scale), scale: scale)
+      )
+      if animated {
+        startZoomMotion(to: target, continuing: running, at: now)
+      } else {
+        position = target
+        tracked = target
+      }
     }
   }
 
@@ -545,24 +598,45 @@ struct CanvasNavigation: Equatable, Sendable {
     var zoom: Zoom?
   }
 
-  private static func fitScale(contentSize: CGSize, canvasSize: CGSize) -> CGFloat {
+  private static func fitScale(
+    contentSize: CGSize,
+    canvasSize: CGSize,
+    margin: CGFloat
+  ) -> CGFloat {
+    let room = CGSize(width: canvasSize.width - 2 * margin, height: canvasSize.height - 2 * margin)
     guard
       contentSize.width > 0, contentSize.height > 0,
-      canvasSize.width > 0, canvasSize.height > 0
+      room.width > 0, room.height > 0
     else {
       return 0
     }
-    let scale = min(canvasSize.width / contentSize.width, canvasSize.height / contentSize.height)
+    let scale = min(room.width / contentSize.width, room.height / contentSize.height)
     // A zoom too small or too large to compute positions with counts as no
     // size.
     return scale.isNormal ? scale : 0
   }
 
-  private static func fittedPosition(contentSize: CGSize, canvasSize: CGSize) -> Position {
+  private static func fittedPosition(
+    contentSize: CGSize,
+    canvasSize: CGSize,
+    margin: CGFloat
+  ) -> Position {
     Position(
-      scale: fitScale(contentSize: contentSize, canvasSize: canvasSize),
+      scale: fitScale(contentSize: contentSize, canvasSize: canvasSize, margin: margin),
       center: CGPoint(x: contentSize.width / 2, y: contentSize.height / 2)
     )
+  }
+
+  /// Follows a change of the fit, stopping any motion. A canvas that was
+  /// fitted is fitted anew; otherwise the zoom and the centre are kept as
+  /// far as the new limits allow.
+  private mutating func followFitChange(wasFitted: Bool) {
+    motion = Motion()
+    forgetVelocity()
+    position = wasFitted
+      ? Self.fittedPosition(contentSize: contentSize, canvasSize: canvasSize, margin: fitMargin)
+      : restingPosition(near: position)
+    tracked = position
   }
 
   /// The centres along one axis that keep the canvas inside the content, or
@@ -999,7 +1073,7 @@ struct CanvasNavigation: Equatable, Sendable {
     let restingScale = min(max(position.scale, range.lowerBound), range.upperBound)
     guard abs(position.scale - restingScale) <= 1e-6 * restingScale else {
       ignoresMomentum = PerAxis(true)
-      startZoomMotion(to: restingPosition(keeping: anchor), at: now)
+      startZoomMotion(to: restingPosition(keeping: anchor), continuing: motion, at: now)
       return
     }
     position.scale = restingScale
@@ -1147,10 +1221,17 @@ struct CanvasNavigation: Equatable, Sendable {
     return velocity
   }
 
-  /// Moves the zoom and the centre to `target` together. Each component runs
-  /// on the settling spring from rest, starting now, so they keep step: the
-  /// centre moves in a line while the zoom moves along its logarithm.
-  private mutating func startZoomMotion(to target: Position, at time: TimeInterval) {
+  /// Moves the zoom and the centre to `target` together on the settling
+  /// spring, starting now from what is shown. Each component starts with the
+  /// velocity it has in `running`, the motion this one replaces, so a new
+  /// target turns the motion without a change of speed. From rest the
+  /// components keep step: the centre moves in a line while the zoom moves
+  /// along its logarithm.
+  private mutating func startZoomMotion(
+    to target: Position,
+    continuing running: Motion,
+    at time: TimeInterval
+  ) {
     motion = Motion()
     tracked = target
     guard
@@ -1165,7 +1246,7 @@ struct CanvasNavigation: Equatable, Sendable {
         base: Self.settleSpring,
         rest: log(target.scale),
         start: log(position.scale),
-        velocity: 0,
+        velocity: running.zoom?.logScale.velocity(at: time) ?? 0,
         startTime: time,
         // The share of the zoom that moves nothing on the canvas by more
         // than the resting distance.
@@ -1180,9 +1261,10 @@ struct CanvasNavigation: Equatable, Sendable {
           base: Self.settleSpring,
           rest: target.center[axis],
           start: position.center[axis],
-          velocity: 0,
+          velocity: running.center[axis]?.sample(at: time).velocity ?? 0,
           startTime: time,
-          tolerance: Self.restingDistance / scale
+          tolerance: Self.restingDistance / scale,
+          reach: canvasSize[axis] / scale
         )
       )
     }

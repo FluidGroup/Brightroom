@@ -103,6 +103,7 @@ each word has one meaning; new API and documentation follow this list.
 | Commit | Record the current root feature as an undo step. Only history commits. | `EditingDocument.commit()` |
 | Editor | A complete UI that edits a document. | `ImageEditor` |
 | Canvas | The view that shows the evaluated result and lets tools edit one Feature. | `ImageEditorCanvas` |
+| Preview source | The downsampled editing copy and thumbnail of a source image that an editor shows, prepared once per open image by a `PreviewSourceLoader` and never stored in a document. What the canvas renders over it is a preview; showing a value there before it is written is previewing it. | `PreviewSource`, `PreviewSourceLoader`, `PreviewSourceReader` |
 | Viewing point | What the canvas shows: the result of evaluating the Feature stack. | |
 | Adjustment point | The Feature a tool edits, which can sit upstream of the viewing point. | `ImageEditorCanvas.editingTarget(_:)`, `ImageEditorCanvas.Target` |
 | Display, viewport | The on-screen space of a canvas. Stored edits never use it. | |

@@ -8,8 +8,10 @@ import Testing
 @testable import BrightroomUI
 
 /// The AppKit `EditingCanvasView` on its own: its lifecycle at zero size and
-/// outside a window, its first frame, its display link, and how it reads and
-/// passes on scroll events.
+/// outside a window, its first frame, its display link, how it reads and
+/// passes on scroll events, its zoom commands and reports, its fit margin,
+/// the pointer, the mouse and point sampling, the keyboard, the focus ring
+/// and what VoiceOver reads, and when it builds a feature change.
 @MainActor
 @Suite(.enabled(if: MTLCreateSystemDefaultDevice() != nil))
 struct AppKitCanvasViewTests {
@@ -25,12 +27,17 @@ struct AppKitCanvasViewTests {
     )
   }
 
-  /// A superview that records the scroll events passed on to it.
-  final class ScrollRecordingView: NSView {
+  /// A superview that records the scroll and key events passed on to it.
+  final class EventRecordingView: NSView {
     private(set) var receivedScrollEvents: [NSEvent] = []
+    private(set) var receivedKeyEvents: [NSEvent] = []
 
     override func scrollWheel(with event: NSEvent) {
       receivedScrollEvents.append(event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+      receivedKeyEvents.append(event)
     }
   }
 
@@ -43,7 +50,7 @@ struct AppKitCanvasViewTests {
       defer: false
     )
     window.isReleasedWhenClosed = false
-    let container = ScrollRecordingView(frame: CGRect(x: 0, y: 0, width: 400, height: 400))
+    let container = EventRecordingView(frame: CGRect(x: 0, y: 0, width: 400, height: 400))
     window.contentView = container
     container.addSubview(view)
     return window
@@ -51,7 +58,12 @@ struct AppKitCanvasViewTests {
 
   /// The scroll events the canvas's superview received.
   private static func forwardedScrollEvents(of canvas: EditingCanvasView) -> [NSEvent] {
-    (canvas.superview as? ScrollRecordingView)?.receivedScrollEvents ?? []
+    (canvas.superview as? EventRecordingView)?.receivedScrollEvents ?? []
+  }
+
+  /// The key events the canvas's superview received.
+  private static func forwardedKeyEvents(of canvas: EditingCanvasView) -> [NSEvent] {
+    (canvas.superview as? EventRecordingView)?.receivedKeyEvents ?? []
   }
 
   /// Ticks the display link by hand until it pauses, as frames would.
@@ -755,6 +767,745 @@ struct AppKitCanvasViewTests {
       Self.forwardedScrollEvents(of: canvas).map(\.phase)
         == [.mayBegin, .ended, .mayBegin, .cancelled]
     )
+    canvas.invalidate()
+  }
+
+  // MARK: - Zoom commands and reports
+
+  /// A canvas of 300 x 300 points in a window, laid out: the 400 x 200
+  /// output fits at 0.75, 300 x 150 points, 75 points below the top.
+  private static func makeLaidOutCanvas() -> (EditingCanvasView, NSWindow) {
+    let canvas = makeCanvas()
+    let window = makeWindow(containing: canvas)
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    return (canvas, window)
+  }
+
+  private static func isClose(_ lhs: CGFloat, _ rhs: CGFloat) -> Bool {
+    abs(lhs - rhs) < 1e-9
+  }
+
+  private static func isClose(_ lhs: CGPoint?, _ rhs: CGPoint) -> Bool {
+    guard let lhs else { return false }
+    return isClose(lhs.x, rhs.x) && isClose(lhs.y, rhs.y)
+  }
+
+  @Test
+  func `The zoom commands step about the centre, fit, and go to a fraction of the range`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    let fit = canvas.navigation.fitScale
+    #expect(Self.isClose(fit, 0.75))
+    let centre = canvas.navigation.position.center
+
+    canvas.zoomIn()
+    #expect(Self.isClose(canvas.navigation.position.scale, 2 * fit))
+    #expect(Self.isClose(canvas.navigation.position.center, centre))
+    canvas.zoomIn()
+    #expect(Self.isClose(canvas.navigation.position.scale, 4 * fit))
+    canvas.zoomOut()
+    #expect(Self.isClose(canvas.navigation.position.scale, 2 * fit))
+    canvas.zoomToFit()
+    #expect(canvas.navigation.isFitted)
+    canvas.zoomOut()
+    #expect(canvas.navigation.isFitted)
+
+    canvas.zoom(toFraction: 1)
+    #expect(Self.isClose(canvas.navigation.position.scale, 8 * fit))
+    // The range is three doublings of the fit.
+    canvas.zoom(toFraction: 1.0 / 3)
+    #expect(Self.isClose(canvas.navigation.position.scale, 2 * fit))
+    #expect(Self.isClose(canvas.navigation.position.center, centre))
+    #expect(canvas.navigation.isMoving == false)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `The zoom is reported once per change, and a command's before it returns`() throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    canvas.onZoomChange = { zooms.append($0) }
+
+    // Nothing is shown at zero size, so nothing is reported.
+    canvas.layout()
+    #expect(zooms.isEmpty)
+
+    // The first frame reports the fit.
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    canvas.areAnimationsEnabled = false
+    let fitted = try #require(zooms.first)
+    #expect(zooms.count == 1)
+    #expect(fitted.isFitted)
+    #expect(Self.isClose(fitted.scale, 0.75))
+    #expect(Self.isClose(fitted.maximumScale, 6))
+    #expect(fitted.displayScale == window.backingScaleFactor)
+
+    // Frames that change nothing report nothing.
+    Self.tickUntilPaused(canvas)
+    canvas.layout()
+    #expect(zooms.count == 1)
+
+    canvas.zoomIn()
+    #expect(zooms.count == 2)
+    #expect(Self.isClose(zooms.last?.scale ?? 0, 1.5))
+    canvas.zoomIn()
+    canvas.zoomIn()
+    #expect(zooms.count == 4)
+    #expect(zooms.last?.isAtMaximum == true)
+    // At the maximum a step changes nothing, and reports nothing.
+    canvas.zoomIn()
+    Self.tickUntilPaused(canvas)
+    #expect(zooms.count == 4)
+
+    canvas.zoom(toFraction: 0.5)
+    #expect(zooms.count == 5)
+    #expect(abs((zooms.last?.fraction ?? 0) - 0.5) < 1e-9)
+
+    canvas.zoomToFit()
+    #expect(zooms.count == 6)
+    #expect(zooms.last == fitted)
+    canvas.invalidate()
+  }
+
+  @Test(.enabled(if: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion == false))
+  func `An animated zoom step reports from the frames of its motion, and a zoom to a fraction before it returns`() async throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    canvas.onZoomChange = { zooms.append($0) }
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    #expect(zooms.count == 1)
+
+    canvas.zoomIn()
+    #expect(zooms.count == 1, "The step has only started its motion.")
+    #expect(canvas.navigation.isMoving)
+    for _ in 0..<250 where canvas.navigation.isMoving {
+      canvas.drawViewportFrame()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(zooms.count > 1)
+    #expect(Self.isClose(zooms.last?.scale ?? 0, 1.5))
+
+    let reported = zooms.count
+    canvas.zoom(toFraction: 1)
+    #expect(zooms.count == reported + 1)
+    #expect(zooms.last?.isAtMaximum == true)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A fit margin leaves room around the fitted output, and a change of it shows on the next frame`() throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    // Before the first layout, as the representable sets it.
+    canvas.fitMargin = 12
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+
+    // The 400 x 200 output fits the 276 points inside the margins at 0.69:
+    // 276 x 138 points, 12 from the sides and 81 from the top.
+    let fitted = try #require(canvas.surface.displayedViewport).contentToCanvasTransform
+    #expect(Self.isClose(fitted.a, 0.69))
+    #expect(Self.isClose(fitted.tx, 12))
+    #expect(Self.isClose(fitted.ty, 81))
+
+    canvas.fitMargin = 0
+    #expect(canvas.displayLink.isPaused == false)
+    canvas.drawViewportFrame()
+    #expect(canvas.navigation.isFitted)
+    let unmargined = try #require(canvas.surface.displayedViewport).contentToCanvasTransform
+    #expect(Self.isClose(unmargined.a, 0.75))
+    #expect(Self.isClose(unmargined.tx, 0))
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A fit margin keeps a tall output that far from the top and the bottom, and farther from the sides`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.fitMargin = 12
+    // The left quarter of the image: a 100 x 200 output, taller than wide.
+    var feature = canvas.feature
+    feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 100, height: 200))
+    canvas.setFeature(feature)
+    canvas.drawViewportFrame()
+
+    // It fits the 276 points inside the margins at 1.38: 138 x 276 points,
+    // 12 from the top and the bottom, and 81 from the sides.
+    #expect(canvas.navigation.isFitted)
+    let viewport = try #require(canvas.surface.displayedViewport)
+    let outputSize = try #require(canvas.outputGeometry?.outputSize)
+    let output = CGRect(origin: .zero, size: outputSize).applying(viewport.contentToCanvasTransform)
+    #expect(Self.isClose(output.minY, 12))
+    #expect(Self.isClose(canvas.bounds.maxY - output.maxY, 12))
+    #expect(Self.isClose(output.minX, 81))
+    #expect(Self.isClose(canvas.bounds.maxX - output.maxX, 81))
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A canvas point maps to the output point under it, and off the image to nil`() throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    func outputPoint(_ x: CGFloat, _ y: CGFloat) -> CGPoint? {
+      canvas.outputPoint(forCanvasPoint: CGPoint(x: x, y: y))
+    }
+    // Before the first frame no point is under the pointer.
+    #expect(outputPoint(150, 150) == nil)
+
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    #expect(Self.isClose(outputPoint(150, 150), CGPoint(x: 200, y: 100)))
+    #expect(Self.isClose(outputPoint(0, 75), .zero))
+    #expect(Self.isClose(outputPoint(299, 224), CGPoint(x: 299 / 0.75, y: 149 / 0.75)))
+    // Above and below the letterboxed output.
+    #expect(outputPoint(150, 50) == nil)
+    #expect(outputPoint(150, 260) == nil)
+
+    // Zoomed in about the centre, the same point shows another pixel.
+    canvas.areAnimationsEnabled = false
+    canvas.zoomIn()
+    #expect(Self.isClose(outputPoint(0, 150), CGPoint(x: 100, y: 100)))
+    canvas.invalidate()
+  }
+
+  // MARK: - Pointer and mouse
+
+  /// Passes `canvas` a mouse event of `type` at `canvasPoint`, made as the
+  /// window makes one.
+  private static func send(
+    _ type: NSEvent.EventType,
+    at canvasPoint: CGPoint,
+    to canvas: EditingCanvasView
+  ) throws {
+    let window = try #require(canvas.window)
+    let location = canvas.convert(canvasPoint, to: nil)
+    switch type {
+    case .mouseEntered, .mouseExited:
+      let event = try #require(
+        NSEvent.enterExitEvent(
+          with: type,
+          location: location,
+          modifierFlags: [],
+          timestamp: 0,
+          windowNumber: window.windowNumber,
+          context: nil,
+          eventNumber: 0,
+          trackingNumber: 0,
+          userData: nil
+        )
+      )
+      if type == .mouseEntered {
+        canvas.mouseEntered(with: event)
+      } else {
+        canvas.mouseExited(with: event)
+      }
+    default:
+      let event = try #require(
+        NSEvent.mouseEvent(
+          with: type,
+          location: location,
+          modifierFlags: [],
+          timestamp: 0,
+          windowNumber: window.windowNumber,
+          context: nil,
+          eventNumber: 0,
+          clickCount: type == .mouseMoved ? 0 : 1,
+          pressure: type == .leftMouseDown || type == .leftMouseDragged ? 1 : 0
+        )
+      )
+      switch type {
+      case .mouseMoved:
+        canvas.mouseMoved(with: event)
+      case .leftMouseDown:
+        canvas.mouseDown(with: event)
+      case .leftMouseDragged:
+        canvas.mouseDragged(with: event)
+      case .leftMouseUp:
+        canvas.mouseUp(with: event)
+      default:
+        Issue.record("The canvas is not sent \(type) events")
+      }
+    }
+  }
+
+  @Test
+  func `The pointer reports the whole output pixel under it, and nil off the image or once it leaves`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    var pointers: [CGPoint?] = []
+    canvas.onPointerChange = { pointers.append($0) }
+
+    // Over output (201.3, 101.3).
+    try Self.send(.mouseEntered, at: CGPoint(x: 151, y: 151), to: canvas)
+    #expect(pointers == [CGPoint(x: 201, y: 101)])
+    // Within the same pixel nothing is reported.
+    try Self.send(.mouseMoved, at: CGPoint(x: 151.2, y: 151.2), to: canvas)
+    #expect(pointers.count == 1)
+    // Above the letterboxed output.
+    try Self.send(.mouseMoved, at: CGPoint(x: 151, y: 50), to: canvas)
+    #expect(pointers == [CGPoint(x: 201, y: 101), nil])
+    try Self.send(.mouseMoved, at: CGPoint(x: 151, y: 151), to: canvas)
+    #expect(pointers.count == 3)
+
+    // A zoom moves the image under the resting pointer: at 1.5 about the
+    // centre it is over output (200.7, 100.7).
+    canvas.zoomIn()
+    #expect(pointers.count == 4)
+    #expect(pointers.last == CGPoint(x: 200, y: 100))
+
+    try Self.send(.mouseExited, at: CGPoint(x: -10, y: 151), to: canvas)
+    #expect(pointers.count == 5)
+    #expect(pointers.last == .some(nil))
+    // Once the pointer has left, frames report nothing for it.
+    canvas.zoomOut()
+    Self.tickUntilPaused(canvas)
+    #expect(pointers.count == 5)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A drag reports the pixel under the pointer, which a pan keeps, and nil off the canvas`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    var pointers: [CGPoint?] = []
+    canvas.onPointerChange = { pointers.append($0) }
+
+    // At the fit a drag pans nothing and moves the pointer over the image,
+    // to output (213.3, 101.3), then off the canvas.
+    try Self.send(.leftMouseDown, at: CGPoint(x: 151, y: 151), to: canvas)
+    try Self.send(.leftMouseDragged, at: CGPoint(x: 160, y: 151), to: canvas)
+    #expect(pointers == [CGPoint(x: 213, y: 101)])
+    try Self.send(.leftMouseDragged, at: CGPoint(x: 320, y: 151), to: canvas)
+    #expect(pointers == [CGPoint(x: 213, y: 101), nil])
+    try Self.send(.leftMouseUp, at: CGPoint(x: 320, y: 151), to: canvas)
+
+    // Zoomed in to 3, the pointer rests over output (200.3, 100.3).
+    canvas.zoomIn()
+    canvas.zoomIn()
+    try Self.send(.mouseMoved, at: CGPoint(x: 151, y: 151), to: canvas)
+    #expect(pointers.last == CGPoint(x: 200, y: 100))
+    let reported = pointers.count
+
+    // The image follows a drag that pans it, so the pixel under the pointer
+    // stays the one the drag took hold of.
+    try Self.send(.leftMouseDown, at: CGPoint(x: 151, y: 151), to: canvas)
+    try Self.send(.leftMouseDragged, at: CGPoint(x: 121, y: 141), to: canvas)
+    Self.tickUntilPaused(canvas)
+    #expect(canvas.navigation.position.center.x > 200)
+    #expect(pointers.count == reported)
+
+    // Off the canvas the pan goes on, over no pixel.
+    try Self.send(.leftMouseDragged, at: CGPoint(x: -20, y: 141), to: canvas)
+    Self.tickUntilPaused(canvas)
+    #expect(pointers.count == reported + 1)
+    #expect(pointers.last == .some(nil))
+    try Self.send(.leftMouseUp, at: CGPoint(x: -20, y: 141), to: canvas)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `Dragging with the mouse pans only once zoomed in`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    func drag(through points: [CGPoint]) throws {
+      try Self.send(.leftMouseDown, at: points[0], to: canvas)
+      for point in points.dropFirst() {
+        try Self.send(.leftMouseDragged, at: point, to: canvas)
+      }
+      try Self.send(.leftMouseUp, at: points[points.count - 1], to: canvas)
+    }
+    let path = [CGPoint(x: 150, y: 150), CGPoint(x: 120, y: 140), CGPoint(x: 110, y: 130)]
+
+    // At the fit there is nothing to pan.
+    let fitted = canvas.navigation.position
+    try drag(through: path)
+    #expect(canvas.navigation.position == fitted)
+
+    // Zoomed in to 3, the content follows the mouse: 40 points left and 20
+    // up move the centre the other way by that many points over the zoom.
+    canvas.zoomIn()
+    canvas.zoomIn()
+    let zoomed = canvas.navigation.position
+    #expect(canvas.navigation.canScroll)
+    try drag(through: path)
+    let panned = CGPoint(x: zoomed.center.x + 40 / 3, y: zoomed.center.y + 20 / 3)
+    #expect(Self.isClose(canvas.navigation.position.center, panned))
+    #expect(canvas.navigation.position.scale == zoomed.scale)
+    #expect(canvas.navigation.isMoving == false)
+
+    // Pulled past the left edge, where the centre's limit is 50, the content
+    // goes back inside when the drag ends. The drag may leave the view.
+    try drag(through: [CGPoint(x: 10, y: 150), CGPoint(x: 600, y: 150)])
+    #expect(canvas.navigation.isMoving == false)
+    #expect(Self.isClose(canvas.navigation.position.center.x, 50))
+    canvas.invalidate()
+  }
+
+  @Test
+  func `While a point is sampled, a click on the image samples it instead of panning, under a crosshair`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    func drag(from start: CGPoint, to end: CGPoint) throws {
+      try Self.send(.leftMouseDown, at: start, to: canvas)
+      try Self.send(.leftMouseDragged, at: end, to: canvas)
+      try Self.send(.leftMouseUp, at: end, to: canvas)
+    }
+    var samples: [CGPoint] = []
+    #expect(canvas.restingCursor === NSCursor.arrow)
+    canvas.pointSampling = { samples.append($0) }
+    #expect(canvas.restingCursor === NSCursor.crosshair)
+
+    // At the fit, a click over output (200, 100) samples it; a click above
+    // the letterboxed output samples nothing.
+    for point in [CGPoint(x: 150, y: 150), CGPoint(x: 150, y: 50)] {
+      try Self.send(.leftMouseDown, at: point, to: canvas)
+      try Self.send(.leftMouseUp, at: point, to: canvas)
+    }
+    #expect(samples.count == 1)
+    #expect(Self.isClose(samples.first, CGPoint(x: 200, y: 100)))
+
+    // Zoomed in to 3, where a drag pans, the click over output (190, 100)
+    // samples it, and the drag that follows pans nothing.
+    canvas.zoomIn()
+    canvas.zoomIn()
+    #expect(canvas.restingCursor === NSCursor.crosshair)
+    let zoomed = canvas.navigation.position
+    try drag(from: CGPoint(x: 120, y: 150), to: CGPoint(x: 90, y: 140))
+    #expect(samples.count == 2)
+    #expect(Self.isClose(samples.last, CGPoint(x: 190, y: 100)))
+    #expect(canvas.navigation.position == zoomed)
+
+    // Without sampling the same drag pans.
+    canvas.pointSampling = nil
+    #expect(canvas.restingCursor === NSCursor.openHand)
+    try drag(from: CGPoint(x: 120, y: 150), to: CGPoint(x: 90, y: 140))
+    #expect(samples.count == 2)
+    #expect(canvas.navigation.position != zoomed)
+    canvas.invalidate()
+  }
+
+  // MARK: - Keyboard and VoiceOver
+
+  private enum ArrowKey {
+    case left
+    case right
+    case up
+    case down
+  }
+
+  /// A key-down of `key` in `window`, as the keyboard sends one, with
+  /// `modifiers` besides the ones an arrow key carries.
+  private static func keyDown(
+    _ key: ArrowKey,
+    modifiers: NSEvent.ModifierFlags = [],
+    in window: NSWindow
+  ) throws -> NSEvent {
+    let (characters, keyCode): (String, UInt16) = switch key {
+    case .left: ("\u{F702}", 123)
+    case .right: ("\u{F703}", 124)
+    case .down: ("\u{F701}", 125)
+    case .up: ("\u{F700}", 126)
+    }
+    return try #require(
+      NSEvent.keyEvent(
+        with: .keyDown,
+        location: .zero,
+        modifierFlags: modifiers.union([.numericPad, .function]),
+        timestamp: 0,
+        windowNumber: window.windowNumber,
+        context: nil,
+        characters: characters,
+        charactersIgnoringModifiers: characters,
+        isARepeat: false,
+        keyCode: keyCode
+      )
+    )
+  }
+
+  @Test
+  func `Zoomed in, a click gives the canvas the keyboard, and the arrow keys pan it up to the edges`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    func press(_ key: ArrowKey, _ modifiers: NSEvent.ModifierFlags = []) throws {
+      canvas.keyDown(with: try Self.keyDown(key, modifiers: modifiers, in: window))
+    }
+    func click() throws {
+      try Self.send(.leftMouseDown, at: CGPoint(x: 150, y: 150), to: canvas)
+      try Self.send(.leftMouseUp, at: CGPoint(x: 150, y: 150), to: canvas)
+    }
+
+    // At the fit there is nothing to pan, so a click leaves the keyboard
+    // where it is, and Tab passes the canvas by.
+    #expect(canvas.acceptsFirstResponder == false)
+    #expect(canvas.canBecomeKeyView == false)
+    try click()
+    #expect(window.firstResponder !== canvas)
+
+    // Zoomed in to 3, a click takes the keyboard; Tab reaches the canvas
+    // with Full Keyboard Access on.
+    canvas.zoomIn()
+    canvas.zoomIn()
+    #expect(canvas.acceptsFirstResponder)
+    #expect(canvas.canBecomeKeyView == NSApplication.shared.isFullKeyboardAccessEnabled)
+    try click()
+    #expect(window.firstResponder === canvas)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 200, y: 100)))
+
+    // An arrow pans a tenth of the 300-point canvas: 30 points, which move
+    // the centre 10 pixels of the output toward the arrow. With Option it
+    // pans nine tenths, and it stops at the edge, where the centre's limit
+    // is 50.
+    try press(.right)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 210, y: 100)))
+    try press(.down)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 210, y: 110)))
+    try press(.left, .option)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 120, y: 110)))
+    try press(.up, .option)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 120, y: 50)))
+    #expect(canvas.navigation.isMoving == false)
+    #expect(Self.forwardedKeyEvents(of: canvas).isEmpty)
+
+    // An arrow with another modifier is passed on.
+    try press(.right, .shift)
+    #expect(Self.isClose(canvas.navigation.position.center, CGPoint(x: 120, y: 50)))
+    #expect(Self.forwardedKeyEvents(of: canvas).count == 1)
+    canvas.invalidate()
+  }
+
+  /// The rectangle `canvas`'s focus ring mask covers, drawn at a pixel per
+  /// point; nil when it draws nothing.
+  private static func focusRingMaskCoverage(of canvas: EditingCanvasView) throws -> CGRect? {
+    let width = Int(canvas.bounds.width)
+    let height = Int(canvas.bounds.height)
+    let bitmap = try #require(
+      NSBitmapImageRep(
+        bitmapDataPlanes: nil,
+        pixelsWide: width,
+        pixelsHigh: height,
+        bitsPerSample: 8,
+        samplesPerPixel: 4,
+        hasAlpha: true,
+        isPlanar: false,
+        colorSpaceName: .deviceRGB,
+        bytesPerRow: 0,
+        bitsPerPixel: 0
+      )
+    )
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+    canvas.drawFocusRingMask()
+    NSGraphicsContext.restoreGraphicsState()
+
+    let pixels = try #require(bitmap.bitmapData)
+    var covered: CGRect?
+    for y in 0..<height {
+      for x in 0..<width where pixels[y * bitmap.bytesPerRow + x * 4 + 3] > 0 {
+        covered = (covered ?? CGRect(x: x, y: y, width: 1, height: 1))
+          .union(CGRect(x: x, y: y, width: 1, height: 1))
+      }
+    }
+    return covered
+  }
+
+  @Test
+  func `With Full Keyboard Access, the zoomed canvas's focus ring surrounds a mask 4 points inside its bounds`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    canvas.isFullKeyboardAccessEnabled = { true }
+    // AppKit draws the ring of the first responder around its mask.
+    #expect(canvas.focusRingType != .none)
+
+    // At the fit the arrows pan nothing: no mask, so no ring.
+    #expect(canvas.focusRingMaskBounds == .zero)
+    #expect(try Self.focusRingMaskCoverage(of: canvas) == nil)
+
+    // Zoomed in, the mask is the 300-point canvas 4 points in on every side,
+    // so the ring AppKit draws outside it stays inside the canvas.
+    canvas.zoomIn()
+    #expect(canvas.canBecomeKeyView)
+    let mask = CGRect(x: 4, y: 4, width: 292, height: 292)
+    #expect(canvas.focusRingMaskBounds == mask)
+    #expect(try Self.focusRingMaskCoverage(of: canvas) == mask)
+
+    // The mask follows a resize.
+    canvas.frame = CGRect(x: 0, y: 0, width: 360, height: 300)
+    canvas.layout()
+    #expect(canvas.focusRingMaskBounds == CGRect(x: 4, y: 4, width: 352, height: 292))
+
+    // Back at the fit, the ring goes.
+    canvas.zoomToFit()
+    #expect(canvas.navigation.isFitted)
+    #expect(canvas.focusRingMaskBounds == .zero)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `With Full Keyboard Access, the zoomed canvas's focus ring mask stays 4 points inside it wherever it sits in its window`() throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    // Away from the corner of a superview that, unlike the canvas, is not
+    // flipped.
+    canvas.frame = CGRect(x: 40, y: 30, width: 300, height: 320)
+    canvas.layout()
+    canvas.areAnimationsEnabled = false
+    canvas.isFullKeyboardAccessEnabled = { true }
+    canvas.zoomIn()
+    #expect(canvas.canBecomeKeyView)
+
+    // AppKit draws the ring outside the mask, so a mask 4 points inside the
+    // canvas on every side keeps the ring inside the canvas and clear of the
+    // views around it. Window coordinates run up.
+    let frame = canvas.convert(canvas.bounds, to: nil)
+    #expect(frame == CGRect(x: 40, y: 30, width: 300, height: 320))
+    #expect(canvas.convert(canvas.focusRingMaskBounds, to: nil) == frame.insetBy(dx: 4, dy: 4))
+    #expect(window.contentLayoutRect.contains(frame))
+    canvas.invalidate()
+  }
+
+  @Test
+  func `Without Full Keyboard Access, a click gives the zoomed canvas the keyboard and no focus ring`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    canvas.isFullKeyboardAccessEnabled = { false }
+    canvas.zoomIn()
+
+    try Self.send(.leftMouseDown, at: CGPoint(x: 150, y: 150), to: canvas)
+    try Self.send(.leftMouseUp, at: CGPoint(x: 150, y: 150), to: canvas)
+    #expect(window.firstResponder === canvas)
+    #expect(canvas.canBecomeKeyView == false)
+    #expect(canvas.focusRingMaskBounds == .zero)
+    #expect(try Self.focusRingMaskCoverage(of: canvas) == nil)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `VoiceOver reads the zoom of the frame on screen as the canvas's value`() throws {
+    let canvas = Self.makeCanvas()
+    #expect(canvas.accessibilityRole() == .image)
+    #expect(canvas.accessibilityValue() == nil)
+
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    canvas.onZoomChange = { zooms.append($0) }
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    canvas.areAnimationsEnabled = false
+    let fitted = try #require(zooms.last)
+    #expect(canvas.accessibilityValue() as? String == fitted.percent.formatted(.percent))
+
+    canvas.zoomIn()
+    let zoomed = try #require(zooms.last)
+    #expect(zoomed.percent == 2 * fitted.percent)
+    #expect(canvas.accessibilityValue() as? String == zoomed.percent.formatted(.percent))
+    canvas.invalidate()
+  }
+
+  @Test(.enabled(if: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion == false))
+  func `VoiceOver reads the zoom an animated step settles at once its frames have drawn`() async throws {
+    let canvas = Self.makeCanvas()
+    let window = Self.makeWindow(containing: canvas)
+    defer { window.close() }
+    var zooms: [ImageEditorCanvas.Zoom] = []
+    canvas.onZoomChange = { zooms.append($0) }
+    canvas.frame = CGRect(x: 0, y: 0, width: 300, height: 300)
+    canvas.layout()
+    let fitted = try #require(zooms.last)
+    let fittedValue = fitted.percent.formatted(.percent)
+    #expect(canvas.accessibilityValue() as? String == fittedValue)
+
+    // The value is the zoom of the frame on screen, so it waits for the
+    // frames of the motion.
+    canvas.zoomIn()
+    #expect(canvas.accessibilityValue() as? String == fittedValue)
+    for _ in 0..<250 where canvas.navigation.isMoving {
+      canvas.drawViewportFrame()
+      try await Task.sleep(for: .milliseconds(20))
+    }
+    #expect(canvas.navigation.isMoving == false)
+    let settled = try #require(zooms.last)
+    #expect(settled.percent == 2 * fitted.percent)
+    #expect(canvas.accessibilityValue() as? String == settled.percent.formatted(.percent))
+    canvas.invalidate()
+  }
+
+  // MARK: - Content pacing
+
+  @Test
+  func `A feature change that keeps the crop is built on the next frame, in the same Metal view`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    Self.tickUntilPaused(canvas)
+    let metalView = try #require(canvas.surface.canvasView)
+
+    var feature = canvas.feature
+    feature.effects.exposure = ExposureFeature(ev: 1)
+    canvas.setFeature(feature)
+    #expect(canvas.needsContentUpdate)
+    #expect(canvas.displayLink.isPaused == false)
+
+    // A run of changes waits for the same frame.
+    feature.effects.exposure = ExposureFeature(ev: 1.5)
+    canvas.setFeature(feature)
+    #expect(canvas.needsContentUpdate)
+
+    canvas.drawViewportFrame()
+    #expect(canvas.needsContentUpdate == false)
+    #expect(canvas.surface.canvasView === metalView)
+    #expect(canvas.surface.displayedViewport != nil)
+    canvas.invalidate()
+  }
+
+  @Test
+  func `A crop change is built at once, drawn at once in a Metal view of a new size, and fitted`() throws {
+    let (canvas, window) = Self.makeLaidOutCanvas()
+    defer { window.close() }
+    canvas.areAnimationsEnabled = false
+    canvas.zoomIn()
+    canvas.zoomIn()
+    let metalView = try #require(canvas.surface.canvasView)
+
+    // A square crop: a new output size, in a Metal view of its own, which
+    // fits at 1.5.
+    var feature = canvas.feature
+    feature.crop = CropFeature(rect: CGRect(x: 0, y: 0, width: 200, height: 200))
+    canvas.setFeature(feature)
+    #expect(canvas.needsContentUpdate == false)
+    #expect(canvas.outputGeometry?.outputSize == CGSize(width: 200, height: 200))
+    let squareView = try #require(canvas.surface.canvasView)
+    #expect(squareView !== metalView)
+    #expect(squareView.hasRenderImages)
+    let viewport = try #require(canvas.surface.displayedViewport)
+    #expect(canvas.navigation.isFitted)
+    #expect(Self.isClose(viewport.contentToCanvasTransform.a, 1.5))
+
+    // A crop of the same size keeps the Metal view and the zoom.
+    canvas.zoomIn()
+    let zoomed = canvas.navigation.position.scale
+    feature.crop = CropFeature(rect: CGRect(x: 100, y: 0, width: 200, height: 200))
+    canvas.setFeature(feature)
+    #expect(canvas.needsContentUpdate == false)
+    #expect(canvas.surface.canvasView === squareView)
+    #expect(canvas.navigation.position.scale == zoomed)
     canvas.invalidate()
   }
 }

@@ -80,10 +80,15 @@ import BrightroomParametric
 
  Render the document with `EditingDocument.render(options:)`.
 
- You might use `ImageEditorCanvas` to create a fully customized user interface.
+ For a fully customized user interface, use `ImageEditorCanvas`, which edits
+ the same document, with the components `OutputAnalysis`, `GrayPoint`,
+ `FilterSwatch` and `ColorGradingWheel`. `PreviewSourceReader` shares one
+ decode of the image between the canvas and the views that read its pixels,
+ such as a histogram from `OutputAnalysis` or `FilterSwatch` previews.
 
  The editor is iOS only: its initializer is unavailable on macOS, where
- `ImageEditorCanvas` shows a document's output.
+ `ImageEditorCanvas` shows a document's output with zoom and pan, and a host
+ builds its own editor from the same pieces.
  */
 public struct ImageEditor: View {
 
@@ -97,6 +102,8 @@ public struct ImageEditor: View {
     public var freeformAspectRatio: String = "FREEFORM"
     public var squareAspectRatio: String = "SQUARE"
     public var originalFilter: String = "ORIGINAL"
+    /// Shown in place of the image when its pixels cannot be decoded.
+    public var imageLoadFailed: String = "The image could not be loaded"
 
     public init() {}
   }
@@ -147,7 +154,8 @@ public struct ImageEditor: View {
   ///     crop, `ImageEditorDocument(source:initialCrop:)`. A document of
   ///     another source image restarts the editor.
   ///   - options: The editor options.
-  ///   - localizedStrings: The button titles.
+  ///   - localizedStrings: The button titles, and the message shown when the
+  ///     image cannot be loaded.
   ///   - onDone: Called after the binding received the last change.
   ///   - onCancel: Called when the user cancels, after the binding received
   ///     the document as it was when the editor opened (history included),

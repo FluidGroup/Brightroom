@@ -121,10 +121,13 @@ It uses only the public API.
 | `ColorCubeFeature` | a reference to your asset, `intensity` | load the cube, set `intensity`, then call `validate()` |
 | `ToneCurveFeature` | each channel's points in order (`input`, `output`), `ToneCurveFeature.semanticVersion` | `ToneCurve.Point(input:output:)`, `ToneCurve(validating:)` |
 | `ColorMixerFeature` | `hue`, `saturation`, `luminance` for all eight bands | `ColorMixerFeature.BandCorrection(validatingHue:saturation:luminance:)` |
+| `ColorGradingFeature` | `hue`, `saturation`, `luminance` for each range (`shadows`, `midtones`, `highlights`, `global`), `blending`, `balance` | `ColorGradingFeature.Correction(validatingHue:saturation:luminance:)` for each range, then `ColorGradingFeature(validatingShadows:midtones:highlights:global:blending:balance:)` |
+| `VibranceFeature`, `BlacksFeature`, `TextureFeature`, `ClarityFeature` | `amount` | `VibranceFeature(validatingAmount:)`, `BlacksFeature(validatingAmount:)`, `TextureFeature(validatingAmount:)`, `ClarityFeature(validatingAmount:)` |
+| `GrainFeature.CameraRaw` | `amount`, `size`, `roughness`, `seed` | `GrainFeature.CameraRaw(validatingAmount:size:roughness:seed:)` |
 | `GaussianBlurFeature`, `SharpenFeature`, `UnsharpMaskFeature` | the radius's unit (`absolute` or `proportional`) and number; `intensity` for sharpen and unsharp mask | `EffectRadius(validatingAbsolute:)`, `EffectRadius(validatingProportional:)`, then the feature's initializer |
 | `FilterFeature` | `name`, `id`, and its effects | the same conversion for each effect, wrapped in `AnyImageEffect`; read each stored effect through `base` |
 | `LocalAdjustmentFeature` | the mask and the content | `Mask`, `BrushMask`, `BrushMask.Stroke`, `BrushMask.Brush`, and the content's own conversion |
-| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects`; the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`); the vignette's `value`, when present | `ImageEditorFeature(effects:localBlur:crop:vignette:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
+| `ImageEditorFeature` (BrightroomUI) | each present effect in `effects` (`vibrance`, `blacks`, `clarity` and `texture` among them); the blur mask (its `GaussianBlurFeature.radius`, which is `.absolute` or `.proportional`, and each stroke's `stampCenters`, which are y-up working-space points, and brush); the crop (`rect` as the selection before the output quarter turn, `quarterTurn`, `straightenRadians`); the vignette's `value`, when present | `ImageEditorFeature(effects:localBlur:crop:vignette:)`; resume editing with `ImageEditorDocument(source:feature:history:)` |
 
 Notes:
 

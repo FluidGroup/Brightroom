@@ -146,6 +146,7 @@ struct ImageEditorContent: View {
               document: canvasDocumentBinding,
               displayedFeature: displayedFeature,
               previewSourceLoader: previewSourceLoader,
+              failureMessage: localizedStrings.imageLoadFailed,
               mode: editingMode,
               localBlurState: localBlurState,
               straightenAngle: straightenAngle,
@@ -167,7 +168,7 @@ struct ImageEditorContent: View {
               localBlurState: localBlurState,
               isLocalBlurPaintable: displayedFeature.isLocalBlurPaintable,
               filters: options.filters,
-              filterPreviewBaseImage: previewSourceLoader.previewSource?.thumbnail,
+              filterPreviewSource: previewSourceLoader.previewSource,
               currentFeature: displayedFeature,
               adjustmentParameter: adjustmentParameter,
               localizedStrings: localizedStrings,
@@ -660,6 +661,7 @@ private struct CanvasHost: View {
   @Binding var document: ImageEditorDocument
   let displayedFeature: ImageEditorFeature
   let previewSourceLoader: PreviewSourceLoader
+  let failureMessage: String
   let mode: ImageEditor.Mode
   let localBlurState: LocalBlurState
   let straightenAngle: Angle?
@@ -672,7 +674,8 @@ private struct CanvasHost: View {
     ImageEditorCanvas(
       document: $document,
       displayedFeature: displayedFeature,
-      previewSourceLoader: previewSourceLoader
+      previewSourceLoader: previewSourceLoader,
+      failureMessage: failureMessage
     )
     .cropGuideDisabled(mode != .crop)
     .straightenAngle(straightenAngle, isEditing: isStraightening)
@@ -694,7 +697,7 @@ private struct ControlHost: View {
   let localBlurState: LocalBlurState
   let isLocalBlurPaintable: Bool
   let filters: [FilterFeature]
-  let filterPreviewBaseImage: CIImage?
+  let filterPreviewSource: PreviewSource?
   let currentFeature: ImageEditorFeature?
   let adjustmentParameter: ImageEditor.Adjustment
   let localizedStrings: ImageEditor.LocalizedStrings
@@ -743,7 +746,7 @@ private struct ControlHost: View {
       case .filters:
         FilterControl(
           presets: filters,
-          baseImage: filterPreviewBaseImage,
+          previewSource: filterPreviewSource,
           selectedPresetIdentifier: currentFeature?.effects.preset?.id,
           localizedStrings: localizedStrings,
           isLoaded: isLoaded,
@@ -1084,7 +1087,7 @@ private struct FilterControl: View {
   private static let originalScrollID = "brightroom.filters.original"
 
   let presets: [FilterFeature]
-  let baseImage: CIImage?
+  let previewSource: PreviewSource?
   let selectedPresetIdentifier: String?
   let localizedStrings: ImageEditor.LocalizedStrings
   let isLoaded: Bool
@@ -1100,7 +1103,7 @@ private struct FilterControl: View {
         FilterChip(
           title: localizedStrings.originalFilter,
           preset: nil,
-          baseImage: baseImage,
+          previewSource: previewSource,
           pointSize: Self.thumbnailPointSize,
           isSelected: selectedPresetIdentifier == nil,
           action: { onSelectPreset(nil) }
@@ -1112,7 +1115,7 @@ private struct FilterControl: View {
           FilterChip(
             title: preset.name,
             preset: preset,
-            baseImage: baseImage,
+            previewSource: previewSource,
             pointSize: Self.thumbnailPointSize,
             isSelected: selectedPresetIdentifier == preset.id,
             action: { onSelectPreset(preset) }
@@ -1150,20 +1153,20 @@ private struct FilterChip: View {
 
   let title: String
   let preset: FilterFeature?
-  let baseImage: CIImage?
+  let previewSource: PreviewSource?
   let pointSize: CGFloat
   let isSelected: Bool
   let action: () -> Void
 
   @Environment(\.displayScale) private var displayScale
-  @State private var image: UIImage?
+  @State private var image: CGImage?
 
   var body: some View {
     Button(action: action) {
       VStack(spacing: 6) {
         ZStack {
           if let image {
-            Image(uiImage: image)
+            Image(decorative: image, scale: displayScale)
               .resizable()
               .scaledToFill()
           } else {
@@ -1196,34 +1199,29 @@ private struct FilterChip: View {
     .accessibilityLabel(title)
     .accessibilityValue(isSelected ? "selected" : "not selected")
     .task(id: renderKey) {
-      guard let baseImage else {
+      guard let previewSource else {
         image = nil
         return
       }
       let rendered = await FilterSwatch.render(
-        base: baseImage,
-        preset: preset,
+        preset,
+        over: previewSource,
         pointSize: pointSize,
-        scale: displayScale
+        displayScale: displayScale
       )
       guard !Task.isCancelled else { return }
       image = rendered
     }
   }
 
-  /// Re-render only when the source thumbnail, the preset, or the scale changes.
-  private var renderKey: RenderKey {
-    RenderKey(
-      baseImageID: baseImage.map(ObjectIdentifier.init),
-      presetIdentifier: preset?.id,
-      scale: displayScale
+  /// Re-render only when the source thumbnail, the preset, or the display scale changes.
+  private var renderKey: FilterSwatch.RenderKey {
+    FilterSwatch.RenderKey(
+      baseImage: previewSource.map { ObjectIdentifier($0.thumbnail) },
+      presetID: preset?.id,
+      displayScale: displayScale,
+      rendering: AdjustmentRendering.standard.identity
     )
-  }
-
-  private struct RenderKey: Equatable {
-    let baseImageID: ObjectIdentifier?
-    let presetIdentifier: String?
-    let scale: CGFloat
   }
 }
 

@@ -25,8 +25,8 @@ import CoreGraphics
 import BrightroomEngine
 import BrightroomParametric
 
-/// The document `ImageEditor` edits: a source image and its `ImageEditorFeature`,
-/// with the edit's history.
+/// The document `ImageEditor` and `ImageEditorCanvas` edit: a source image and
+/// its `ImageEditorFeature`, with the edit's history.
 public typealias ImageEditorDocument = EditingDocument<ImageEditorFeature>
 
 extension EditingDocument where Content == ImageEditorFeature {
@@ -133,9 +133,10 @@ extension ImageEditor.Options.AspectRatioPolicy {
 
 extension ImageEditorFeature {
 
-  /// Whether a global effect the editor edits, the local blur, or the
-  /// vignette is set: everything but the crop that ImageEditor's Reset
-  /// removes. The host's `effects.custom`, which Reset keeps, does not count.
+  /// Whether a global effect, the local blur, or the vignette is set:
+  /// everything but the crop that ImageEditor's Reset removes, including the
+  /// effects it has no control for. The host's `effects.custom`, which Reset
+  /// keeps, does not count.
   var hasAnyEffect: Bool {
     effects != .init(custom: effects.custom) || localBlur != nil || vignette != nil
   }

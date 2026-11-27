@@ -62,11 +62,9 @@ struct ImageEditorSession {
   /// to the document. nil when nothing is in progress.
   private(set) var liveFeature: ImageEditorFeature?
 
-  /// Every document this session wrote, oldest first.
+  /// The documents written in the current tool visit: a write over one of
+  /// them continues the visit.
   private var writes: [ImageEditorDocument] = []
-
-  /// The index in `writes` of the current tool visit's first write.
-  private var toolVisitStart = 0
 
   init(documentAtStart: ImageEditorDocument) {
     self.documentAtStart = documentAtStart
@@ -77,15 +75,26 @@ struct ImageEditorSession {
     liveFeature ?? document.feature
   }
 
+  /// Shows `change` applied over the displayed feature, without writing it.
+  /// `liveFeature` is nil when the result equals the document's feature.
+  mutating func previewFeature(
+    over document: ImageEditorDocument,
+    change: (inout ImageEditorFeature) -> Void
+  ) {
+    var feature = displayedFeature(of: document)
+    change(&feature)
+    liveFeature = feature == document.feature ? nil : feature
+  }
+
   /// Shows an adjustment slider value without writing it.
   mutating func previewAdjustmentValue(
     _ sliderValue: Double,
     parameter: ImageEditor.Adjustment,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    parameter.apply(sliderValue: sliderValue, to: &feature)
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      parameter.apply(sliderValue: sliderValue, to: &$0)
+    }
   }
 
   /// Previews all grading axes together without adding a document history step.
@@ -93,21 +102,21 @@ struct ImageEditorSession {
     _ grading: ColorGradingFeature,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    // Keep an authored hue at zero saturation so returning to the wheel keeps
-    // the selected hue. Only a complete reset removes the optional feature.
-    feature.effects.colorGrading = grading == ColorGradingFeature() ? nil : grading
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      // Keep an authored hue at zero saturation so returning to the wheel keeps
+      // the selected hue. Only a complete reset removes the optional feature.
+      $0.effects.colorGrading = grading == ColorGradingFeature() ? nil : grading
+    }
   }
 
   mutating func previewGrain(
     _ grain: GrainFeature.CameraRaw,
     over document: ImageEditorDocument
   ) {
-    var feature = displayedFeature(of: document)
-    // Keep size, roughness and seed at zero amount so the next edit restores them.
-    feature.effects.grain = grain == .init(amount: 0) ? nil : grain
-    liveFeature = feature == document.feature ? nil : feature
+    previewFeature(over: document) {
+      // Keep size, roughness and seed at zero amount so the next edit restores them.
+      $0.effects.grain = grain == .init(amount: 0) ? nil : grain
+    }
   }
 
   /// Drops the value shown by a control in progress, for example because
@@ -158,7 +167,7 @@ struct ImageEditorSession {
     of document: ImageEditorDocument
   ) -> ImageEditorDocument? {
     let written = self.document(after: document)
-    toolVisitStart = writes.count
+    writes.removeAll()
     return written
   }
 
@@ -178,7 +187,7 @@ struct ImageEditorSession {
     // Nothing to write: the live value is gone.
     _ = endToolVisit(of: document)
     let written = write(over: document) { $0.feature = initial }
-    toolVisitStart = writes.count
+    writes.removeAll()
     return written
   }
 
@@ -224,7 +233,7 @@ struct ImageEditorSession {
     // A rebinding can reach a write before `onChange` reports it.
     noteDocument(document)
     var next = document
-    if writes[toolVisitStart...].contains(document) == false {
+    if writes.contains(document) == false {
       next.commit()
     }
     change(&next)

@@ -69,7 +69,11 @@ dependencies: [
 
 The requirements: iOS 17 and macOS 14 for every product, Swift 6.3 or later
 in Swift 6 language mode. On macOS, BrightroomUI has `ImageEditorCanvas` as a
-viewer; the built-in editor is iOS only. The products are the same.
+viewer, with zoom commands and reports, and the preview source and the
+components to build an editor around it
+([Building Your Own Editor](#building-your-own-editor)); the built-in editor
+is iOS only, as are crop and brush editing for now. The products are the
+same.
 
 BrightroomParametric no longer imports SwiftUI: the feature tree rows moved
 to BrightroomUI ([Debug Feature Tree](#debug-feature-tree)) and
@@ -116,13 +120,14 @@ sections.
 | `CropEditingState` | Removed from the public API. Use `CropFeature`. | [CropEditingState](#cropeditingstate-is-no-longer-public) |
 | `EditingStack.CropModifier` (BrightroomEngine) | `InitialCrop` (BrightroomUI) | [InitialCrop](#initialcrop-replaces-cropmodifier) |
 | `SwiftUIMetalImageView`, `ImageDisplayBackground` | Removed; the demo app keeps its own copy | [Helpers No Longer Public](#helpers-no-longer-public) |
+| (none) | `PreviewSourceReader`, and the components `OutputAnalysis`, `GrayPoint`, `FilterSwatch`, and `ColorGradingWheel` | [Building Your Own Editor](#building-your-own-editor) |
 
 ### BrightroomEngine
 
 | 5.1.1 | 6.0 | See |
 | --- | --- | --- |
 | `ImageProvider`, `ImageSource`, `ImageProviderError` | `SourceImage`, `SourceImageError` | [SourceImage](#sourceimage-replaces-imageprovider) |
-| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Removed. Its edit and history are `EditingDocument`; its loading is `SourceImage`. | [EditingStack](#editingstack-is-removed) |
+| `EditingStack` (with `Edit`, `Loaded`, `Options`, `Revision`), `EditingStackError` | Removed. Its edit and history are `EditingDocument`; its loading is `SourceImage`, and its preview images are a `PreviewSourceLoader`'s `PreviewSource`. | [EditingStack](#editingstack-is-removed) |
 | `BrightRoomImageRenderer`, `ImageRenderer` | `EditingDocument.render(options:)` | [EditingStack](#editingstack-is-removed) |
 | `EditingFeatureTree`, `FeatureTreePoint` | Removed. Address features by member name. | [Addressing Features](#addressing-features) |
 | `PixelAspectRatio` | `AspectRatio` (BrightroomParametric) | [Aspect Ratio](#aspect-ratio) |
@@ -877,16 +882,20 @@ precondition failure), and `history.removeAll()` drops them.
 
 ### EditingStack Is Removed
 
-`EditingStack` is gone. BrightroomUI's editors prepare their preview
-themselves, with a package-internal loader that holds no edit and no history;
-apps never create one.
+`EditingStack` is gone. BrightroomUI's editors prepare their preview source
+themselves. To show the image in views of your own, a `PreviewSourceLoader`
+(BrightroomEngine) prepares it once into a `PreviewSource`, the downsampled
+editing copy and a thumbnail, and holds no edit and no history. In SwiftUI,
+`PreviewSourceReader` (BrightroomUI) keeps one loader per image, which you
+can share with the canvas
+([Building Your Own Editor](#building-your-own-editor)).
 
 | 5.1.1 | 6.0 |
 | --- | --- |
 | `EditingStack(imageProvider:options:cropModifier:)` | A `SourceImage`, then `ImageEditorDocument(source:)`, or `await ImageEditorDocument(source:initialCrop:)` for a policy-decided crop |
-| `start()`, `isLoading`, `loadedState` | None. The editor prepares its preview. To show the image yourself, use `SourceImage.makeCIImage(maxPixelSize:)`. |
+| `start()`, `isLoading`, `loadedState` | The editors prepare their own preview source. For views of your own: `PreviewSourceLoader(source:)`, `await load()`, and `phase` (`.idle`, `.loading`, `.loaded(_:)`, `.failed`), or `PreviewSourceReader` in SwiftUI. |
 | `Loaded.makeOriginalCIImage()` | `SourceImage.makeCIImage()` |
-| `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `SourceImage.makeCIImage(maxPixelSize:)` |
+| `Loaded.thumbnailImage`, `editingSourceImage`, `editingSourceCGImage` | `PreviewSource.thumbnail` and `image`, from a loader's `previewSource` (`CIImage`s; the editing copy is GPU-resident when a Metal device is available), or `SourceImage.makeCIImage(maxPixelSize:)` |
 | `Loaded.currentEdit`, `EditingStack.Edit`, `featureTree`, `updateFeature(id:mutate:)`, `Edit.makeEditingDocument(orientedImageSize:)` | `document.feature`, read and written by member name |
 | `undo()`, `redo()`, `Loaded.canUndo`, `Loaded.canRedo` | `document.undo()`, `redo()`, `canUndo`, `canRedo` |
 | `commitCurrentEditIfNeeded()`, `Loaded.hasUncommittedChanges` | `document.commit()`, `hasUncommittedChanges` |
@@ -944,6 +953,7 @@ over an `EditingStack`.
 | `button_done_title`, `button_cancel_title`, `button_reset_title` | `done`, `cancel`, `reset` |
 | `button_aspectratio_original`, `button_aspectratio_freeform`, `button_aspectratio_square` | `originalAspectRatio`, `freeformAspectRatio`, `squareAspectRatio` |
 | `button_filter_original` | `originalFilter` |
+| (new) | `imageLoadFailed`, shown in place of the image when its pixels cannot be decoded. The editor shows it as given; 6.0 and 6.1 showed the canvas's own message, which SwiftUI looked up in your app's strings as a key, so set `imageLoadFailed` to keep a translation. |
 | `Options.filterPresets` (default `PhotosCropDefaultFilterPresets.make()`) | `ImageEditor.Options.filters`, empty by default |
 
 The aspect ratio option is one choice, so it is a policy, and the freeform
@@ -1031,6 +1041,12 @@ How the editor writes to the binding:
   [Your own effects](#your-own-effects)).
 - `onDone` is called after the binding received the last change, so the
   document you read there is final.
+- The Warmth slider writes `effects.whiteBalance.temperature` and keeps the
+  `tint`, which the editor has no control for: at 0 it removes
+  `whiteBalance` only when the tint is 0 too, and otherwise keeps the white
+  balance at temperature 0 with its tint. 5.1.1 removed the whole
+  `TemperatureFeature` at 0, its tint included, and 6.0 and 6.1 removed the
+  whole `whiteBalance`.
 - Cancel writes back the document the editor opened with, history
   included, then calls `onCancel`. Everything written since the editor
   opened is discarded, your own writes to the binding (an undo, a redo)
@@ -1055,9 +1071,9 @@ canvas draws it inside the crop guide, centred on the guide as it moves.
 `ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
 `ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
-- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and eleven
-  adjustments, each an optional member, evaluated in declaration order, then
-  `custom`, effects of your own (see [Your own effects](#your-own-effects));
+- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and seventeen
+  optional effects, evaluated in declaration order, then `custom`, effects of
+  your own (see [Your own effects](#your-own-effects));
 - `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
 - `crop: CropFeature` — the final crop;
 - `vignette: VignetteFeature?` — the vignette, evaluated after the final crop.
@@ -1070,6 +1086,16 @@ y-down, so flip them when you convert a saved 5.x edit (see
 A new document from `ImageEditorDocument(source:)` has no effects and a crop
 that covers the whole image. To rebuild a saved edit, use
 `ImageEditorFeature(effects:localBlur:crop:vignette:)`.
+
+`Effects` evaluates its members in the order it declares them: `preset`,
+`exposure`, `brightness`, `whiteBalance`, `highlights`, `shadows`,
+`vibrance`, `saturation`, `contrast`, `blacks`, `colorGrading`, `clarity`,
+`texture`, `sharpen`, `unsharpMask`, `gaussianBlur`, `fade`, `grain`, then
+`custom`. The initializer that takes every member,
+`Effects(preset:exposure:brightness:whiteBalance:highlights:shadows:vibrance:saturation:contrast:blacks:colorGrading:clarity:texture:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:)`,
+takes them in that order, and an omitted member is absent. `ImageEditor` has
+no control for `blacks`, `clarity`, `texture`, `sharpen`, `unsharpMask`, or
+`fade`: set them in code, and Reset removes them.
 
 The vignette is centred on the crop output, and its radius is half the
 output's longer side. In 5.1.1 the editor's vignette was one of the
@@ -1408,6 +1434,148 @@ struct CropEditor: View {
   }
 }
 ```
+
+## Building Your Own Editor
+
+5.x kept the editor's preview inside `EditingStack` and had no macOS UI. In
+Brightroom 6 the preview source and the components are public, and the
+canvas can use your `PreviewSourceLoader`, so an editor of your own shows the
+canvas's pixels without decoding the image again. On macOS, where
+BrightroomUI has no built-in editor, this is how you build one.
+
+- **Preview source.** `PreviewSource` (BrightroomEngine) holds a source
+  image's downsampled editing copy (`image`) and thumbnail (`thumbnail`),
+  with the `SourceImage` they come from (`source`). A
+  `PreviewSourceLoader(source:)` prepares it: `await load()` decodes the
+  image once, off the main actor, however many views call it, and `phase`
+  (`.idle`, `.loading`, `.loaded(_:)`, `.failed`) and `previewSource`
+  publish the result on the main actor. `PreviewSourceReader(source:content:)`
+  (BrightroomUI) keeps one loader per source image: when its source changes,
+  it gives its content a new loader and a new identity, so state kept inside
+  the content starts afresh for the new image.
+- **The canvas.** Both `ImageEditorCanvas` initializers take
+  `previewSourceLoader:` after `document:`. The canvas shows that loader's
+  preview source when it is of the document's image, and prepares its own
+  otherwise. It starts the loader it is given, also one that replaces
+  another, such as a new loader that retries a failed load. To show your own
+  loading and failure views in place of the canvas's, start the loader
+  yourself and show the canvas once `phase` is `.loaded`.
+  `displayedFeature(_:)` shows a feature you have not written,
+  such as a slider value in progress or the original to compare with. It
+  changes only how the members the editing target does not edit are drawn:
+  while the target is `.crop`, the canvas draws the document's crop, and
+  while it is `.localBlur`, the document's blur. Canvas changes still apply
+  to the document. This holds on macOS too, where the default target is
+  `.crop`: pass `.editingTarget(nil)` to draw the displayed feature whole.
+- **macOS.** The canvas is a viewer with zoom and pan; `.editingTarget(nil)`
+  asks for one. `onZoomChange(_:)` reports an `ImageEditorCanvas.Zoom`
+  (`scale`, `fitScale`, `maximumScale`, `displayScale`, `fraction`,
+  `isFitted`, `isAtMaximum`, `percent`, and an initializer for your tests),
+  `onPointerChange(_:)` reports the crop-output pixel under the pointer,
+  `pointSampling(_:)` turns a click into a crop-output point,
+  `fitMargin(_:)` keeps a margin around the output at the fit, and
+  `canvasAccessibilityLabel(_:)` names the canvas for VoiceOver. These
+  modifiers are unavailable on iOS. `ImageEditorCanvasReader`
+  and `ImageEditorCanvasProxy` are available on macOS with the zoom
+  commands `zoomIn()`, `zoomOut()`, `zoomToFit()`, and `zoom(toFraction:)`,
+  which iOS does not have; the crop commands stay iOS only.
+- **Components.** They work on iOS and macOS. The first three take a
+  feature and the loaded `PreviewSource` the feature is authored over;
+  `ColorGradingWheel` takes the correction of one range:
+  - `OutputAnalysis.analyze(_:over:adjustmentRendering:)` renders what the
+    canvas shows into a `Histogram` (`levels()` scales its bins for
+    drawing) and the colors `color(atOutputPoint:)` reads at a point of the
+    crop output (`outputSize`). `Histogram` and `Color` have initializers,
+    so your tests can build them;
+  - `GrayPoint.solve(at:in:over:temperatureRange:tintRange:adjustmentRendering:)`
+    returns the `WhiteBalanceFeature` that makes the area around a
+    crop-output point neutral, or a `GrayPoint.Rejection`;
+  - `FilterSwatch.render(_:over:pointSize:displayScale:adjustmentRendering:)`
+    renders a `FilterFeature` over the center square of the thumbnail;
+  - `ColorGradingWheel` sets the hue and saturation of one range of a
+    `ColorGradingFeature`, reporting each operation with `onChange`, `onEnd`
+    and, for one that ends without a value, `onDeferredEnd`. Pass
+    `interaction: .pointer` on the Mac, where the wheel also takes focus and
+    the arrow keys, and your localized `rangeName`, `hueLabel` and
+    `saturationLabel` for VoiceOver.
+
+  The first three run off the main actor. Before you apply a result, check
+  that the document's `source` is still `previewSource.source`. An analysis
+  or a swatch asked for in a task that is already cancelled returns nil
+  without rendering; one that has started runs to its end, so check
+  `Task.isCancelled` before you use its result. A gray point always runs to
+  its end.
+
+```swift
+import BrightroomEngine
+import BrightroomParametric
+import BrightroomUI
+import SwiftUI
+
+struct EditorView: View {
+  @Binding var document: ImageEditorDocument
+
+  var body: some View {
+    // One loader per image: the canvas and the other views share its decode.
+    // For another image, the content gets a new loader and fresh state.
+    PreviewSourceReader(source: document.source) { loader in
+      EditorContent(document: $document, loader: loader)
+    }
+  }
+}
+
+struct EditorContent: View {
+  @Binding var document: ImageEditorDocument
+  let loader: PreviewSourceLoader
+  // Kept per image: the canvas reports nothing while no image is shown.
+  @State private var zoom: ImageEditorCanvas.Zoom?
+
+  var body: some View {
+    ImageEditorCanvasReader { canvas in
+      VStack {
+        ImageEditorCanvas(document: $document, previewSourceLoader: loader)
+          .editingTarget(nil)
+          .onZoomChange { zoom = $0 }
+        HStack {
+          Button("Zoom to Fit") { canvas.zoomToFit() }
+            .disabled(zoom?.isFitted ?? true)
+          Button("Zoom In") { canvas.zoomIn() }
+            .disabled(zoom?.isAtMaximum ?? true)
+        }
+        if let previewSource = loader.previewSource {
+          HistogramView(feature: document.feature, previewSource: previewSource)
+        }
+      }
+    }
+  }
+}
+
+struct HistogramView: View {
+  var feature: ImageEditorFeature
+  var previewSource: PreviewSource
+  @State private var analysis: OutputAnalysis?
+
+  var body: some View {
+    // Draw `analysis?.histogram.levels()`, for example with Swift Charts.
+    Color.clear
+      .task(id: feature) {
+        // A newer feature cancels this task: the wait analyzes a slider drag
+        // once it pauses, and a cancelled task neither renders nor replaces
+        // the newer result.
+        try? await Task.sleep(for: .milliseconds(100))
+        let result = await OutputAnalysis.analyze(feature, over: previewSource)
+        if !Task.isCancelled {
+          analysis = result
+        }
+      }
+  }
+}
+```
+
+The components never write to the document, the macOS canvas writes
+nothing, and nothing in BrightroomUI registers with an `UndoManager`: write
+each completed change to the binding once, and commit or register undo steps
+as your editor decides.
 
 ## InitialCrop Replaces CropModifier
 
@@ -1761,7 +1929,15 @@ Gaussian blur, sharpen, and unsharp mask radii share `EffectRadius`:
 and `.proportional(_:)` is a fraction of the chain-entry diagonal where 100 is
 one twentieth of it. The editor's canvas previews over a downsampled copy of
 the source and scales an absolute radius by the same factor, so a host's
-`.absolute(_:)` radius previews at the size it exports. In
+`.absolute(_:)` radius previews at the size it exports. The filter swatches
+(the editor's, and `FilterSwatch.render(_:over:pointSize:displayScale:)`)
+scale it to the swatch the same way, so an absolute radius takes the same
+share of the picture in a swatch as on the canvas. 6.0 and 6.1 evaluated a
+swatch as if its pixels were the full-resolution source's, so an absolute
+radius was applied in swatch pixels. Presets whose effects depend on the
+render scale therefore look different in a swatch than in 6.1, and as they
+look on the canvas: absolute radii, grain whatever its radius, and effects of
+your own that read `FeatureEvaluationContext.renderScale`. In
 5.1.1 both radii were plain `Double`s on different scales: a sharpen radius of
 100 and an unsharp-mask radius of 1 were each a twentieth of the diagonal. A
 5.1.1 sharpen radius keeps its look as `.proportional(v)`; multiply an
