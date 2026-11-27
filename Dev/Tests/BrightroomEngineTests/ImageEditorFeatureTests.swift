@@ -243,6 +243,7 @@ struct ImageEditorFeatureTests {
       try #require(effects.whiteBalance),
       try #require(effects.highlights),
       try #require(effects.shadows),
+      try #require(effects.vibrance),
       try #require(effects.saturation),
       try #require(effects.contrast),
       try #require(effects.sharpen),
@@ -250,7 +251,7 @@ struct ImageEditorFeatureTests {
       try #require(effects.gaussianBlur),
       try #require(effects.fade),
     ]
-    #expect(builtInEffects.count == 12)
+    #expect(builtInEffects.count == 13)
     let customEffects: [any Feature] = effects.custom.map { $0.base }
     #expect(customEffects.count == 2)
     let globalEffects = builtInEffects + customEffects
@@ -366,7 +367,7 @@ struct ImageEditorFeatureTests {
 
   // MARK: - Helpers
 
-  /// A document with all 12 built-in global effect members, two custom
+  /// A document with built-in global effects, two custom
   /// effects, a blur mask, a rotated crop, and a vignette.
   private func makeFullDocument() -> ImageEditorFeature {
     var document = ImageEditorFeature(imageSize: imageSize)
@@ -376,6 +377,7 @@ struct ImageEditorFeatureTests {
       (.warmth, 30),
       (.highlights, 40),
       (.shadows, 30),
+      (.vibrance, 50),
       (.saturation, -30),
       (.contrast, 25),
       (.gaussianBlur, 10),

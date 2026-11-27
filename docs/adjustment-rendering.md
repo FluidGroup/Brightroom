@@ -86,6 +86,7 @@ All listed slots are typed and independently replaceable.
 | Feature / authored units | Brightroom standard | GradingKit installer |
 | --- | --- | --- |
 | Exposure / EV, zero neutral | Core Image exposure | Experimental gain/shoulder |
+| Vibrance / signed −100…100 | Core Image vibrance | Measured SDR RGB response |
 | Saturation / normalized offset, zero neutral | Core Image saturation | Measured RGB response atlas |
 | Highlights / normalized recovery; Shadows / normalized lift | Core Image highlight/shadow controls | Measured spatial responses |
 | HighlightsShadows / two signed −100…100 amounts | Shadows then Highlights | Original calibrated coupling and spatial responses |
@@ -100,7 +101,7 @@ All listed slots are typed and independently replaceable.
 
 All other types retain their existing standard evaluation: contrast, white
 balance, curves, vignette, geometry, masks and custom Feature bodies are not
-newly replaced. Vibrance, Lightroom Parametric Curve, and Color Calibration
+newly replaced. Lightroom Parametric Curve and Color Calibration
 primaries/Shadow Tint still have no corresponding authored types here. This
 boundary does not claim full Lightroom control coverage or fidelity.
 

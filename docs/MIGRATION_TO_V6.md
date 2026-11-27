@@ -1071,7 +1071,7 @@ canvas draws it inside the crop guide, centred on the guide as it moves.
 `ImageEditorFeature` (BrightroomUI) is the root feature `ImageEditor` and
 `ImageEditorCanvas` edit. It is a `Feature` and `Equatable`:
 
-- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and sixteen
+- `effects: ImageEditorFeature.Effects` — the filter (`preset`) and seventeen
   optional effects, evaluated in declaration order, then `custom`, effects of
   your own (see [Your own effects](#your-own-effects));
 - `localBlur: LocalAdjustmentFeature<GaussianBlurFeature>?` — the painted blur;
@@ -1089,10 +1089,10 @@ that covers the whole image. To rebuild a saved edit, use
 
 `Effects` evaluates its members in the order it declares them: `preset`,
 `exposure`, `brightness`, `whiteBalance`, `highlights`, `shadows`,
-`saturation`, `contrast`, `blacks`, `colorGrading`, `clarity`, `texture`,
-`sharpen`, `unsharpMask`, `gaussianBlur`, `fade`, `grain`, then `custom`.
-The initializer that takes every member,
-`Effects(preset:exposure:brightness:whiteBalance:highlights:shadows:saturation:contrast:blacks:colorGrading:clarity:texture:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:)`,
+`vibrance`, `saturation`, `contrast`, `blacks`, `colorGrading`, `clarity`,
+`texture`, `sharpen`, `unsharpMask`, `gaussianBlur`, `fade`, `grain`, then
+`custom`. The initializer that takes every member,
+`Effects(preset:exposure:brightness:whiteBalance:highlights:shadows:vibrance:saturation:contrast:blacks:colorGrading:clarity:texture:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:)`,
 takes them in that order, and an omitted member is absent. `ImageEditor` has
 no control for `blacks`, `clarity`, `texture`, `sharpen`, `unsharpMask`, or
 `fade`: set them in code, and Reset removes them.

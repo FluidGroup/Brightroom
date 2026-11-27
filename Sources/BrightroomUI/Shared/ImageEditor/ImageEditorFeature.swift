@@ -63,6 +63,7 @@ public struct ImageEditorFeature: Feature, Equatable {
     public var whiteBalance: WhiteBalanceFeature?
     public var highlights: HighlightsFeature?
     public var shadows: ShadowsFeature?
+    public var vibrance: VibranceFeature?
     public var saturation: SaturationFeature?
     public var contrast: ContrastFeature?
     /// Lowers or lifts the darkest tones, after the other light adjustments,
@@ -177,6 +178,33 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.grain = grain
     }
 
+    public init(
+      preset: FilterFeature? = nil,
+      exposure: ExposureFeature? = nil,
+      brightness: BrightnessFeature? = nil,
+      whiteBalance: WhiteBalanceFeature? = nil,
+      highlights: HighlightsFeature? = nil,
+      shadows: ShadowsFeature? = nil,
+      vibrance: VibranceFeature?,
+      saturation: SaturationFeature? = nil,
+      contrast: ContrastFeature? = nil,
+      colorGrading: ColorGradingFeature? = nil,
+      sharpen: SharpenFeature? = nil,
+      unsharpMask: UnsharpMaskFeature? = nil,
+      gaussianBlur: GaussianBlurFeature? = nil,
+      fade: FadeFeature? = nil,
+      grain: GrainFeature.CameraRaw? = nil,
+      custom: [AnyImageEffect] = []
+    ) {
+      self.init(
+        preset: preset, exposure: exposure, brightness: brightness, whiteBalance: whiteBalance,
+        highlights: highlights, shadows: shadows, saturation: saturation, contrast: contrast,
+        colorGrading: colorGrading, sharpen: sharpen, unsharpMask: unsharpMask,
+        gaussianBlur: gaussianBlur, fade: fade, grain: grain, custom: custom
+      )
+      self.vibrance = vibrance
+    }
+
     /// Creates global effects with every member, in evaluation order. Omitted
     /// effects are absent.
     public init(
@@ -186,6 +214,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       whiteBalance: WhiteBalanceFeature? = nil,
       highlights: HighlightsFeature? = nil,
       shadows: ShadowsFeature? = nil,
+      vibrance: VibranceFeature? = nil,
       saturation: SaturationFeature? = nil,
       contrast: ContrastFeature? = nil,
       blacks: BlacksFeature? = nil,
@@ -205,6 +234,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       self.whiteBalance = whiteBalance
       self.highlights = highlights
       self.shadows = shadows
+      self.vibrance = vibrance
       self.saturation = saturation
       self.contrast = contrast
       self.blacks = blacks
@@ -226,6 +256,7 @@ public struct ImageEditorFeature: Feature, Equatable {
       whiteBalance
       highlights
       shadows
+      vibrance
       saturation
       contrast
       blacks

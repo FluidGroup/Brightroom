@@ -223,6 +223,7 @@ struct GrayPointTests {
       whiteBalance: WhiteBalanceFeature(temperature: 600, tint: -20),
       highlights: HighlightsFeature(value: 0.3),
       shadows: ShadowsFeature(value: -0.2),
+      vibrance: VibranceFeature(amount: 30),
       saturation: SaturationFeature(value: 0.5),
       contrast: ContrastFeature(value: 0.1),
       blacks: BlacksFeature(amount: -30),

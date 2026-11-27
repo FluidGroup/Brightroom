@@ -109,7 +109,7 @@ and its body's type is
 
 ```text
 TupleFeature<
-  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 16 optional effects
+  ImageEditorFeature.Effects,                    // composite ImageEffect: preset + 17 optional effects
   Optional<LocalAdjustmentFeature<GaussianBlurFeature>>,
   CropFeature,                                   // domain feature: the final crop
   Optional<VignetteFeature>                      // after the crop: centred on its output

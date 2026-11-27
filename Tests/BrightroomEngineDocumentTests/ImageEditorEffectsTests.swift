@@ -104,8 +104,12 @@ struct ImageEditorEffectsTests {
       preset:exposure:brightness:whiteBalance:highlights:shadows:saturation:contrast:
       colorGrading:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:
     )
+    let vibrance = ImageEditorFeature.Effects.init(
+      preset:exposure:brightness:whiteBalance:highlights:shadows:vibrance:saturation:contrast:
+      colorGrading:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:
+    )
     let every = ImageEditorFeature.Effects.init(
-      preset:exposure:brightness:whiteBalance:highlights:shadows:saturation:contrast:
+      preset:exposure:brightness:whiteBalance:highlights:shadows:vibrance:saturation:contrast:
       blacks:colorGrading:clarity:texture:sharpen:unsharpMask:gaussianBlur:fade:grain:custom:
     )
 
@@ -113,10 +117,16 @@ struct ImageEditorEffectsTests {
     #expect(grading(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, []) == .init())
     #expect(grain(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, []) == .init())
     #expect(
-      every(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, [])
+      vibrance(nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, [])
         == .init()
     )
+    #expect(
+      every(
+        nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, []
+      ) == .init()
+    )
     #expect(ImageEditorFeature.Effects(grain: nil) == .init())
+    #expect(ImageEditorFeature.Effects(vibrance: nil) == .init())
   }
 
   @Test func `The all-member initializer sets each member it is given`() {
@@ -141,6 +151,7 @@ struct ImageEditorEffectsTests {
       whiteBalance: WhiteBalanceFeature(temperature: 300, tint: 10),
       highlights: HighlightsFeature(value: 0.4),
       shadows: ShadowsFeature(value: 0.3),
+      vibrance: VibranceFeature(amount: 25),
       saturation: SaturationFeature(value: 1.2),
       contrast: ContrastFeature(value: 0.1),
       blacks: BlacksFeature(amount: -30),
@@ -161,6 +172,7 @@ struct ImageEditorEffectsTests {
     everyAssigned.whiteBalance = WhiteBalanceFeature(temperature: 300, tint: 10)
     everyAssigned.highlights = HighlightsFeature(value: 0.4)
     everyAssigned.shadows = ShadowsFeature(value: 0.3)
+    everyAssigned.vibrance = VibranceFeature(amount: 25)
     everyAssigned.saturation = SaturationFeature(value: 1.2)
     everyAssigned.contrast = ContrastFeature(value: 0.1)
     everyAssigned.colorGrading = ColorGradingFeature(global: .init(hue: 40, saturation: 20))
